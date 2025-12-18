@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:velotask/models/todo.dart';
 import 'package:velotask/theme/app_theme.dart';
+import 'package:velotask/l10n/app_localizations.dart';
 
 class DialogInputRow extends StatelessWidget {
   final IconData icon;
@@ -42,64 +42,6 @@ class DialogInputRow extends StatelessWidget {
   }
 }
 
-class TaskTypeSelector extends StatelessWidget {
-  final TaskType selectedType;
-  final Function(TaskType) onTypeChanged;
-
-  const TaskTypeSelector({
-    super.key,
-    required this.selectedType,
-    required this.onTypeChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        _buildTypeTag(context, TaskType.ddl, 'DDL'),
-        const SizedBox(width: 8),
-        _buildTypeTag(context, TaskType.tdl, 'TDL'),
-        const SizedBox(width: 8),
-        _buildTypeTag(context, TaskType.wtd, 'WTD'),
-      ],
-    );
-  }
-
-  Widget _buildTypeTag(BuildContext context, TaskType type, String label) {
-    final isSelected = selectedType == type;
-    return InkWell(
-      onTap: () => onTypeChanged(type),
-      borderRadius: BorderRadius.circular(8),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? Theme.of(context).primaryColor
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: isSelected
-                ? Theme.of(context).primaryColor
-                : Theme.of(
-                    context,
-                  ).colorScheme.secondary.withValues(alpha: 0.2),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            color: isSelected
-                ? Theme.of(context).colorScheme.surface
-                : Theme.of(context).colorScheme.secondary,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            fontSize: 12,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class PrioritySelector extends StatelessWidget {
   final int selectedPriority;
   final Function(int) onPriorityChanged;
@@ -112,13 +54,19 @@ class PrioritySelector extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
-        _buildPriorityTag(context, 0, 'Low', AppTheme.lowPriority),
+        _buildPriorityTag(context, 0, l10n.priorityLow, AppTheme.lowPriority),
         const SizedBox(width: 8),
-        _buildPriorityTag(context, 1, 'Med', AppTheme.mediumPriority),
+        _buildPriorityTag(
+          context,
+          1,
+          l10n.priorityMed,
+          AppTheme.mediumPriority,
+        ),
         const SizedBox(width: 8),
-        _buildPriorityTag(context, 2, 'High', AppTheme.highPriority),
+        _buildPriorityTag(context, 2, l10n.priorityHigh, AppTheme.highPriority),
       ],
     );
   }
@@ -179,6 +127,7 @@ class DialogDatePicker extends StatelessWidget {
   final DateTime? date;
   final Function(DateTime?) onSelect;
   final bool isOptional;
+  final DateTime? firstDate;
 
   const DialogDatePicker({
     super.key,
@@ -186,19 +135,29 @@ class DialogDatePicker extends StatelessWidget {
     required this.date,
     required this.onSelect,
     this.isOptional = false,
+    this.firstDate,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final secondaryColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    final l10n = AppLocalizations.of(context)!;
 
     return InkWell(
       onTap: () async {
+        final initialDate = date ?? DateTime.now();
+        final effectiveFirstDate = firstDate ?? DateTime(2000);
+
+        // Ensure initialDate is not before firstDate
+        final validInitialDate = initialDate.isBefore(effectiveFirstDate)
+            ? effectiveFirstDate
+            : initialDate;
+
         final picked = await showDatePicker(
           context: context,
-          initialDate: date ?? DateTime.now(),
-          firstDate: DateTime(2000),
+          initialDate: validInitialDate,
+          firstDate: effectiveFirstDate,
           lastDate: DateTime(2100),
           builder: (context, child) {
             return Theme(
@@ -238,7 +197,7 @@ class DialogDatePicker extends StatelessWidget {
             Text(label, style: TextStyle(color: secondaryColor, fontSize: 12)),
             Text(
               date == null
-                  ? (isOptional ? '--/--' : 'Today')
+                  ? (isOptional ? '--/--' : l10n.today)
                   : '${date!.month}/${date!.day}',
               style: TextStyle(
                 color: theme.primaryColor,

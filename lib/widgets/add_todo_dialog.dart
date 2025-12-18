@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
+import 'package:velotask/services/todo_storage.dart';
 import 'package:velotask/widgets/dialog_components.dart';
+import 'package:velotask/l10n/app_localizations.dart';
 
 class AddTodoDialog extends StatefulWidget {
   final Todo? todo;
@@ -10,7 +13,7 @@ class AddTodoDialog extends StatefulWidget {
     DateTime? startDate,
     DateTime? ddl,
     int importance,
-    TaskType taskType,
+    List<Tag> tags,
   )
   onAdd;
 
@@ -26,11 +29,14 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
   DateTime _startDate = DateTime.now();
   DateTime? _ddl;
   int _importance = 1;
-  TaskType _taskType = TaskType.tdl;
+  List<Tag> _availableTags = [];
+  List<Tag> _selectedTags = [];
+  final TodoStorage _storage = TodoStorage();
 
   @override
   void initState() {
     super.initState();
+    _loadTags();
     if (widget.todo != null) {
       _titleController.text = widget.todo!.title;
       _descController.text = widget.todo!.description;
@@ -38,8 +44,15 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
           widget.todo!.startDate ?? widget.todo!.createdAt ?? DateTime.now();
       _ddl = widget.todo!.ddl;
       _importance = widget.todo!.importance;
-      _taskType = widget.todo!.taskType;
+      _selectedTags = widget.todo!.tags.toList();
     }
+  }
+
+  Future<void> _loadTags() async {
+    final tags = await _storage.loadTags();
+    setState(() {
+      _availableTags = tags;
+    });
   }
 
   @override
@@ -51,10 +64,11 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AlertDialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       title: Text(
-        widget.todo == null ? '✨ New Task' : '✏️ Edit Task',
+        widget.todo == null ? l10n.newTask : l10n.editTask,
         style: const TextStyle(fontWeight: FontWeight.bold),
       ),
       content: SingleChildScrollView(
@@ -76,7 +90,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                     fontWeight: FontWeight.w600,
                   ),
                   decoration: InputDecoration(
-                    hintText: 'What to do?',
+                    hintText: l10n.titleHint,
                     hintStyle: TextStyle(
                       color: Colors.grey.withValues(alpha: 0.5),
                       fontWeight: FontWeight.normal,
@@ -100,7 +114,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                   controller: _descController,
                   style: const TextStyle(fontSize: 16),
                   decoration: InputDecoration(
-                    hintText: 'Add description...',
+                    hintText: l10n.descHint,
                     hintStyle: TextStyle(
                       color: Colors.grey.withValues(alpha: 0.5),
                     ),
@@ -124,18 +138,30 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                   children: [
                     Expanded(
                       child: DialogDatePicker(
-                        label: 'From',
+                        label: l10n.dateFrom,
                         date: _startDate,
+                        firstDate: DateTime.now().subtract(
+                          const Duration(days: 1),
+                        ), // Allow today
                         onSelect: (d) {
-                          if (d != null) setState(() => _startDate = d);
+                          if (d != null) {
+                            setState(() {
+                              _startDate = d;
+                              // If DDL is before new start date, reset it or adjust it
+                              if (_ddl != null && _ddl!.isBefore(d)) {
+                                _ddl = null;
+                              }
+                            });
+                          }
                         },
                       ),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: DialogDatePicker(
-                        label: 'To',
+                        label: l10n.dateTo,
                         date: _ddl,
+                        firstDate: _startDate,
                         onSelect: (d) => setState(() => _ddl = d),
                         isOptional: true,
                       ),
@@ -153,16 +179,60 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                   onPriorityChanged: (val) => setState(() => _importance = val),
                 ),
               ),
-              const SizedBox(height: 16),
 
-              // Task Type Row
-              DialogInputRow(
-                icon: Icons.category_outlined,
-                child: TaskTypeSelector(
-                  selectedType: _taskType,
-                  onTypeChanged: (val) => setState(() => _taskType = val),
+              // Tags Row
+              if (_availableTags.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                DialogInputRow(
+                  icon: Icons.label_outline,
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: _availableTags.map((tag) {
+                      final isSelected = _selectedTags.any(
+                        (t) => t.id == tag.id,
+                      );
+                      Color tagColor = Colors.blue;
+                      if (tag.color != null) {
+                        try {
+                          tagColor = Color(
+                            int.parse(tag.color!.replaceAll('#', '0xFF')),
+                          );
+                        } catch (_) {}
+                      }
+                      return FilterChip(
+                        label: Text(tag.name),
+                        selected: isSelected,
+                        onSelected: (selected) {
+                          setState(() {
+                            if (selected) {
+                              _selectedTags.add(tag);
+                            } else {
+                              _selectedTags.removeWhere((t) => t.id == tag.id);
+                            }
+                          });
+                        },
+                        backgroundColor: Colors.transparent,
+                        selectedColor: tagColor.withValues(alpha: 0.2),
+                        labelStyle: TextStyle(
+                          color: isSelected
+                              ? tagColor
+                              : Theme.of(context).colorScheme.onSurface,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          side: BorderSide(
+                            color: isSelected
+                                ? tagColor
+                                : Colors.grey.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        showCheckmark: false,
+                      );
+                    }).toList(),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),
@@ -175,7 +245,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
               context,
             ).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
-          child: const Text('Cancel'),
+          child: Text(l10n.cancel),
         ),
         FilledButton(
           onPressed: () {
@@ -186,7 +256,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                 _startDate,
                 _ddl,
                 _importance,
-                _taskType,
+                _selectedTags,
               );
               Navigator.pop(context);
             }
@@ -200,7 +270,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           ),
           child: Text(
-            widget.todo == null ? 'Create' : 'Save',
+            widget.todo == null ? l10n.create : l10n.save,
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
         ),

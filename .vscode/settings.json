@@ -10,7 +10,8 @@
         "**/.dart_tool": true,
         "**/.idea": true,
         "**/build": true,
-        "**/web": true
+        "**/web": true,
+        "**/.flutter-plugins-dependencies": true
     },
     "editor.formatOnSave": true,
 }

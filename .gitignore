@@ -74,3 +74,32 @@ app.*.map.json
 
 # Web
 lib/generated_plugin_registrant.dart
+
+# =========================
+# Added by Copilot Recommendations
+# =========================
+
+# Android Signing (Security)
+*.jks
+*.keystore
+key.properties
+
+# Environment Variables (Security)
+.env
+.env.*
+
+# Windows System Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Build Files
+problems-report.html
+
+# Generated files
+*.g.dart
+*.freezed.dart
+
+# Localization generated files
+lib/l10n/app_*.dart

@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:velotask/models/todo.dart';
-import 'package:velotask/screens/timeline_screen.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:velotask/screens/settings_screen.dart';
+import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/main.dart';
+import 'package:velotask/l10n/app_localizations.dart';
 
 class HomeAppBar extends StatelessWidget {
   final List<Todo> todos;
+  final VoidCallback? onSettingsClosed;
 
-  const HomeAppBar({super.key, required this.todos});
+  const HomeAppBar({super.key, required this.todos, this.onSettingsClosed});
 
   @override
   Widget build(BuildContext context) {
@@ -22,11 +24,10 @@ class HomeAppBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            'Velotask',
-            style: GoogleFonts.exo2(
+            AppLocalizations.of(context)!.appName,
+            style: AppTheme.headerStyle(context).copyWith(
               color: Theme.of(context).primaryColor,
               fontWeight: FontWeight.w800,
-              fontStyle: FontStyle.italic,
               fontSize: 24,
               letterSpacing: -0.5,
             ),
@@ -34,6 +35,19 @@ class HomeAppBar extends StatelessWidget {
         ],
       ),
       actions: [
+        IconButton(
+          icon: Icon(
+            Icons.settings_outlined,
+            color: Theme.of(context).primaryColor,
+          ),
+          onPressed: () async {
+            await Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const SettingsScreen()),
+            );
+            onSettingsClosed?.call();
+          },
+        ),
         ValueListenableBuilder<ThemeMode>(
           valueListenable: themeNotifier,
           builder: (context, mode, child) {
@@ -52,20 +66,6 @@ class HomeAppBar extends StatelessWidget {
                 final prefs = await SharedPreferences.getInstance();
                 await prefs.setString('theme_mode', newMode.toString());
               },
-            );
-          },
-        ),
-        IconButton(
-          icon: Icon(
-            Icons.view_timeline_outlined,
-            color: Theme.of(context).primaryColor,
-          ),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => TimelineScreen(todos: todos),
-              ),
             );
           },
         ),

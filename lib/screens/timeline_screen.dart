@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/widgets/timeline_header.dart';
 import 'package:velotask/widgets/timeline_task_row.dart';
+import 'package:velotask/l10n/app_localizations.dart';
 
 class TimelineScreen extends StatelessWidget {
   final List<Todo> todos;
@@ -43,15 +44,15 @@ class TimelineScreen extends StatelessWidget {
     const double dayWidth = 60.0;
     const int daysToShow = 30;
     final double totalWidth = dayWidth * daysToShow;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
-          'TIMELINE',
-          style: GoogleFonts.exo2(
+          l10n.timeline.toUpperCase(),
+          style: AppTheme.headerStyle(context).copyWith(
             fontWeight: FontWeight.w900,
-            fontStyle: FontStyle.italic,
             letterSpacing: 1.0,
             color: Theme.of(context).primaryColor,
           ),
@@ -59,19 +60,12 @@ class TimelineScreen extends StatelessWidget {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         elevation: 0,
         centerTitle: true,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios_new,
-            size: 20,
-            color: Theme.of(context).primaryColor,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
+        automaticallyImplyLeading: false,
       ),
       body: timelineTasks.isEmpty
           ? Center(
               child: Text(
-                'No tasks for the next 30 days',
+                l10n.noTasksTimeline,
                 style: TextStyle(
                   color: Theme.of(
                     context,

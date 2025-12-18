@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/theme/app_theme.dart';
+import 'package:velotask/l10n/app_localizations.dart';
 
 class TodoItem extends StatelessWidget {
   final Todo todo;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
+  final List<Tag>? visibleTags; // For testing or explicit tag display
 
   const TodoItem({
     super.key,
@@ -14,6 +17,7 @@ class TodoItem extends StatelessWidget {
     required this.onToggle,
     required this.onDelete,
     required this.onEdit,
+    this.visibleTags,
   });
 
   Color _getImportanceColor() {
@@ -27,16 +31,17 @@ class TodoItem extends StatelessWidget {
     }
   }
 
-  String _formatDate(DateTime date) {
+  String _formatDate(BuildContext context, DateTime date) {
+    final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final tomorrow = today.add(const Duration(days: 1));
     final target = DateTime(date.year, date.month, date.day);
 
     if (target == today) {
-      return 'Today';
+      return l10n.today;
     } else if (target == tomorrow) {
-      return 'Tomorrow';
+      return l10n.tomorrow;
     } else {
       return '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
     }
@@ -115,29 +120,48 @@ class TodoItem extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          margin: const EdgeInsets.only(right: 6),
-                          decoration: BoxDecoration(
-                            color: Theme.of(
-                              context,
-                            ).colorScheme.secondary.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            todo.taskType.name.toUpperCase(),
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.secondary,
-                            ),
+                    if ((visibleTags ?? todo.tags).isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children: (visibleTags ?? todo.tags).map((tag) {
+                              Color tagColor = Colors.blue;
+                              if (tag.color != null) {
+                                try {
+                                  tagColor = Color(
+                                    int.parse(
+                                      tag.color!.replaceAll('#', '0xFF'),
+                                    ),
+                                  );
+                                } catch (_) {}
+                              }
+                              return Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                margin: const EdgeInsets.only(right: 6),
+                                decoration: BoxDecoration(
+                                  color: tagColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  tag.name.toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: tagColor,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
                           ),
                         ),
+                      ),
+                    Row(
+                      children: [
                         Expanded(
                           child: AnimatedDefaultTextStyle(
                             duration: const Duration(milliseconds: 200),
@@ -186,10 +210,12 @@ class TodoItem extends StatelessWidget {
               width: 80,
               child: Builder(
                 builder: (context) {
+                  final l10n = AppLocalizations.of(context)!;
                   final dateStr = todo.ddl != null
-                      ? _formatDate(todo.ddl!)
+                      ? _formatDate(context, todo.ddl!)
                       : '-';
-                  final isUrgent = dateStr == 'Today' || dateStr == 'Tmrw';
+                  final isUrgent =
+                      dateStr == l10n.today || dateStr == l10n.tomorrow;
                   return Text(
                     dateStr,
                     style: TextStyle(
@@ -223,10 +249,10 @@ class TodoItem extends StatelessWidget {
                   ),
                   child: Text(
                     todo.importance == 2
-                        ? 'High'
+                        ? AppLocalizations.of(context)!.priorityHigh
                         : todo.importance == 0
-                        ? 'Low'
-                        : 'Med',
+                        ? AppLocalizations.of(context)!.priorityLow
+                        : AppLocalizations.of(context)!.priorityMed,
                     style: TextStyle(
                       fontSize: 10,
                       color: _getImportanceColor(),

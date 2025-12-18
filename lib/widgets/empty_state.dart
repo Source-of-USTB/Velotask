@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:velotask/l10n/app_localizations.dart';
 
 class EmptyState extends StatelessWidget {
   const EmptyState({super.key});
@@ -17,7 +18,7 @@ class EmptyState extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'No tasks found',
+              AppLocalizations.of(context)!.noTasksFound,
               style: TextStyle(
                 color: Theme.of(
                   context,

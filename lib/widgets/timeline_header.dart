@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:velotask/theme/app_theme.dart';
+import 'package:velotask/l10n/app_localizations.dart';
 
 class TimelineHeader extends StatelessWidget {
   final DateTime today;
@@ -36,8 +37,8 @@ class TimelineHeader extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Text(
-                  _getWeekday(date.weekday).toUpperCase(),
-                  style: GoogleFonts.exo2(
+                  _getWeekday(context, date.weekday).toUpperCase(),
+                  style: AppTheme.headerStyle(context).copyWith(
                     fontSize: 10,
                     color: isToday ? theme.primaryColor : secondaryColor,
                     fontWeight: FontWeight.bold,
@@ -64,7 +65,7 @@ class TimelineHeader extends StatelessWidget {
                       : null,
                   child: Text(
                     date.day.toString(),
-                    style: GoogleFonts.exo2(
+                    style: AppTheme.headerStyle(context).copyWith(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
                       color: isToday
@@ -81,8 +82,25 @@ class TimelineHeader extends StatelessWidget {
     );
   }
 
-  String _getWeekday(int weekday) {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return days[weekday - 1];
+  String _getWeekday(BuildContext context, int weekday) {
+    final l10n = AppLocalizations.of(context)!;
+    switch (weekday) {
+      case DateTime.monday:
+        return l10n.shortWeekdayMon;
+      case DateTime.tuesday:
+        return l10n.shortWeekdayTue;
+      case DateTime.wednesday:
+        return l10n.shortWeekdayWed;
+      case DateTime.thursday:
+        return l10n.shortWeekdayThu;
+      case DateTime.friday:
+        return l10n.shortWeekdayFri;
+      case DateTime.saturday:
+        return l10n.shortWeekdaySat;
+      case DateTime.sunday:
+        return l10n.shortWeekdaySun;
+      default:
+        return '';
+    }
   }
 }

@@ -1,8 +1,7 @@
 import 'package:isar/isar.dart';
+import 'package:velotask/models/tag.dart';
 
 part 'todo.g.dart';
-
-enum TaskType { ddl, tdl, wtd }
 
 @collection
 class Todo {
@@ -15,8 +14,8 @@ class Todo {
   DateTime? startDate;
   DateTime? ddl;
   int importance; // 0: Low, 1: Normal, 2: High
-  @enumerated
-  TaskType taskType;
+
+  final tags = IsarLinks<Tag>();
 
   Todo({
     this.id = Isar.autoIncrement,
@@ -27,7 +26,6 @@ class Todo {
     this.startDate,
     this.ddl,
     this.importance = 1,
-    this.taskType = TaskType.tdl,
   });
 
   // 复制方法
@@ -40,7 +38,6 @@ class Todo {
     DateTime? startDate,
     DateTime? ddl,
     int? importance,
-    TaskType? taskType,
   }) {
     return Todo(
       id: id ?? this.id,
@@ -51,7 +48,6 @@ class Todo {
       startDate: startDate ?? this.startDate,
       ddl: ddl ?? this.ddl,
       importance: importance ?? this.importance,
-      taskType: taskType ?? this.taskType,
     );
   }
 }

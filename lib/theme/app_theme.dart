@@ -23,11 +23,57 @@ class AppTheme {
   static const Color darkSecondaryColor = Color(0xFFB0BEC5);
   static const Color darkAccentColor = Color(0xFF3498DB);
 
+  static TextStyle headerStyle(BuildContext context) {
+    final locale = Localizations.localeOf(context);
+
+    if (locale.languageCode == 'zh') {
+      return GoogleFonts.notoSansSc(
+        textStyle: const TextStyle(fontWeight: FontWeight.w900),
+      );
+    }
+
+    return GoogleFonts.exo2(
+      textStyle: const TextStyle(
+        fontStyle: FontStyle.italic,
+        fontWeight: FontWeight.w800,
+      ),
+    );
+  }
+
+  static TextStyle bodyStyle(
+    BuildContext context, {
+    double? fontSize,
+    FontWeight? fontWeight,
+    Color? color,
+  }) {
+    return GoogleFonts.notoSansSc(
+      fontSize: fontSize ?? 14,
+      fontWeight: fontWeight ?? FontWeight.normal,
+      color: color ?? Theme.of(context).textTheme.bodyMedium?.color,
+    );
+  }
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
       scaffoldBackgroundColor: backgroundColor,
-      textTheme: GoogleFonts.notoSansScTextTheme(),
+      textTheme: GoogleFonts.notoSansScTextTheme().copyWith(
+        bodyLarge: GoogleFonts.notoSansSc(fontSize: 16),
+        bodyMedium: GoogleFonts.notoSansSc(fontSize: 14),
+        bodySmall: GoogleFonts.notoSansSc(fontSize: 12),
+        titleLarge: GoogleFonts.notoSansSc(
+          fontSize: 22,
+          fontWeight: FontWeight.w600,
+        ),
+        titleMedium: GoogleFonts.notoSansSc(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+        titleSmall: GoogleFonts.notoSansSc(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       primaryColor: primaryColor,
       colorScheme: const ColorScheme.light(
         primary: primaryColor,
@@ -130,7 +176,24 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       scaffoldBackgroundColor: darkBackgroundColor,
-      textTheme: GoogleFonts.notoSansScTextTheme(ThemeData.dark().textTheme),
+      textTheme: GoogleFonts.notoSansScTextTheme(ThemeData.dark().textTheme)
+          .copyWith(
+            bodyLarge: GoogleFonts.notoSansSc(fontSize: 16),
+            bodyMedium: GoogleFonts.notoSansSc(fontSize: 14),
+            bodySmall: GoogleFonts.notoSansSc(fontSize: 12),
+            titleLarge: GoogleFonts.notoSansSc(
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+            ),
+            titleMedium: GoogleFonts.notoSansSc(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+            ),
+            titleSmall: GoogleFonts.notoSansSc(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
       primaryColor: darkPrimaryColor,
       colorScheme: const ColorScheme.dark(
         primary: darkPrimaryColor,

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/theme/app_theme.dart';
 
@@ -97,7 +96,7 @@ class TimelineTaskRow extends StatelessWidget {
                 todo.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.exo2(
+                style: AppTheme.headerStyle(context).copyWith(
                   color: theme.colorScheme.onSurface,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,

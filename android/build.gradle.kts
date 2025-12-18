@@ -22,10 +22,10 @@ subprojects {
             if (android != null) {
                 try {
                     val setCompileSdkVersion = android.javaClass.getMethod("setCompileSdkVersion", Int::class.java)
-                    setCompileSdkVersion.invoke(android, 35)
+                    setCompileSdkVersion.invoke(android, 36)
                     
                     val setBuildToolsVersion = android.javaClass.getMethod("setBuildToolsVersion", String::class.java)
-                    setBuildToolsVersion.invoke(android, "35.0.0")
+                    setBuildToolsVersion.invoke(android, "36.0.0")
                 } catch (e: Exception) {
                     println("Failed to set compileSdk/buildTools for ${project.name}: ${e.message}")
                 }
@@ -39,6 +39,17 @@ subprojects {
                     }
                 } catch (e: Exception) {
                      println("Failed to set namespace for ${project.name}: ${e.message}")
+                }
+
+                try {
+                    val compileOptions = android.javaClass.getMethod("getCompileOptions").invoke(android)
+                    val setSourceCompatibility = compileOptions.javaClass.getMethod("setSourceCompatibility", JavaVersion::class.java)
+                    val setTargetCompatibility = compileOptions.javaClass.getMethod("setTargetCompatibility", JavaVersion::class.java)
+                    
+                    setSourceCompatibility.invoke(compileOptions, JavaVersion.VERSION_17)
+                    setTargetCompatibility.invoke(compileOptions, JavaVersion.VERSION_17)
+                } catch (e: Exception) {
+                    println("Failed to set Java 17 for ${project.name}: ${e.message}")
                 }
             }
         }

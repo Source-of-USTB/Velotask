@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:velotask/models/todo.dart';
-import 'package:google_fonts/google_fonts.dart';
+import 'package:velotask/theme/app_theme.dart';
+import 'package:velotask/l10n/app_localizations.dart';
 
 class ProgressHeader extends StatelessWidget {
   final List<Todo> todos;
@@ -58,10 +59,9 @@ class ProgressHeader extends StatelessWidget {
                       children: [
                         Text(
                           '${(progress * 100).toInt()}',
-                          style: GoogleFonts.exo2(
+                          style: AppTheme.headerStyle(context).copyWith(
                             fontSize: 56,
                             fontWeight: FontWeight.w900,
-                            fontStyle: FontStyle.italic,
                             color: Theme.of(context).primaryColor,
                             height: 1.0,
                             letterSpacing: -2.0,
@@ -69,10 +69,9 @@ class ProgressHeader extends StatelessWidget {
                         ),
                         Text(
                           '%',
-                          style: GoogleFonts.exo2(
+                          style: AppTheme.headerStyle(context).copyWith(
                             fontSize: 24,
                             fontWeight: FontWeight.w800,
-                            fontStyle: FontStyle.italic,
                             color: Theme.of(context).colorScheme.secondary,
                           ),
                         ),
@@ -80,8 +79,8 @@ class ProgressHeader extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'COMPLETED',
-                      style: GoogleFonts.exo2(
+                      AppLocalizations.of(context)!.completed,
+                      style: AppTheme.headerStyle(context).copyWith(
                         fontSize: 11,
                         letterSpacing: 3.0,
                         fontWeight: FontWeight.bold,
