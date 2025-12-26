@@ -4,7 +4,9 @@ import 'package:velotask/models/todo.dart';
 import 'package:velotask/screens/timeline_screen.dart';
 import 'package:velotask/screens/todo_list_view.dart';
 import 'package:velotask/services/todo_storage.dart';
+import 'package:velotask/services/ai_service.dart';
 import 'package:velotask/widgets/add_todo_dialog.dart';
+import 'package:velotask/widgets/ai_input_dialog.dart';
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/utils/logger.dart';
 
@@ -159,6 +161,51 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  Future<void> _showAIInputDialog() async {
+    final result = await showDialog<AIParseResult>(
+      context: context,
+      builder: (context) =>
+          AIInputDialog(existingTags: tags.map((t) => t.name).toList()),
+    );
+
+    if (result != null && mounted) {
+      // Map AI result to Todo fields
+      final title = result.title;
+      final desc = result.description;
+      final importance = result.importance;
+      final startDate = result.startDate;
+      final ddl = result.ddl;
+
+      // Handle tags
+      List<Tag> selectedTags = [];
+      bool tagsAdded = false;
+      for (final name in result.tags) {
+        // Find existing tag or create new one
+        var tag = tags.cast<Tag?>().firstWhere(
+          (t) => t?.name.toLowerCase() == name.toLowerCase(),
+          orElse: () => null,
+        );
+
+        if (tag == null) {
+          tag = Tag(name: name);
+          await _storage.addTag(tag);
+          tagsAdded = true;
+        }
+        selectedTags.add(tag);
+      }
+
+      if (tagsAdded) {
+        await _loadTags(); // Refresh tags list once
+        // Re-map selectedTags to the newly loaded tag objects to ensure they have IDs
+        selectedTags = result.tags.map((name) {
+          return tags.firstWhere((t) => t.name.toLowerCase() == name.toLowerCase());
+        }).toList();
+      }
+
+      await _addTodo(title, desc, startDate, ddl, importance, selectedTags);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -174,6 +221,7 @@ class _MainScreenState extends State<MainScreen> {
             onDelete: _deleteTodo,
             onEdit: _editTodo,
             onRefreshTags: _loadTags,
+            onAIAction: _showAIInputDialog,
           ),
           TimelineScreen(todos: todos),
         ],

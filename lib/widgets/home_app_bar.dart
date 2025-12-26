@@ -9,11 +9,18 @@ import 'package:velotask/l10n/app_localizations.dart';
 class HomeAppBar extends StatelessWidget {
   final List<Todo> todos;
   final VoidCallback? onSettingsClosed;
+  final VoidCallback? onAIAction;
 
-  const HomeAppBar({super.key, required this.todos, this.onSettingsClosed});
+  const HomeAppBar({
+    super.key,
+    required this.todos,
+    this.onSettingsClosed,
+    this.onAIAction,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SliverAppBar(
       floating: true,
       pinned: true,
@@ -24,7 +31,7 @@ class HomeAppBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            AppLocalizations.of(context)!.appName,
+            l10n.appName,
             style: AppTheme.headerStyle(context).copyWith(
               color: Theme.of(context).primaryColor,
               fontWeight: FontWeight.w800,
@@ -35,6 +42,14 @@ class HomeAppBar extends StatelessWidget {
         ],
       ),
       actions: [
+        IconButton(
+          icon: Icon(
+            Icons.auto_awesome_outlined,
+            color: Theme.of(context).primaryColor,
+          ),
+          tooltip: l10n.aiQuickAdd,
+          onPressed: onAIAction,
+        ),
         IconButton(
           icon: Icon(
             Icons.settings_outlined,

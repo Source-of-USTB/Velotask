@@ -16,6 +16,7 @@ class TodoListView extends StatefulWidget {
   final Function(Todo) onDelete;
   final Function(Todo) onEdit;
   final VoidCallback onRefreshTags;
+  final VoidCallback? onAIAction;
 
   const TodoListView({
     super.key,
@@ -26,6 +27,7 @@ class TodoListView extends StatefulWidget {
     required this.onDelete,
     required this.onEdit,
     required this.onRefreshTags,
+    this.onAIAction,
   });
 
   @override
@@ -73,7 +75,11 @@ class _TodoListViewState extends State<TodoListView> {
 
     return CustomScrollView(
       slivers: [
-        HomeAppBar(todos: widget.todos, onSettingsClosed: widget.onRefreshTags),
+        HomeAppBar(
+          todos: widget.todos,
+          onSettingsClosed: widget.onRefreshTags,
+          onAIAction: widget.onAIAction,
+        ),
         ProgressHeader(todos: widget.todos),
         FilterSection(
           currentFilter: _filter,

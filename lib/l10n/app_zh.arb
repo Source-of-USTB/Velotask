@@ -49,5 +49,20 @@
   "shortWeekdayThu": "四",
   "shortWeekdayFri": "五",
   "shortWeekdaySat": "六",
-  "shortWeekdaySun": "日"
+  "shortWeekdaySun": "日",
+  "aiAssistant": "AI 助手",
+  "aiSettings": "AI 设置",
+  "aiBaseUrl": "API 基础链接",
+  "aiApiKey": "API 密钥",
+  "aiModel": "模型名称",
+  "aiSettingsSubtitle": "配置 AI 以支持自然语言输入",
+  "aiQuickAdd": "AI 快速添加",
+  "aiInputHint": "例如：明天下午5点买牛奶",
+  "aiParsing": "AI 正在解析...",
+  "aiParseError": "AI 解析任务失败",
+  "aiBaseUrlHelper": "AI 提供商的基础 URL",
+  "aiApiKeyHelper": "AI 提供商的 API 密钥",
+  "aiModelHelper": "模型名称 (如 gpt-3.5-turbo, deepseek-chat)",
+  "aiProcessing": "处理中...",
+  "aiSubmit": "提交"
 }

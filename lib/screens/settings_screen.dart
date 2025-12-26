@@ -15,11 +15,42 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String _version = '';
+  final TextEditingController _aiBaseUrlController = TextEditingController();
+  final TextEditingController _aiApiKeyController = TextEditingController();
+  final TextEditingController _aiModelController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
     _loadVersion();
+    _loadAISettings();
+  }
+
+  @override
+  void dispose() {
+    _aiBaseUrlController.dispose();
+    _aiApiKeyController.dispose();
+    _aiModelController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadAISettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _aiBaseUrlController.text = prefs.getString('ai_base_url') ?? '';
+        _aiApiKeyController.text = prefs.getString('ai_api_key') ?? '';
+        _aiModelController.text =
+            prefs.getString('ai_model') ?? 'gpt-3.5-turbo';
+      });
+    }
+  }
+
+  Future<void> _saveAISettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('ai_base_url', _aiBaseUrlController.text.trim());
+    await prefs.setString('ai_api_key', _aiApiKeyController.text.trim());
+    await prefs.setString('ai_model', _aiModelController.text.trim());
   }
 
   Future<void> _loadVersion() async {
@@ -109,6 +140,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 MaterialPageRoute(builder: (context) => const TagsScreen()),
               );
             },
+          ),
+          const Divider(),
+          _buildSectionHeader(context, l10n.aiAssistant),
+          ListTile(
+            leading: const Icon(Icons.auto_awesome_outlined),
+            title: Text(l10n.aiSettings),
+            subtitle: Text(l10n.aiSettingsSubtitle),
+            onTap: () => _showAISettingsDialog(context),
           ),
           const Divider(),
           _buildSectionHeader(context, l10n.about),
@@ -219,6 +258,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _setLocale(const Locale('zh'));
               Navigator.pop(context);
             },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAISettingsDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.aiSettings),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _aiBaseUrlController,
+              decoration: InputDecoration(
+                labelText: l10n.aiBaseUrl,
+                hintText: 'https://api.openai.com/v1',
+                helperText: l10n.aiBaseUrlHelper,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _aiApiKeyController,
+              decoration: InputDecoration(
+                labelText: l10n.aiApiKey,
+                hintText: 'sk-...',
+                helperText: l10n.aiApiKeyHelper,
+              ),
+              obscureText: true,
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _aiModelController,
+              decoration: InputDecoration(
+                labelText: l10n.aiModel,
+                hintText: 'gpt-3.5-turbo',
+                helperText: l10n.aiModelHelper,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+          ),
+          TextButton(
+            onPressed: () {
+              _saveAISettings();
+              Navigator.pop(context);
+            },
+            child: Text(MaterialLocalizations.of(context).okButtonLabel),
           ),
         ],
       ),

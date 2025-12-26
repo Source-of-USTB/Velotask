@@ -49,5 +49,20 @@
   "shortWeekdayThu": "Thu",
   "shortWeekdayFri": "Fri",
   "shortWeekdaySat": "Sat",
-  "shortWeekdaySun": "Sun"
+  "shortWeekdaySun": "Sun",
+  "aiAssistant": "AI Assistant",
+  "aiSettings": "AI Settings",
+  "aiBaseUrl": "API Base URL",
+  "aiApiKey": "API Key",
+  "aiModel": "Model Name",
+  "aiSettingsSubtitle": "Configure AI for natural language input",
+  "aiQuickAdd": "AI Quick Add",
+  "aiInputHint": "e.g., Buy milk tomorrow at 5pm",
+  "aiParsing": "AI is parsing...",
+  "aiParseError": "Failed to parse task via AI",
+  "aiBaseUrlHelper": "The base URL of your AI provider",
+  "aiApiKeyHelper": "Your API key for the AI provider",
+  "aiModelHelper": "The model name (e.g., gpt-3.5-turbo, deepseek-chat)",
+  "aiProcessing": "Processing...",
+  "aiSubmit": "Submit"
 }
