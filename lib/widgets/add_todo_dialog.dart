@@ -65,22 +65,33 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final dialogWidth = screenWidth > 700 ? 560.0 : screenWidth - 40;
+    final maxDialogBodyHeight = screenHeight * 0.72;
+    final useVerticalDateLayout = screenWidth < 420;
+
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       title: Text(
         widget.todo == null ? l10n.newTask : l10n.editTask,
         style: const TextStyle(fontWeight: FontWeight.bold),
       ),
-      content: SingleChildScrollView(
-        child: SizedBox(
-          width: 400,
+      content: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: dialogWidth,
+          maxHeight: maxDialogBodyHeight,
+        ),
+        child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Title Input
               DialogInputRow(
-                icon: Icons.edit_outlined,
                 isInput: true,
                 child: TextField(
                   controller: _titleController,
@@ -108,7 +119,6 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
 
               // Description Input
               DialogInputRow(
-                icon: Icons.description_outlined,
                 isInput: true,
                 child: TextField(
                   controller: _descController,
@@ -133,47 +143,74 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
 
               // Date Picker
               DialogInputRow(
-                icon: Icons.calendar_today_outlined,
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: DialogDatePicker(
-                        label: l10n.dateFrom,
-                        date: _startDate,
-                        firstDate: DateTime.now().subtract(
-                          const Duration(days: 1),
-                        ), // Allow today
-                        onSelect: (d) {
-                          if (d != null) {
-                            setState(() {
-                              _startDate = d;
-                              // If DDL is before new start date, reset it or adjust it
-                              if (_ddl != null && _ddl!.isBefore(d)) {
-                                _ddl = null;
+                child: useVerticalDateLayout
+                    ? Column(
+                        children: [
+                          DialogDatePicker(
+                            label: l10n.dateFrom,
+                            date: _startDate,
+                            firstDate: DateTime.now().subtract(
+                              const Duration(days: 1),
+                            ),
+                            onSelect: (d) {
+                              if (d != null) {
+                                setState(() {
+                                  _startDate = d;
+                                  if (_ddl != null && _ddl!.isBefore(d)) {
+                                    _ddl = null;
+                                  }
+                                });
                               }
-                            });
-                          }
-                        },
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          DialogDatePicker(
+                            label: l10n.dateTo,
+                            date: _ddl,
+                            firstDate: _startDate,
+                            onSelect: (d) => setState(() => _ddl = d),
+                            isOptional: true,
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: DialogDatePicker(
+                              label: l10n.dateFrom,
+                              date: _startDate,
+                              firstDate: DateTime.now().subtract(
+                                const Duration(days: 1),
+                              ),
+                              onSelect: (d) {
+                                if (d != null) {
+                                  setState(() {
+                                    _startDate = d;
+                                    if (_ddl != null && _ddl!.isBefore(d)) {
+                                      _ddl = null;
+                                    }
+                                  });
+                                }
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: DialogDatePicker(
+                              label: l10n.dateTo,
+                              date: _ddl,
+                              firstDate: _startDate,
+                              onSelect: (d) => setState(() => _ddl = d),
+                              isOptional: true,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DialogDatePicker(
-                        label: l10n.dateTo,
-                        date: _ddl,
-                        firstDate: _startDate,
-                        onSelect: (d) => setState(() => _ddl = d),
-                        isOptional: true,
-                      ),
-                    ),
-                  ],
-                ),
               ),
               const SizedBox(height: 16),
 
               // Priority Row
               DialogInputRow(
-                icon: Icons.flag_outlined,
                 child: PrioritySelector(
                   selectedPriority: _importance,
                   onPriorityChanged: (val) => setState(() => _importance = val),
@@ -184,10 +221,9 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
               if (_availableTags.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 DialogInputRow(
-                  icon: Icons.label_outline,
                   child: Wrap(
                     spacing: 8,
-                    runSpacing: 4,
+                    runSpacing: 8,
                     children: _availableTags.map((tag) {
                       final isSelected = _selectedTags.any(
                         (t) => t.id == tag.id,
@@ -212,6 +248,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                             }
                           });
                         },
+                        materialTapTargetSize: MaterialTapTargetSize.padded,
                         backgroundColor: Colors.transparent,
                         selectedColor: tagColor.withValues(alpha: 0.2),
                         labelStyle: TextStyle(

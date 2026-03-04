@@ -3,13 +3,13 @@ import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/theme/app_theme.dart';
 
 class DialogInputRow extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
   final Widget child;
   final bool isInput;
 
   const DialogInputRow({
     super.key,
-    required this.icon,
+    this.icon,
     required this.child,
     this.isInput = false,
   });
@@ -19,12 +19,16 @@ class DialogInputRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(
-          icon,
-          size: 20,
-          color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.5),
-        ),
-        const SizedBox(width: 16),
+        if (icon != null) ...[
+          Icon(
+            icon,
+            size: 20,
+            color: Theme.of(
+              context,
+            ).colorScheme.secondary.withValues(alpha: 0.5),
+          ),
+          const SizedBox(width: 16),
+        ],
         Expanded(
           child: isInput
               ? Container(
@@ -170,15 +174,7 @@ class DialogDatePicker extends StatelessWidget {
                   ),
                 ),
               ),
-              child: Transform.scale(
-                scale: 0.9,
-                child: MediaQuery(
-                  data: MediaQuery.of(
-                    context,
-                  ).copyWith(size: const Size(320, 400)),
-                  child: child!,
-                ),
-              ),
+              child: child!,
             );
           },
         );

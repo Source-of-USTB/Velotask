@@ -128,6 +128,7 @@ class FilterSection extends StatelessWidget {
       label: Text(label),
       selected: isSelected,
       onSelected: (_) => onFilterChanged(filter, currentTag),
+      materialTapTargetSize: MaterialTapTargetSize.padded,
       backgroundColor: Colors.transparent,
       selectedColor: theme.primaryColor,
       labelStyle: TextStyle(
@@ -144,7 +145,7 @@ class FilterSection extends StatelessWidget {
         ),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-      visualDensity: VisualDensity.compact,
+      visualDensity: VisualDensity.standard,
     );
   }
 
@@ -163,6 +164,7 @@ class FilterSection extends StatelessWidget {
       onSelected: (bool selected) {
         onFilterChanged(currentFilter, selected ? tag : null);
       },
+      materialTapTargetSize: MaterialTapTargetSize.padded,
       backgroundColor: Colors.transparent,
       selectedColor: tagColor,
       checkmarkColor: Colors.white,
@@ -182,7 +184,7 @@ class FilterSection extends StatelessWidget {
       ),
       showCheckmark: false,
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-      visualDensity: VisualDensity.compact,
+      visualDensity: VisualDensity.standard,
     );
   }
 }

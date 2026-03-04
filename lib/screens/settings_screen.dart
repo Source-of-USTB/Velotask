@@ -272,45 +272,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showAISettingsDialog(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final dialogWidth = screenWidth > 700 ? 560.0 : screenWidth - 40;
+    final maxDialogBodyHeight = screenHeight * 0.68;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+        contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         title: Text(l10n.aiSettings),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _aiBaseUrlController,
-              decoration: InputDecoration(
-                labelText: l10n.aiBaseUrl,
-                hintText: 'https://api.openai.com/v1',
-                helperText: l10n.aiBaseUrlHelper,
-              ),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: dialogWidth,
+            maxHeight: maxDialogBodyHeight,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _aiBaseUrlController,
+                  decoration: InputDecoration(
+                    labelText: l10n.aiBaseUrl,
+                    hintText: 'https://api.openai.com/v1',
+                  ),
+                ),
+                const SizedBox(height: 18),
+                TextField(
+                  controller: _aiApiKeyController,
+                  decoration: InputDecoration(
+                    labelText: l10n.aiApiKey,
+                    hintText: 'sk-...',
+                  ),
+                  obscureText: true,
+                ),
+                const SizedBox(height: 18),
+                TextField(
+                  controller: _aiModelController,
+                  decoration: InputDecoration(
+                    labelText: l10n.aiModel,
+                    hintText: 'gpt-3.5-turbo',
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _aiApiKeyController,
-              decoration: InputDecoration(
-                labelText: l10n.aiApiKey,
-                hintText: 'sk-...',
-                helperText: l10n.aiApiKeyHelper,
-              ),
-              obscureText: true,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _aiModelController,
-              decoration: InputDecoration(
-                labelText: l10n.aiModel,
-                hintText: 'gpt-3.5-turbo',
-                helperText: l10n.aiModelHelper,
-              ),
-            ),
-          ],
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
             child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
           ),
           TextButton(
@@ -318,6 +332,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _saveAISettings();
               Navigator.pop(context);
             },
+            style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
             child: Text(MaterialLocalizations.of(context).okButtonLabel),
           ),
         ],

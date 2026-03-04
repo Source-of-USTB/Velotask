@@ -48,6 +48,7 @@ class HomeAppBar extends StatelessWidget {
             color: Theme.of(context).primaryColor,
           ),
           tooltip: l10n.aiQuickAdd,
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           onPressed: onAIAction,
         ),
         IconButton(
@@ -55,6 +56,7 @@ class HomeAppBar extends StatelessWidget {
             Icons.settings_outlined,
             color: Theme.of(context).primaryColor,
           ),
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           onPressed: () async {
             await Navigator.push(
               context,
@@ -73,6 +75,7 @@ class HomeAppBar extends StatelessWidget {
                     : Icons.dark_mode_outlined,
                 color: Theme.of(context).primaryColor,
               ),
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               onPressed: () async {
                 final newMode = mode == ThemeMode.dark
                     ? ThemeMode.light
