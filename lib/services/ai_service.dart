@@ -40,6 +40,10 @@ class AIParseResult {
 
 class AIService {
   static final Logger _logger = AppLogger.getLogger('AIService');
+  final http.Client _httpClient;
+
+  AIService({http.Client? httpClient})
+    : _httpClient = httpClient ?? http.Client();
 
   Future<AIParseResult?> parseTask(
     String input, {
@@ -94,7 +98,7 @@ User input: "$input"
     try {
       _logger.info('AI parsing task: $input');
 
-      final response = await http
+      final response = await _httpClient
           .post(
             Uri.parse('$normalizedBaseUrl/chat/completions'),
             headers: {

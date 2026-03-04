@@ -164,8 +164,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               final uri = Uri.parse(
                 'https://github.com/Source-of-USTB/Velotask',
               );
-              if (await canLaunchUrl(uri)) {
-                await launchUrl(uri);
+              final launched = await launchUrl(
+                uri,
+                mode: LaunchMode.externalApplication,
+              );
+              if (!launched && context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Unable to open link')),
+                );
               }
             },
           ),
