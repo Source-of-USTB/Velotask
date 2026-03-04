@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/services/todo_storage.dart';
 import 'package:velotask/widgets/dialog_components.dart';
-import 'package:velotask/l10n/app_localizations.dart';
 
 class AddTodoDialog extends StatefulWidget {
   final Todo? todo;

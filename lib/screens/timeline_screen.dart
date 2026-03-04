@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:velotask/theme/app_theme.dart';
+import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/todo.dart';
+import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/widgets/timeline_header.dart';
 import 'package:velotask/widgets/timeline_task_row.dart';
-import 'package:velotask/l10n/app_localizations.dart';
 
 class TimelineScreen extends StatelessWidget {
   final List<Todo> todos;

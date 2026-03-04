@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/l10n/app_localizations.dart';
+import 'package:velotask/theme/app_theme.dart';
 
 class DialogInputRow extends StatelessWidget {
   final IconData icon;

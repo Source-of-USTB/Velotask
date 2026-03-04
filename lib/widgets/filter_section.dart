@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo_filter.dart';
-import 'package:velotask/l10n/app_localizations.dart';
 
 class FilterSection extends StatelessWidget {
   final TodoFilter currentFilter;

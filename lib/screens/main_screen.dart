@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/screens/timeline_screen.dart';
 import 'package:velotask/screens/todo_list_view.dart';
-import 'package:velotask/services/todo_storage.dart';
 import 'package:velotask/services/ai_service.dart';
+import 'package:velotask/services/todo_storage.dart';
+import 'package:velotask/utils/logger.dart';
 import 'package:velotask/widgets/add_todo_dialog.dart';
 import 'package:velotask/widgets/ai_input_dialog.dart';
-import 'package:velotask/l10n/app_localizations.dart';
-import 'package:velotask/utils/logger.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});

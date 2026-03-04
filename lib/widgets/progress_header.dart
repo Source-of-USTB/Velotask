@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/theme/app_theme.dart';
-import 'package:velotask/l10n/app_localizations.dart';
 
 class ProgressHeader extends StatelessWidget {
   final List<Todo> todos;

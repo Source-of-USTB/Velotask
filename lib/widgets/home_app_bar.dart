@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:velotask/l10n/app_localizations.dart';
+import 'package:velotask/main.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/screens/settings_screen.dart';
 import 'package:velotask/theme/app_theme.dart';
-import 'package:velotask/main.dart';
-import 'package:velotask/l10n/app_localizations.dart';
 
 class HomeAppBar extends StatelessWidget {
   final List<Todo> todos;
