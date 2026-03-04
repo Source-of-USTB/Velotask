@@ -41,53 +41,67 @@ class ProgressHeader extends StatelessWidget {
                 SizedBox(
                   width: 140,
                   height: 140,
-                  child: CircularProgressIndicator(
-                    value: progress,
-                    color: Theme.of(context).primaryColor,
-                    backgroundColor: Colors.transparent,
-                    strokeWidth: 16,
-                    strokeCap: StrokeCap.butt,
+                  child: TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 1000),
+                    curve: Curves.easeOutCubic,
+                    tween: Tween<double>(begin: 0, end: progress),
+                    builder: (context, value, child) {
+                      return CircularProgressIndicator(
+                        value: value,
+                        color: Theme.of(context).primaryColor,
+                        backgroundColor: Colors.transparent,
+                        strokeWidth: 16,
+                        strokeCap: StrokeCap.butt,
+                      );
+                    },
                   ),
                 ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
+                TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 1000),
+                  curve: Curves.easeOutCubic,
+                  tween: Tween<double>(begin: 0, end: progress),
+                  builder: (context, value, child) {
+                    return Column(
                       mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
                       children: [
-                        Text(
-                          '${(progress * 100).toInt()}',
-                          style: AppTheme.headerStyle(context).copyWith(
-                            fontSize: 56,
-                            fontWeight: FontWeight.w900,
-                            color: Theme.of(context).primaryColor,
-                            height: 1.0,
-                            letterSpacing: -2.0,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              '${(value * 100).toInt()}',
+                              style: AppTheme.headerStyle(context).copyWith(
+                                fontSize: 56,
+                                fontWeight: FontWeight.w900,
+                                color: Theme.of(context).primaryColor,
+                                height: 1.0,
+                                letterSpacing: -2.0,
+                              ),
+                            ),
+                            Text(
+                              '%',
+                              style: AppTheme.headerStyle(context).copyWith(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                                color: Theme.of(context).colorScheme.secondary,
+                              ),
+                            ),
+                          ],
                         ),
+                        const SizedBox(height: 4),
                         Text(
-                          '%',
+                          AppLocalizations.of(context)!.completed,
                           style: AppTheme.headerStyle(context).copyWith(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
+                            fontSize: 11,
+                            letterSpacing: 3.0,
+                            fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.secondary,
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      AppLocalizations.of(context)!.completed,
-                      style: AppTheme.headerStyle(context).copyWith(
-                        fontSize: 11,
-                        letterSpacing: 3.0,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.secondary,
-                      ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ],
             ),

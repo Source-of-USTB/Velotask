@@ -198,7 +198,9 @@ class _MainScreenState extends State<MainScreen> {
         await _loadTags(); // Refresh tags list once
         // Re-map selectedTags to the newly loaded tag objects to ensure they have IDs
         selectedTags = result.tags.map((name) {
-          return tags.firstWhere((t) => t.name.toLowerCase() == name.toLowerCase());
+          return tags.firstWhere(
+            (t) => t.name.toLowerCase() == name.toLowerCase(),
+          );
         }).toList();
       }
 
@@ -210,21 +212,33 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: [
-          TodoListView(
-            todos: todos,
-            tags: tags,
-            isLoading: _isLoading,
-            onToggle: _toggleTodo,
-            onDelete: _deleteTodo,
-            onEdit: _editTodo,
-            onRefreshTags: _loadTags,
-            onAIAction: _showAIInputDialog,
-          ),
-          TimelineScreen(todos: todos),
-        ],
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        transitionBuilder: (Widget child, Animation<double> animation) {
+          return FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.0, 0.02),
+                end: Offset.zero,
+              ).animate(animation),
+              child: child,
+            ),
+          );
+        },
+        child: _selectedIndex == 0
+            ? TodoListView(
+                key: const ValueKey('todo_list'),
+                todos: todos,
+                tags: tags,
+                isLoading: _isLoading,
+                onToggle: _toggleTodo,
+                onDelete: _deleteTodo,
+                onEdit: _editTodo,
+                onRefreshTags: _loadTags,
+                onAIAction: _showAIInputDialog,
+              )
+            : TimelineScreen(key: const ValueKey('timeline'), todos: todos),
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,

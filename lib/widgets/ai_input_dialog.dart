@@ -46,12 +46,13 @@ class _AIInputDialogState extends State<AIInputDialog> {
     } catch (e) {
       _logger.severe('AI parsing failed', e);
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         setState(() {
           _isProcessing = false;
           if (e.toString().contains('AI configuration missing')) {
             _error = 'config_missing';
           } else {
-            _error = e.toString();
+            _error = '${l10n.aiParseError}: ${e.toString().split('\n').first}';
           }
         });
       }

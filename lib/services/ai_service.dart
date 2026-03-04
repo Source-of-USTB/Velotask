@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:velotask/utils/logger.dart';
@@ -53,6 +54,10 @@ class AIService {
       throw Exception('AI configuration missing');
     }
 
+    final normalizedBaseUrl = baseUrl.endsWith('/')
+        ? baseUrl.substring(0, baseUrl.length - 1)
+        : baseUrl;
+
     final now = DateTime.now();
     final tagsContext = existingTags.isEmpty ? 'None' : existingTags.join(', ');
 
@@ -88,20 +93,22 @@ User input: "$input"
     try {
       _logger.info('AI parsing task: $input');
 
-      final response = await http.post(
-        Uri.parse('$baseUrl/chat/completions'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $apiKey',
-        },
-        body: jsonEncode({
-          'model': model,
-          'messages': [
-            {'role': 'user', 'content': prompt},
-          ],
-          'temperature': 0.1,
-        }),
-      );
+      final response = await http
+          .post(
+            Uri.parse('$normalizedBaseUrl/chat/completions'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $apiKey',
+            },
+            body: jsonEncode({
+              'model': model,
+              'messages': [
+                {'role': 'user', 'content': prompt},
+              ],
+              'temperature': 0.1,
+            }),
+          )
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
@@ -122,11 +129,11 @@ User input: "$input"
         _logger.severe(
           'AI API error: ${response.statusCode} - ${response.body}',
         );
-        return null;
+        throw Exception('API Error: ${response.statusCode}');
       }
     } catch (e, stack) {
       _logger.severe('Failed to parse task via AI', e, stack);
-      return null;
+      rethrow;
     }
   }
 }
