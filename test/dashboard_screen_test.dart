@@ -24,9 +24,19 @@ void main() {
     WidgetTester tester,
   ) async {
     final todos = [
-      Todo(title: 'A', isCompleted: false, importance: 2),
+      Todo(
+        title: 'A',
+        isCompleted: false,
+        importance: 2,
+        ddl: DateTime.now().add(const Duration(hours: 1)),
+      ),
       Todo(title: 'B', isCompleted: true, importance: 1),
-      Todo(title: 'C', isCompleted: false, importance: 0),
+      Todo(
+        title: 'C',
+        isCompleted: false,
+        importance: 0,
+        ddl: DateTime.now().add(const Duration(days: 30)),
+      ),
     ];
 
     await tester.pumpWidget(

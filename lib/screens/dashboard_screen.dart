@@ -1,11 +1,13 @@
-import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/theme/app_theme.dart';
+import 'package:velotask/utils/priority_engine.dart';
 
 class DashboardScreen extends StatefulWidget {
   final List<Todo> todos;
@@ -18,9 +20,9 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   static const String _displayNameKey = 'user_display_name';
-  static const String _avatarImageKey = 'user_avatar_image_base64';
+  static const String _avatarImageKey = 'user_avatar_image_path';
   String? _displayName;
-  String? _avatarImageBase64;
+  String? _avatarImagePath;
   final ImagePicker _imagePicker = ImagePicker();
 
   @override
@@ -31,12 +33,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _loadDisplayName() async {
     final prefs = await SharedPreferences.getInstance();
+    String? avatarPath = prefs.getString(_avatarImageKey);
+    if (avatarPath != null && !await File(avatarPath).exists()) {
+      avatarPath = null;
+      await prefs.remove(_avatarImageKey);
+    }
     if (!mounted) {
       return;
     }
     setState(() {
       _displayName = prefs.getString(_displayNameKey);
-      _avatarImageBase64 = prefs.getString(_avatarImageKey);
+      _avatarImagePath = avatarPath;
     });
   }
 
@@ -51,17 +58,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return;
     }
 
-    final bytes = await picked.readAsBytes();
-    final encoded = base64Encode(bytes);
+    final appDir = await getApplicationDocumentsDirectory();
+    final avatarDir = Directory(
+      '${appDir.path}${Platform.pathSeparator}avatar',
+    );
+    if (!await avatarDir.exists()) {
+      await avatarDir.create(recursive: true);
+    }
+    final avatarPath =
+        '${avatarDir.path}${Platform.pathSeparator}profile_avatar.jpg';
+    await File(
+      avatarPath,
+    ).writeAsBytes(await picked.readAsBytes(), flush: true);
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_avatarImageKey, encoded);
+    await prefs.setString(_avatarImageKey, avatarPath);
 
     if (!mounted) {
       return;
     }
     setState(() {
-      _avatarImageBase64 = encoded;
+      _avatarImagePath = avatarPath;
     });
   }
 
@@ -130,7 +147,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final l10n = AppLocalizations.of(context)!;
     final completed = widget.todos.where((todo) => todo.isCompleted).length;
     final highUrgent = widget.todos
-        .where((todo) => !todo.isCompleted && todo.importance == 2)
+        .where(
+          (todo) =>
+              !todo.isCompleted &&
+              PriorityEngine.isHighUrgency(todo, allTodos: widget.todos),
+        )
         .length;
 
     final statsTitle = l10n.dashboardTaskStats;
@@ -180,10 +201,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           child: InkWell(
                             customBorder: const CircleBorder(),
                             onTap: _pickAvatarImage,
-                            child: _avatarImageBase64 != null
+                            child: _avatarImagePath != null
                                 ? ClipOval(
-                                    child: Image.memory(
-                                      base64Decode(_avatarImageBase64!),
+                                    child: Image.file(
+                                      File(_avatarImagePath!),
                                       fit: BoxFit.cover,
                                     ),
                                   )

@@ -69,10 +69,22 @@ class _TodoItemState extends State<TodoItem> {
   Widget build(BuildContext context) {
     final isDone = widget.todo.isCompleted;
     final l10n = AppLocalizations.of(context)!;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
     final dateStr = widget.todo.ddl != null
         ? _formatDate(context, widget.todo.ddl!)
         : '-';
-    final isUrgent = dateStr == l10n.today || dateStr == l10n.tomorrow;
+    final isUrgent =
+        widget.todo.ddl != null &&
+        (() {
+          final ddlDay = DateTime(
+            widget.todo.ddl!.year,
+            widget.todo.ddl!.month,
+            widget.todo.ddl!.day,
+          );
+          return ddlDay == today || ddlDay == tomorrow;
+        })();
     final statusLabel = isDone ? l10n.filterDone : l10n.filterActive;
     final priorityLabel = widget.todo.importance == 2
         ? l10n.priorityHigh

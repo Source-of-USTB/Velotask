@@ -133,18 +133,29 @@ void main() {
       final todo = Todo(title: 'Swipe Todo');
       var toggled = false;
       var deleted = false;
+      var visible = true;
 
       await tester.pumpWidget(
         createLocalizedWidgetForTesting(
-          child: TodoItem(
-            todo: todo,
-            onToggle: () {
-              toggled = true;
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              if (!visible) {
+                return const SizedBox.shrink();
+              }
+              return TodoItem(
+                todo: todo,
+                onToggle: () {
+                  toggled = true;
+                },
+                onDelete: () {
+                  deleted = true;
+                  setState(() {
+                    visible = false;
+                  });
+                },
+                onEdit: () {},
+              );
             },
-            onDelete: () {
-              deleted = true;
-            },
-            onEdit: () {},
           ),
         ),
       );
@@ -162,6 +173,7 @@ void main() {
 
       expect(toggled, isFalse);
       expect(deleted, isTrue);
+      expect(find.byType(TodoItem), findsNothing);
     });
   });
 

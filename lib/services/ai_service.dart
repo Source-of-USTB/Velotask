@@ -249,11 +249,14 @@ User input: "$input"
   }
 
   String _stripMarkdownCodeBlock(String content) {
-    if (content.startsWith('```json') && content.endsWith('```')) {
-      return content.substring(7, content.length - 3).trim();
-    }
-    if (content.startsWith('```') && content.endsWith('```')) {
-      return content.substring(3, content.length - 3).trim();
+    final trimmed = content.trim();
+    final codeBlockRegex = RegExp(
+      r'^```[a-zA-Z0-9_-]*\s*([\s\S]*?)```$',
+      caseSensitive: false,
+    );
+    final match = codeBlockRegex.firstMatch(trimmed);
+    if (match != null) {
+      return (match.group(1) ?? '').trim();
     }
     return content;
   }

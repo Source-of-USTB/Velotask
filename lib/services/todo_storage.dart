@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:velotask/models/tag.dart';
@@ -18,7 +19,9 @@ class TodoStorage {
   final String? directoryPath;
 
   factory TodoStorage({String? directoryPath}) {
-    _instance ??= TodoStorage._internal(directoryPath: directoryPath);
+    if (_instance == null || _instance!.directoryPath != directoryPath) {
+      _instance = TodoStorage._internal(directoryPath: directoryPath);
+    }
     return _instance!;
   }
 
@@ -27,11 +30,33 @@ class TodoStorage {
   static Isar? _isar;
   static Completer<void>? _initCompleter;
   static List<Tag>? _tagCache;
+  static String? _openedDirectoryPath;
   static final Logger _logger = AppLogger.getLogger('TodoStorage');
 
   Future<void> _init() async {
+    Directory dir;
+    if (directoryPath != null) {
+      dir = Directory(directoryPath!);
+      if (!await dir.exists()) {
+        await dir.create(recursive: true);
+      }
+      _logger.info('Using custom directory: ${dir.path}');
+    } else {
+      dir = await getApplicationDocumentsDirectory();
+      _logger.info('Using default directory: ${dir.path}');
+    }
+
+    final targetPath = dir.path;
     if (_isar != null && _isar!.isOpen) {
-      return;
+      if (_openedDirectoryPath == targetPath) {
+        return;
+      }
+      await _isar!.close();
+      _isar = null;
+      _initCompleter = null;
+      _tagCache = null;
+      _openedDirectoryPath = null;
+      _logger.info('Reopening Isar for directory switch: $targetPath');
     }
 
     if (_initCompleter != null) {
@@ -39,18 +64,9 @@ class TodoStorage {
     }
 
     _initCompleter = Completer<void>();
-
     try {
-      Directory dir;
-      if (directoryPath != null) {
-        dir = Directory(directoryPath!);
-        if (!dir.existsSync()) dir.createSync(recursive: true);
-        _logger.info('Using custom directory: ${dir.path}');
-      } else {
-        dir = await getApplicationDocumentsDirectory();
-        _logger.info('Using default directory: ${dir.path}');
-      }
-      _isar = await Isar.open([TodoSchema, TagSchema], directory: dir.path);
+      _isar = await Isar.open([TodoSchema, TagSchema], directory: targetPath);
+      _openedDirectoryPath = targetPath;
       _logger.info('Isar database initialized');
       _initCompleter!.complete();
     } catch (e, stack) {
@@ -156,5 +172,9 @@ class TodoStorage {
       await _isar!.close();
       _isar = null;
     }
+    _initCompleter = null;
+    _tagCache = null;
+    _openedDirectoryPath = null;
+    _instance = null;
   }
 }

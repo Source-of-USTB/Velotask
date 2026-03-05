@@ -20,12 +20,18 @@ class NotificationService {
   static const String _channelName = 'Task Reminders';
   static const String _channelDescription =
       'Reminders for deadlines and daily summaries';
+  static const Duration _minResyncInterval = Duration(seconds: 3);
 
   static const int _dailySummaryId = 888888;
 
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+  DateTime? _lastResyncAt;
+  String? _lastResyncFingerprint;
+  Map<int, String> _scheduledTaskFingerprints = <int, String>{};
+  String? _dailySummaryFingerprint;
+  bool _hasHydratedPendingNotifications = false;
   static final Logger _logger = AppLogger.getLogger('NotificationService');
 
   Future<void> initialize() async {
@@ -86,12 +92,19 @@ class NotificationService {
       await initialize();
     }
 
-    // Cancel all previously scheduled notifications to ensure clean slate
-    await _plugin.cancelAll();
-    _logger.info('Cancelled all notifications for sync');
-
     final now = DateTime.now();
+    final fingerprint = _buildResyncFingerprint(todos, l10n.localeName);
+    final shouldSkip =
+        _lastResyncFingerprint == fingerprint &&
+        _lastResyncAt != null &&
+        now.difference(_lastResyncAt!) < _minResyncInterval;
+    if (shouldSkip) {
+      _logger.fine('Skip notification resync: unchanged snapshot in cooldown.');
+      return;
+    }
+
     int activeCount = 0;
+    final desiredTaskFingerprints = <int, String>{};
 
     for (final todo in todos) {
       if (todo.isCompleted) continue;
@@ -100,15 +113,71 @@ class NotificationService {
 
       // Schedule DDL reminder if DDL is in the future
       if (todo.ddl != null && todo.ddl!.isAfter(now)) {
-        await _scheduleTaskReminder(todo, l10n);
+        final reminderPlan = _buildTaskReminderPlan(todo, l10n);
+        if (reminderPlan == null) {
+          continue;
+        }
+        desiredTaskFingerprints[todo.id] = reminderPlan.fingerprint;
+        final previousFingerprint = _scheduledTaskFingerprints[todo.id];
+        if (previousFingerprint != reminderPlan.fingerprint) {
+          await _plugin.cancel(todo.id);
+          await _scheduleTaskReminder(todo, reminderPlan);
+        }
       }
     }
 
-    // Schedule daily summary
-    await _scheduleDailySummary(activeCount, l10n);
+    if (!_hasHydratedPendingNotifications) {
+      final pending = await _plugin.pendingNotificationRequests();
+      for (final item in pending) {
+        if (item.id == _dailySummaryId) {
+          continue;
+        }
+        if (!desiredTaskFingerprints.containsKey(item.id)) {
+          await _plugin.cancel(item.id);
+        }
+      }
+      _hasHydratedPendingNotifications = true;
+    }
+
+    final staleIds = _scheduledTaskFingerprints.keys
+        .where((id) => !desiredTaskFingerprints.containsKey(id))
+        .toList();
+    for (final staleId in staleIds) {
+      await _plugin.cancel(staleId);
+    }
+
+    _scheduledTaskFingerprints = desiredTaskFingerprints;
+
+    final dailyFingerprint = '${l10n.localeName}|$activeCount';
+    if (_dailySummaryFingerprint != dailyFingerprint) {
+      await _plugin.cancel(_dailySummaryId);
+      await _scheduleDailySummary(activeCount, l10n);
+      _dailySummaryFingerprint = dailyFingerprint;
+    }
+
+    _lastResyncFingerprint = fingerprint;
+    _lastResyncAt = now;
   }
 
-  Future<void> _scheduleTaskReminder(Todo todo, AppLocalizations l10n) async {
+  String _buildResyncFingerprint(List<Todo> todos, String localeName) {
+    final relevant =
+        todos
+            .map(
+              (todo) => [
+                todo.id,
+                todo.isCompleted,
+                todo.ddl?.millisecondsSinceEpoch ?? -1,
+                todo.title,
+                todo.importance,
+                todo.estimatedEffortHours ?? -1,
+              ].join('#'),
+            )
+            .toList()
+          ..sort();
+    return '$localeName|${relevant.join('|')}';
+  }
+
+  _TaskReminderPlan? _buildTaskReminderPlan(Todo todo, AppLocalizations l10n) {
     try {
       final now = tz.TZDateTime.now(tz.local);
       final ddl = tz.TZDateTime.from(todo.ddl!, tz.local);
@@ -139,7 +208,7 @@ class NotificationService {
 
       if (scheduledDate == null) {
         _logger.fine('No suitable future reminder time for "${todo.title}"');
-        return;
+        return null;
       }
 
       final UrgencyBand band = PriorityEngine.urgencyBand(
@@ -153,32 +222,45 @@ class NotificationService {
         UrgencyBand.relaxed => l10n.urgencyRelaxed,
       };
 
-      await _plugin.zonedSchedule(
-        todo.id,
-        l10n.notifyPriorityTitle,
-        '${todo.title} • ${l10n.urgencyLabel}: $urgencyText',
-        scheduledDate,
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            _channelId,
-            _channelName,
-            channelDescription: _channelDescription,
-            importance: Importance.high,
-            priority: Priority.high,
-          ),
-          iOS: const DarwinNotificationDetails(),
-        ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        payload: 'todo_${todo.id}',
-      );
-      _logger.fine(
-        'Scheduled reminder for "${todo.title}" at $scheduledDate (Urgency based)',
+      final title = l10n.notifyPriorityTitle;
+      final body = '${todo.title} • ${l10n.urgencyLabel}: $urgencyText';
+      return _TaskReminderPlan(
+        scheduledDate: scheduledDate,
+        title: title,
+        body: body,
+        fingerprint:
+            '${scheduledDate.millisecondsSinceEpoch}|${todo.title}|$urgencyText|${l10n.localeName}',
       );
     } catch (e) {
       _logger.warning('Failed to schedule reminder for todo ${todo.id}: $e');
+      return null;
     }
+  }
+
+  Future<void> _scheduleTaskReminder(int todoId, _TaskReminderPlan plan) async {
+    await _plugin.zonedSchedule(
+      todoId,
+      plan.title,
+      plan.body,
+      plan.scheduledDate,
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _channelId,
+          _channelName,
+          channelDescription: _channelDescription,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: const DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      payload: 'todo_$todoId',
+    );
+    _logger.fine(
+      'Scheduled reminder for todo $todoId at ${plan.scheduledDate} (Urgency based)',
+    );
   }
 
   /// Finds the approximate time when the task reaches the target urgency.
@@ -293,4 +375,18 @@ class NotificationService {
   Future<void> cancelAll() async {
     await _plugin.cancelAll();
   }
+}
+
+class _TaskReminderPlan {
+  final tz.TZDateTime scheduledDate;
+  final String title;
+  final String body;
+  final String fingerprint;
+
+  const _TaskReminderPlan({
+    required this.scheduledDate,
+    required this.title,
+    required this.body,
+    required this.fingerprint,
+  });
 }
