@@ -8,6 +8,7 @@ class TodoItem extends StatelessWidget {
   final VoidCallback onToggle;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
+
   const TodoItem({
     super.key,
     required this.todo,
@@ -16,7 +17,7 @@ class TodoItem extends StatelessWidget {
     required this.onEdit,
   });
 
-  Color _getImportanceColor() {
+  Color _importanceColor() {
     switch (todo.importance) {
       case 2:
         return AppTheme.highPriority;
@@ -33,46 +34,152 @@ class TodoItem extends StatelessWidget {
     final today = DateTime(now.year, now.month, now.day);
     final tomorrow = today.add(const Duration(days: 1));
     final target = DateTime(date.year, date.month, date.day);
+    if (target == today) return l10n.today;
+    if (target == tomorrow) return l10n.tomorrow;
+    return '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
+  }
 
-    if (target == today) {
-      return l10n.today;
-    } else if (target == tomorrow) {
-      return l10n.tomorrow;
-    } else {
-      return '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
-    }
+  void _showDetail(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        title: Text(
+          todo.title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: todo.description.isEmpty
+            ? null
+            : SingleChildScrollView(
+                child: Text(
+                  todo.description,
+                  style: const TextStyle(fontSize: 15, height: 1.6),
+                ),
+              ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              onEdit();
+            },
+            child: Text(l10n.edit),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancel),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showContextMenu(BuildContext context, Offset globalPosition) {
+    final l10n = AppLocalizations.of(context)!;
+    final renderBox = context.findRenderObject() as RenderBox;
+    final localPosition = renderBox.globalToLocal(globalPosition);
+    final rect = RelativeRect.fromLTRB(
+      globalPosition.dx,
+      globalPosition.dy,
+      globalPosition.dx + 1,
+      globalPosition.dy + 1,
+    );
+    // ignore: unused_local_variable
+    final _ = localPosition;
+
+    showMenu<_MenuAction>(
+      context: context,
+      position: rect,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      items: [
+        PopupMenuItem(
+          value: _MenuAction.toggle,
+          child: Row(
+            children: [
+              Icon(
+                todo.isCompleted
+                    ? Icons.radio_button_unchecked
+                    : Icons.check_circle_outline,
+                size: 18,
+              ),
+              const SizedBox(width: 10),
+              Text(
+                todo.isCompleted ? l10n.filterActive : l10n.completed,
+                style: const TextStyle(fontSize: 14),
+              ),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: _MenuAction.edit,
+          child: Row(
+            children: [
+              const Icon(Icons.edit_outlined, size: 18),
+              const SizedBox(width: 10),
+              Text(l10n.edit, style: const TextStyle(fontSize: 14)),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          value: _MenuAction.delete,
+          child: Row(
+            children: [
+              Icon(Icons.delete_outline,
+                  size: 18, color: Theme.of(context).colorScheme.error),
+              const SizedBox(width: 10),
+              Text(
+                l10n.delete,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: Theme.of(context).colorScheme.error,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    ).then((action) {
+      if (action == null) return;
+      switch (action) {
+        case _MenuAction.toggle:
+          onToggle();
+        case _MenuAction.edit:
+          onEdit();
+        case _MenuAction.delete:
+          onDelete();
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final isDone = todo.isCompleted;
 
-    return Dismissible(
-      key: Key(todo.id.toString()),
-      background: Container(
-        color: Theme.of(context).colorScheme.error,
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.delete_outline, color: Colors.white),
-      ),
-      direction: DismissDirection.endToStart,
-      onDismissed: (_) => onDelete(),
+    return GestureDetector(
+      onTap: () => _showDetail(context),
+      onSecondaryTapUp: (details) =>
+          _showContextMenu(context, details.globalPosition),
+      onLongPressStart: (details) =>
+          _showContextMenu(context, details.globalPosition),
       child: Container(
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: Theme.of(
-                context,
-              ).colorScheme.secondary.withValues(alpha: 0.1),
+              color: Theme.of(context)
+                  .colorScheme
+                  .secondary
+                  .withValues(alpha: 0.1),
             ),
           ),
         ),
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         child: Row(
           children: [
-            // Checkbox Column (Fixed width)
+            // Checkbox
             GestureDetector(
               onTap: onToggle,
+              behavior: HitTestBehavior.opaque,
               child: SizedBox(
                 width: 40,
                 child: Center(
@@ -108,7 +215,7 @@ class TodoItem extends StatelessWidget {
               ),
             ),
 
-            // Name Column (Expanded)
+            // Title + Tags
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -128,16 +235,13 @@ class TodoItem extends StatelessWidget {
                                 try {
                                   tagColor = Color(
                                     int.parse(
-                                      tag.color!.replaceAll('#', '0xFF'),
-                                    ),
+                                        tag.color!.replaceAll('#', '0xFF')),
                                   );
                                 } catch (_) {}
                               }
                               return Container(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
+                                    horizontal: 6, vertical: 2),
                                 margin: const EdgeInsets.only(right: 6),
                                 decoration: BoxDecoration(
                                   color: tagColor.withValues(alpha: 0.1),
@@ -156,60 +260,39 @@ class TodoItem extends StatelessWidget {
                           ),
                         ),
                       ),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: AnimatedDefaultTextStyle(
-                            duration: const Duration(milliseconds: 200),
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              decoration: isDone
-                                  ? TextDecoration.lineThrough
-                                  : TextDecoration.none,
-                              color: isDone
-                                  ? Theme.of(context).colorScheme.secondary
-                                  : Theme.of(context).primaryColor,
-                              decorationColor: Theme.of(
-                                context,
-                              ).colorScheme.secondary,
-                            ),
-                            child: Text(
-                              todo.title,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (todo.description.isNotEmpty)
-                      Text(
-                        todo.description,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(context).colorScheme.secondary
-                              .withValues(
-                                alpha: 0.8, // Increased contrast
-                              ),
-                        ),
+                    AnimatedDefaultTextStyle(
+                      duration: const Duration(milliseconds: 200),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        decoration: isDone
+                            ? TextDecoration.lineThrough
+                            : TextDecoration.none,
+                        color: isDone
+                            ? Theme.of(context).colorScheme.secondary
+                            : Theme.of(context).primaryColor,
+                        decorationColor:
+                            Theme.of(context).colorScheme.secondary,
+                      ),
+                      child: Text(
+                        todo.title,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
+                    ),
                   ],
                 ),
               ),
             ),
 
-            // DDL Column (Fixed width)
+            // DDL
             SizedBox(
               width: 80,
               child: Builder(
                 builder: (context) {
                   final l10n = AppLocalizations.of(context)!;
-                  final dateStr = todo.ddl != null
-                      ? _formatDate(context, todo.ddl!)
-                      : '-';
+                  final dateStr =
+                      todo.ddl != null ? _formatDate(context, todo.ddl!) : '-';
                   final isUrgent =
                       dateStr == l10n.today || dateStr == l10n.tomorrow;
                   return Text(
@@ -219,9 +302,8 @@ class TodoItem extends StatelessWidget {
                       color: isUrgent
                           ? Theme.of(context).primaryColor
                           : Theme.of(context).colorScheme.secondary,
-                      fontWeight: isUrgent
-                          ? FontWeight.bold
-                          : FontWeight.normal,
+                      fontWeight:
+                          isUrgent ? FontWeight.bold : FontWeight.normal,
                       fontFamily: 'monospace',
                     ),
                     textAlign: TextAlign.center,
@@ -230,51 +312,30 @@ class TodoItem extends StatelessWidget {
               ),
             ),
 
-            // Importance Column (Fixed width)
+            // Priority badge
             SizedBox(
               width: 60,
               child: Center(
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
+                      horizontal: 8, vertical: 2),
                   decoration: BoxDecoration(
-                    color: _getImportanceColor().withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12), // Pill shape
+                    color: _importanceColor().withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
                     todo.importance == 2
                         ? AppLocalizations.of(context)!.priorityHigh
                         : todo.importance == 0
-                        ? AppLocalizations.of(context)!.priorityLow
-                        : AppLocalizations.of(context)!.priorityMed,
+                            ? AppLocalizations.of(context)!.priorityLow
+                            : AppLocalizations.of(context)!.priorityMed,
                     style: TextStyle(
                       fontSize: 10,
-                      color: _getImportanceColor(),
+                      color: _importanceColor(),
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-              ),
-            ),
-
-            // Edit Button
-            SizedBox(
-              width: 40,
-              child: IconButton(
-                icon: Icon(
-                  Icons.edit_outlined,
-                  size: 18,
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.secondary.withValues(alpha: 0.4),
-                ),
-                onPressed: onEdit,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                splashRadius: 20,
-                hoverColor: Colors.transparent,
               ),
             ),
           ],
@@ -283,3 +344,5 @@ class TodoItem extends StatelessWidget {
     );
   }
 }
+
+enum _MenuAction { toggle, edit, delete }
