@@ -36,6 +36,19 @@ class _TodoListViewState extends State<TodoListView> {
   TodoFilter _filter = TodoFilter.active;
   Tag? _filterTag;
 
+  @override
+  void didUpdateWidget(covariant TodoListView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_filterTag != null) {
+      final stillExists = widget.tags.any((t) => t.id == _filterTag!.id);
+      if (!stillExists) {
+        setState(() {
+          _filterTag = null;
+        });
+      }
+    }
+  }
+
   List<Todo> get _filteredTodos {
     List<Todo> result;
 
