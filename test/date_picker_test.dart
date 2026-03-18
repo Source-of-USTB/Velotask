@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:velotask/l10n/app_localizations.dart';
+import 'package:velotask/models/todo.dart';
 import 'package:velotask/widgets/add_todo_dialog.dart';
 
 void main() {
@@ -26,7 +27,7 @@ void main() {
                   showDialog(
                     context: context,
                     builder: (context) => AddTodoDialog(
-                      onAdd: (title, desc, startDate, ddl, importance, tags) {
+                      onAdd: (title, desc, startDate, ddl, importance, tags, taskType) {
                         selectedStartDate = startDate;
                         selectedDdl = ddl;
                       },

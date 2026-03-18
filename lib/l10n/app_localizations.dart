@@ -356,18 +356,6 @@ abstract class AppLocalizations {
   /// **'No tasks for the next 30 days'**
   String get noTasksTimeline;
 
-  /// No description provided for @taskTypeTask.
-  ///
-  /// In en, this message translates to:
-  /// **'Task'**
-  String get taskTypeTask;
-
-  /// No description provided for @taskTypeDeadline.
-  ///
-  /// In en, this message translates to:
-  /// **'Deadline'**
-  String get taskTypeDeadline;
-
   /// No description provided for @shortWeekdayMon.
   ///
   /// In en, this message translates to:
@@ -409,6 +397,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sun'**
   String get shortWeekdaySun;
+
+  /// No description provided for @taskTypeTask.
+  ///
+  /// In en, this message translates to:
+  /// **'Task'**
+  String get taskTypeTask;
+
+  /// No description provided for @taskTypeDeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline'**
+  String get taskTypeDeadline;
 }
 
 class _AppLocalizationsDelegate

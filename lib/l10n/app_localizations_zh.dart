@@ -138,12 +138,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get noTasksTimeline => '未来30天无任务';
 
   @override
-  String get taskTypeTask => '任务';
-
-  @override
-  String get taskTypeDeadline => '截止日期';
-
-  @override
   String get shortWeekdayMon => '一';
 
   @override
@@ -163,4 +157,10 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get shortWeekdaySun => '日';
+
+  @override
+  String get taskTypeTask => '任务';
+
+  @override
+  String get taskTypeDeadline => '截止日期';
 }

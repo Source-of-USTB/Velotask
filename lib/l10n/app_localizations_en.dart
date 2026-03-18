@@ -138,12 +138,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noTasksTimeline => 'No tasks for the next 30 days';
 
   @override
-  String get taskTypeTask => 'Task';
-
-  @override
-  String get taskTypeDeadline => 'Deadline';
-
-  @override
   String get shortWeekdayMon => 'Mon';
 
   @override
@@ -163,4 +157,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get shortWeekdaySun => 'Sun';
+
+  @override
+  String get taskTypeTask => 'Task';
+
+  @override
+  String get taskTypeDeadline => 'Deadline';
 }
