@@ -38,7 +38,6 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
   @override
   void initState() {
     super.initState();
-    _loadTags();
     if (widget.todo != null) {
       _titleController.text = widget.todo!.title;
       _descController.text = widget.todo!.description;
@@ -47,14 +46,20 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
       _ddl = widget.todo!.ddl;
       _importance = widget.todo!.importance;
       _taskType = widget.todo!.taskType;
-      _selectedTags = widget.todo!.tags.toList();
+      // _selectedTags will be set after _loadTags completes (tags must be loaded first)
     }
+    _loadTags();
   }
 
   Future<void> _loadTags() async {
     final tags = await _storage.loadTags();
     setState(() {
       _availableTags = tags;
+      // Initialise selection by matching on id after tags are loaded.
+      if (widget.todo != null) {
+        final todoTagIds = widget.todo!.tags.map((t) => t.id).toSet();
+        _selectedTags = tags.where((t) => todoTagIds.contains(t.id)).toList();
+      }
     });
   }
 
