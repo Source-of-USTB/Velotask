@@ -1,89 +1,137 @@
-import 'package:isar/isar.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:drift/drift.dart';
+import 'package:velotask/models/database.dart';
 import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
 
 class TodoStorage {
-  static Isar? _isar;
+  static final TodoStorage _instance = TodoStorage._internal();
+  factory TodoStorage() => _instance;
+  TodoStorage._internal();
 
-  Future<void> _init() async {
-    if (_isar != null && _isar!.isOpen) return;
-    final dir = await getApplicationDocumentsDirectory();
-    _isar = await Isar.open([TodoSchema, TagSchema], directory: dir.path);
+  final AppDatabase _db = AppDatabase();
 
-    // Seed default tags if empty
-    final count = await _isar!.tags.count();
-    if (count == 0) {
-      await _isar!.writeTxn(() async {
-        await _isar!.tags.putAll([
-          Tag(name: 'TDL', color: '#2196F3'), // Blue
-          Tag(name: 'DDL', color: '#F44336'), // Red
-          Tag(name: 'WTD', color: '#FFC107'), // Amber
-        ]);
-      });
-    }
-  }
+  // ---------------------------------------------------------------------------
+  // Tag helpers
+  // ---------------------------------------------------------------------------
 
-  Future<List<Todo>> loadTodos() async {
-    await _init();
-    return await _isar!.todos.where().findAll();
-  }
+  Tag _rowToTag(TagRow row) =>
+      Tag(id: row.id, name: row.name, color: row.color);
+
+  // ---------------------------------------------------------------------------
+  // Tags CRUD
+  // ---------------------------------------------------------------------------
 
   Future<List<Tag>> loadTags() async {
-    await _init();
-    return await _isar!.tags.where().findAll();
+    final rows = await _db.select(_db.tags).get();
+    return rows.map(_rowToTag).toList();
   }
 
-  Future<void> addTag(Tag tag) async {
-    await _init();
-    // Prevent unique index violation by checking for existing tag name first
-    final existing = await _isar!.tags
-        .filter()
-        .nameEqualTo(tag.name)
-        .findFirst();
-    if (existing != null) {
-      // If tag exists, update its color if different and return
-      if (existing.color != tag.color) {
-        existing.color = tag.color;
-        await _isar!.writeTxn(() async {
-          await _isar!.tags.put(existing);
-        });
-      }
-      return;
+  /// Inserts a new tag. If a tag with the same name already exists, updates
+  /// its color and returns the existing record.
+  Future<Tag> addTag(Tag tag) async {
+    final id = await _db
+        .into(_db.tags)
+        .insertOnConflictUpdate(TagsCompanion.insert(
+          name: tag.name,
+          color: Value(tag.color),
+        ));
+    final row = await (_db.select(_db.tags)..where((t) => t.id.equals(id)))
+        .getSingle();
+    return _rowToTag(row);
+  }
+
+  Future<void> deleteTag(int id) async {
+    // Remove junction rows first (cascade not configured at DB level).
+    await (_db.delete(_db.todoTags)
+          ..where((tt) => tt.tagId.equals(id)))
+        .go();
+    await (_db.delete(_db.tags)..where((t) => t.id.equals(id))).go();
+  }
+
+  // ---------------------------------------------------------------------------
+  // Todo helpers
+  // ---------------------------------------------------------------------------
+
+  Future<List<Tag>> _tagsForTodo(int todoId) async {
+    final query = _db.select(_db.tags).join([
+      innerJoin(
+        _db.todoTags,
+        _db.todoTags.tagId.equalsExp(_db.tags.id),
+      ),
+    ])
+      ..where(_db.todoTags.todoId.equals(todoId));
+    final rows = await query.get();
+    return rows.map((r) => _rowToTag(r.readTable(_db.tags))).toList();
+  }
+
+  Todo _rowToTodo(TodoRow row, List<Tag> tags) => Todo(
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        isCompleted: row.isCompleted,
+        createdAt: row.createdAt,
+        startDate: row.startDate,
+        ddl: row.ddl,
+        importance: row.importance,
+        taskType: TaskType.values[row.taskType],
+        tags: tags,
+      );
+
+  Future<void> _saveTodoTags(int todoId, List<Tag> tags) async {
+    await (_db.delete(_db.todoTags)
+          ..where((tt) => tt.todoId.equals(todoId)))
+        .go();
+    for (final tag in tags) {
+      await _db.into(_db.todoTags).insert(
+            TodoTagsCompanion.insert(todoId: todoId, tagId: tag.id),
+            mode: InsertMode.insertOrIgnore,
+          );
     }
-
-    await _isar!.writeTxn(() async {
-      await _isar!.tags.put(tag);
-    });
   }
 
-  Future<void> deleteTag(Id id) async {
-    await _init();
-    await _isar!.writeTxn(() async {
-      await _isar!.tags.delete(id);
-    });
+  // ---------------------------------------------------------------------------
+  // Todos CRUD
+  // ---------------------------------------------------------------------------
+
+  Future<List<Todo>> loadTodos() async {
+    final rows = await _db.select(_db.todos).get();
+    return Future.wait<Todo>(rows.map((row) async {
+      final tags = await _tagsForTodo(row.id);
+      return _rowToTodo(row, tags);
+    }));
   }
 
-  Future<void> addTodo(Todo todo) async {
-    await _init();
-    await _isar!.writeTxn(() async {
-      await _isar!.todos.put(todo);
-      await todo.tags.save();
-    });
+  Future<Todo> addTodo(Todo todo) async {
+    final id = await _db.into(_db.todos).insert(TodosCompanion.insert(
+          title: todo.title,
+          description: Value(todo.description),
+          isCompleted: Value(todo.isCompleted),
+          createdAt: Value(todo.createdAt),
+          startDate: Value(todo.startDate),
+          ddl: Value(todo.ddl),
+          importance: Value(todo.importance),
+          taskType: Value(todo.taskType.index),
+        ));
+    await _saveTodoTags(id, todo.tags);
+    return todo.copyWith(id: id);
   }
 
   Future<void> updateTodo(Todo todo) async {
-    await _init();
-    await _isar!.writeTxn(() async {
-      await _isar!.todos.put(todo);
-      await todo.tags.save();
-    });
+    await (_db.update(_db.todos)..where((t) => t.id.equals(todo.id)))
+        .write(TodosCompanion(
+          title: Value(todo.title),
+          description: Value(todo.description),
+          isCompleted: Value(todo.isCompleted),
+          startDate: Value(todo.startDate),
+          ddl: Value(todo.ddl),
+          importance: Value(todo.importance),
+          taskType: Value(todo.taskType.index),
+        ));
+    await _saveTodoTags(todo.id, todo.tags);
   }
 
-  Future<void> deleteTodo(Id id) async {
-    await _init();
-    await _isar!.writeTxn(() async {
-      await _isar!.todos.delete(id);
-    });
+  Future<void> deleteTodo(int id) async {
+    await (_db.delete(_db.todoTags)..where((tt) => tt.todoId.equals(id))).go();
+    await (_db.delete(_db.todos)..where((t) => t.id.equals(id))).go();
   }
 }

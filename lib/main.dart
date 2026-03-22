@@ -6,6 +6,7 @@ import 'package:velotask/screens/main_screen.dart';
 import 'package:velotask/theme/app_theme.dart';
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.system);
+// 自动跟随系统颜色
 final ValueNotifier<Locale?> localeNotifier = ValueNotifier(null);
 
 Future<void> main() async {
@@ -27,40 +28,36 @@ Future<void> main() async {
     localeNotifier.value = Locale(savedLocale);
   }
 
-  runApp(const MyApp());
+  runApp(const MyApp()); //
 }
 
+// 根组件
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
   @override
   Widget build(BuildContext context) {
-    return ValueListenableBuilder<ThemeMode>(
-      valueListenable: themeNotifier,
-      builder: (context, currentMode, child) {
-        return ValueListenableBuilder<Locale?>(
-          valueListenable: localeNotifier,
-          builder: (context, currentLocale, child) {
-            return MaterialApp(
-              title: 'Velotask',
-              theme: AppTheme.lightTheme,
-              darkTheme: AppTheme.darkTheme,
-              themeMode: currentMode,
-              locale: currentLocale,
-              localizationsDelegates: const [
-                AppLocalizations.delegate,
-                GlobalMaterialLocalizations.delegate,
-                GlobalWidgetsLocalizations.delegate,
-                GlobalCupertinoLocalizations.delegate,
-              ],
-              supportedLocales: const [
-                Locale('en'), // English
-                Locale('zh'), // Chinese
-              ],
-              home: const MainScreen(),
-              debugShowCheckedModeBanner: false,
-            );
-          },
+    return ListenableBuilder(
+      // 监听
+      listenable: Listenable.merge([themeNotifier, localeNotifier]),
+      builder: (context, child) {
+        return MaterialApp(
+          title: 'Velotask',
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeNotifier.value,
+          locale: localeNotifier.value,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('en'), // English
+            Locale('zh'), // Chinese
+          ],
+          home: const MainScreen(), // 控制页面布局
+          debugShowCheckedModeBanner: false,
         );
       },
     );

@@ -20,10 +20,17 @@ class TimelineScreen extends StatelessWidget {
     final timelineTasks = todos.where((todo) {
       if (todo.isCompleted) return false;
 
+      if (todo.taskType == TaskType.deadline) {
+        // Deadlines: show if ddl falls within the window
+        if (todo.ddl == null) return false;
+        final ddlDay = DateTime(todo.ddl!.year, todo.ddl!.month, todo.ddl!.day);
+        return !ddlDay.isBefore(today) && ddlDay.isBefore(nextMonth);
+      }
+
+      // Task: show if date range overlaps with the window
       final start = todo.startDate ?? todo.createdAt ?? today;
       final end = todo.ddl ?? start;
 
-      // Normalize dates to start of day
       final startDate = DateTime(start.year, start.month, start.day);
       final endDate = DateTime(
         end.year,

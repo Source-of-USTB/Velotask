@@ -1,15 +1,18 @@
-import 'package:isar/isar.dart';
-
-part 'tag.g.dart';
-
-@collection
+/// Plain data class used throughout the UI.
+/// The actual Drift table definition lives in database.dart (Tags table).
 class Tag {
-  Id id = Isar.autoIncrement;
+  final int id;
+  final String name;
+  final String? color;
 
-  @Index(unique: true)
-  late String name;
+  const Tag({required this.id, required this.name, this.color});
 
-  String? color; // Hex string, e.g., "#FF0000"
+  /// Convenience: create an unsaved tag (id = 0) for use before insertion.
+  const Tag.unsaved({required this.name, this.color}) : id = 0;
 
-  Tag({required this.name, this.color});
+  Tag copyWith({int? id, String? name, String? color}) => Tag(
+        id: id ?? this.id,
+        name: name ?? this.name,
+        color: color ?? this.color,
+      );
 }

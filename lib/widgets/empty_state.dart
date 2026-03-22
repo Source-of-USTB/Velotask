@@ -7,6 +7,8 @@ class EmptyState extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SliverFillRemaining(
+      // 使主页面空的时候不会出现滚动条
+      hasScrollBody: false,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

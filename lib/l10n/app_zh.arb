@@ -48,5 +48,7 @@
   "shortWeekdayThu": "四",
   "shortWeekdayFri": "五",
   "shortWeekdaySat": "六",
-  "shortWeekdaySun": "日"
+  "shortWeekdaySun": "日",
+  "taskTypeTask": "任务",
+  "taskTypeDeadline": "截止日期"
 }

@@ -48,5 +48,7 @@
   "shortWeekdayThu": "Thu",
   "shortWeekdayFri": "Fri",
   "shortWeekdaySat": "Sat",
-  "shortWeekdaySun": "Sun"
+  "shortWeekdaySun": "Sun",
+  "taskTypeTask": "Task",
+  "taskTypeDeadline": "Deadline"
 }

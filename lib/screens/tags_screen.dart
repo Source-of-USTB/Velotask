@@ -45,15 +45,14 @@ class _TagsScreenState extends State<TagsScreen> {
     final name = _tagNameController.text.trim();
     if (name.isEmpty) return;
 
-    // Use toARGB32() instead of deprecated .value
     final colorHex =
         '#${_selectedColor.toARGB32().toRadixString(16).substring(2)}';
-    final newTag = Tag(name: name, color: colorHex);
+    final newTag = Tag.unsaved(name: name, color: colorHex);
 
     try {
       await _storage.addTag(newTag);
     } catch (e) {
-      // If insertion failed (e.g., unique constraint), show a friendly message
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Tag "${newTag.name}" already exists')),
       );

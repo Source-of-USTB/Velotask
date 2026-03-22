@@ -36,6 +36,19 @@ class _TodoListViewState extends State<TodoListView> {
   TodoFilter _filter = TodoFilter.active;
   Tag? _filterTag;
 
+  @override
+  void didUpdateWidget(covariant TodoListView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_filterTag != null) {
+      final stillExists = widget.tags.any((t) => t.id == _filterTag!.id);
+      if (!stillExists) {
+        setState(() {
+          _filterTag = null;
+        });
+      }
+    }
+  }
+
   List<Todo> get _filteredTodos {
     List<Todo> result;
 
@@ -92,7 +105,7 @@ class _TodoListViewState extends State<TodoListView> {
           )
         else if (filteredList.isEmpty)
           const EmptyState()
-        else
+        else ...[
           SliverList(
             delegate: SliverChildBuilderDelegate((context, index) {
               final todo = filteredList[index];
@@ -104,7 +117,8 @@ class _TodoListViewState extends State<TodoListView> {
               );
             }, childCount: filteredList.length),
           ),
-        const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+          const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+        ],
       ],
     );
   }

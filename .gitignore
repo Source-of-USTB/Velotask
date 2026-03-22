@@ -103,3 +103,6 @@ problems-report.html
 
 # Localization generated files
 lib/l10n/app_*.dart
+
+# Claude Code
+.claude/

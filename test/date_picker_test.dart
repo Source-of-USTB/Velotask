@@ -26,7 +26,7 @@ void main() {
                   showDialog(
                     context: context,
                     builder: (context) => AddTodoDialog(
-                      onAdd: (title, desc, startDate, ddl, importance, tags) {
+                      onAdd: (title, desc, startDate, ddl, importance, tags, taskType) {
                         selectedStartDate = startDate;
                         selectedDdl = ddl;
                       },

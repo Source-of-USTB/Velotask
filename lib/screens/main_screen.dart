@@ -61,6 +61,7 @@ class _MainScreenState extends State<MainScreen> {
     DateTime? ddl,
     int importance,
     List<Tag> tags,
+    TaskType taskType,
   ) async {
     if (title.isEmpty) return;
 
@@ -70,13 +71,14 @@ class _MainScreenState extends State<MainScreen> {
       startDate: startDate,
       ddl: ddl,
       importance: importance,
+      taskType: taskType,
+      tags: tags,
     );
-    newTodo.tags.addAll(tags);
 
-    await _storage.addTodo(newTodo);
+    final saved = await _storage.addTodo(newTodo);
     if (mounted) {
       setState(() {
-        todos.add(newTodo);
+        todos.add(saved);
       });
     }
   }
@@ -108,26 +110,25 @@ class _MainScreenState extends State<MainScreen> {
       context: context,
       builder: (context) => AddTodoDialog(
         todo: todo,
-        onAdd: (title, desc, startDate, ddl, importance, tags) async {
-          final updatedTodo = todo.copyWith(
-            title: title,
-            description: desc,
-            startDate: startDate,
-            ddl: ddl,
-            importance: importance,
-          );
-          updatedTodo.tags.clear();
-          updatedTodo.tags.addAll(tags);
+        onAdd: (title, desc, startDate, ddl, importance, tags, taskType) async {
+          todo.title = title;
+          todo.description = desc;
+          todo.startDate = startDate;
+          todo.ddl = ddl;
+          todo.importance = importance;
+          todo.taskType = taskType;
+          todo.tags = tags;
+
+          await _storage.updateTodo(todo);
 
           if (mounted) {
             setState(() {
               final index = todos.indexWhere((t) => t.id == todo.id);
               if (index != -1) {
-                todos[index] = updatedTodo;
+                todos[index] = todo;
               }
             });
           }
-          await _storage.updateTodo(updatedTodo);
         },
       ),
     );

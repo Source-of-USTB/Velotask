@@ -119,8 +119,8 @@ class FilterSection extends StatelessWidget {
               : colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-      visualDensity: VisualDensity.compact,
+      labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 
@@ -157,8 +157,8 @@ class FilterSection extends StatelessWidget {
         ),
       ),
       showCheckmark: false,
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-      visualDensity: VisualDensity.compact,
+      labelPadding: const EdgeInsets.symmetric(horizontal: 4),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 }
