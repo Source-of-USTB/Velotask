@@ -218,8 +218,7 @@ class _TagsScreenState extends State<TagsScreen> {
           : ListView.separated(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
               itemCount: _tags.length,
-              separatorBuilder: (context, index) =>
-                  const SizedBox(height: 10),
+              separatorBuilder: (context, index) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final tag = _tags[index];
                 Color tagColor = Colors.blue;
