@@ -121,7 +121,7 @@ class NotificationService {
         final previousFingerprint = _scheduledTaskFingerprints[todo.id];
         if (previousFingerprint != reminderPlan.fingerprint) {
           await _plugin.cancel(todo.id);
-          await _scheduleTaskReminder(todo, reminderPlan);
+          await _scheduleTaskReminder(todo.id, reminderPlan);
         }
       }
     }

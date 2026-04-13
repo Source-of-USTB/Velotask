@@ -39,6 +39,12 @@ class _MainScreenState extends State<MainScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    _aiService.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadData() async {
     try {
       await Future.wait([_loadTodos(), _loadTags()]);
@@ -96,17 +102,20 @@ class _MainScreenState extends State<MainScreen> {
     DateTime? startDate,
     DateTime? ddl,
     int importance,
-    List<Tag> tags,
-  ) async {
+    List<Tag> tags, {
+    double? presetEffortHours,
+  }) async {
     if (title.isEmpty) return;
 
-    final estimatedEffortHours = await _aiService.estimateEffortHours(
-      title: title,
-      description: desc,
-      importance: importance,
-      startDate: startDate,
-      ddl: ddl,
-    );
+    final estimatedEffortHours =
+        presetEffortHours ??
+        await _aiService.estimateEffortHours(
+          title: title,
+          description: desc,
+          importance: importance,
+          startDate: startDate,
+          ddl: ddl,
+        );
 
     final newTodo = Todo(
       title: title,
@@ -153,6 +162,70 @@ class _MainScreenState extends State<MainScreen> {
     // No need to save links when just toggling completion status
     await _storage.updateTodo(updatedTodo, saveLinks: false);
     await _syncNotifications();
+  }
+
+  Future<void> _addTodosFromAI(List<AIParseResult> results) async {
+    final filtered = results.where((r) => r.title.trim().isNotEmpty).toList();
+    if (filtered.isEmpty) return;
+
+    final tagByName = {
+      for (final tag in tags) tag.name.toLowerCase(): tag,
+    };
+
+    var tagsAdded = false;
+    for (final result in filtered) {
+      for (final rawName in result.tags) {
+        final name = rawName.trim();
+        if (name.isEmpty) continue;
+        final key = name.toLowerCase();
+        if (tagByName.containsKey(key)) continue;
+
+        final newTag = Tag(name: name);
+        try {
+          await _storage.addTag(newTag);
+          tagByName[key] = newTag;
+          tagsAdded = true;
+        } catch (_) {
+          // If tag exists concurrently, we'll refresh after loop.
+          tagsAdded = true;
+        }
+      }
+    }
+
+    if (tagsAdded) {
+      await _loadTags();
+      tagByName
+        ..clear()
+        ..addEntries(tags.map((t) => MapEntry(t.name.toLowerCase(), t)));
+    }
+
+    final newTodos = <Todo>[];
+    for (final result in filtered) {
+      final todo = Todo(
+        title: result.title.trim(),
+        description: result.description.trim(),
+        startDate: result.startDate,
+        ddl: result.ddl,
+        importance: result.importance,
+        estimatedEffortHours: result.estimatedEffortHours,
+      );
+
+      final resolvedTags = result.tags
+          .map((name) => tagByName[name.toLowerCase()])
+          .whereType<Tag>()
+          .toList();
+      todo.tags.addAll(resolvedTags);
+
+      await _storage.addTodo(todo);
+      newTodos.add(todo);
+    }
+
+    if (mounted) {
+      setState(() {
+        todos.addAll(newTodos);
+      });
+      await _syncNotifications();
+    }
   }
 
   Future<void> _editTodo(Todo todo) async {
@@ -204,49 +277,14 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _showAIInputDialog() async {
-    final result = await showDialog<AIParseResult>(
+    final results = await showDialog<List<AIParseResult>>(
       context: context,
       builder: (context) =>
           AIInputDialog(existingTags: tags.map((t) => t.name).toList()),
     );
 
-    if (result != null && mounted) {
-      // Map AI result to Todo fields
-      final title = result.title;
-      final desc = result.description;
-      final importance = result.importance;
-      final startDate = result.startDate;
-      final ddl = result.ddl;
-
-      // Handle tags
-      List<Tag> selectedTags = [];
-      bool tagsAdded = false;
-      for (final name in result.tags) {
-        // Find existing tag or create new one
-        var tag = tags.cast<Tag?>().firstWhere(
-          (t) => t?.name.toLowerCase() == name.toLowerCase(),
-          orElse: () => null,
-        );
-
-        if (tag == null) {
-          tag = Tag(name: name);
-          await _storage.addTag(tag);
-          tagsAdded = true;
-        }
-        selectedTags.add(tag);
-      }
-
-      if (tagsAdded) {
-        await _loadTags(); // Refresh tags list once
-        // Re-map selectedTags to the newly loaded tag objects to ensure they have IDs
-        selectedTags = result.tags.map((name) {
-          return tags.firstWhere(
-            (t) => t.name.toLowerCase() == name.toLowerCase(),
-          );
-        }).toList();
-      }
-
-      await _addTodo(title, desc, startDate, ddl, importance, selectedTags);
+    if (results != null && mounted) {
+      await _addTodosFromAI(results);
     }
   }
 

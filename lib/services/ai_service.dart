@@ -5,6 +5,11 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:velotask/utils/logger.dart';
 
+typedef _JsonMap = Map<String, dynamic>;
+
+
+// TODO: 升级后解析速度明显变慢了，考虑对解析速度进行量化并尽可能地优化。
+// TODO: 尽可能让AI充分的利用已有信息，减少它的“想象力”，比如提供当前时间、星期、已有标签等上下文，让它更倾向于复用已有标签而不是创造新标签。
 class AIParseResult {
   final String title;
   final String description;
@@ -12,6 +17,7 @@ class AIParseResult {
   final DateTime? startDate;
   final DateTime? ddl;
   final List<String> tags;
+  final double? estimatedEffortHours;
 
   AIParseResult({
     required this.title,
@@ -20,20 +26,39 @@ class AIParseResult {
     this.startDate,
     this.ddl,
     this.tags = const [],
+    this.estimatedEffortHours,
   });
 
   factory AIParseResult.fromJson(Map<String, dynamic> json) {
+    final rawImportance = json['importance'];
+    final parsedImportance = rawImportance is int
+        ? rawImportance
+        : int.tryParse('${rawImportance ?? ''}');
+
+    DateTime? parseDate(dynamic value) {
+      if (value == null) return null;
+      if (value is String) return DateTime.tryParse(value);
+      return DateTime.tryParse('$value');
+    }
+
     return AIParseResult(
-      title: json['title'] ?? '',
-      description: json['description'] ?? '',
-      importance: json['importance'] ?? 1,
-      startDate: json['startDate'] != null
-          ? DateTime.tryParse(json['startDate'])
-          : null,
-      ddl: json['deadline'] != null
-          ? DateTime.tryParse(json['deadline'])
-          : null,
-      tags: json['tags'] != null ? List<String>.from(json['tags']) : const [],
+      title: '${json['title'] ?? ''}'.trim(),
+      description: '${json['description'] ?? ''}'.trim(),
+      importance: (parsedImportance ?? 1).clamp(0, 2),
+      startDate: parseDate(json['startDate']),
+      ddl: parseDate(json['deadline']),
+      tags: json['tags'] is List
+          ? (json['tags'] as List)
+              .map((e) => '$e'.trim())
+              .where((e) => e.isNotEmpty)
+              .take(4)
+              .toList(growable: false)
+          : const [],
+      estimatedEffortHours: (json['estimatedHours'] is num)
+          ? (json['estimatedHours'] as num).toDouble().clamp(0.25, 100.0)
+          : double.tryParse(
+              '${json['estimatedHours'] ?? ''}',
+            )?.clamp(0.25, 100.0),
     );
   }
 }
@@ -44,6 +69,8 @@ class AIService {
 
   AIService({http.Client? httpClient})
     : _httpClient = httpClient ?? http.Client();
+
+  void dispose() => _httpClient.close();
 
   Future<double?> estimateEffortHours({
     required String title,
@@ -59,58 +86,41 @@ class AIService {
     }
 
     final now = DateTime.now();
-    final prompt =
-        '''
-You are a task effort estimation engine.
-
-Estimate effort hours (E) for the task. Output ONLY JSON:
-{"estimatedHours": number}
-
-Rules:
-1) Return a single positive number in hours.
-2) Consider title, description, priority, start/deadline if available.
-3) Keep estimate practical for personal task management.
-4) Use range [0.25, 100].
-5) No markdown, no extra text.
-
-Context:
-- Current time: ${now.toIso8601String()}
-- Title: "$title"
-- Description: "$description"
-- Importance: $importance (0 low, 1 normal, 2 high)
-- Start: ${startDate?.toIso8601String() ?? 'null'}
-- Deadline: ${ddl?.toIso8601String() ?? 'null'}
-''';
+    final messages = [
+      {
+        'role': 'system',
+        'content':
+            'Estimate task effort hours for a personal todo app. Output ONLY JSON: {"estimatedHours":number}. Range: 0.25-100.',
+      },
+      {
+        'role': 'user',
+        'content': jsonEncode({
+          'now': now.toIso8601String(),
+          'title': title,
+          'description': description,
+          'importance': importance.clamp(0, 2),
+          'startDate': startDate?.toIso8601String(),
+          'deadline': ddl?.toIso8601String(),
+        }),
+      },
+    ];
 
     try {
-      final response = await _httpClient
-          .post(
-            Uri.parse('${config.baseUrl}/chat/completions'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ${config.apiKey}',
-            },
-            body: jsonEncode({
-              'model': config.model,
-              'messages': [
-                {'role': 'user', 'content': prompt},
-              ],
-              'temperature': 0.2,
-            }),
-          )
-          .timeout(const Duration(seconds: 20));
+      final data = await _chatCompletionsJson(
+        config,
+        messages: messages,
+        temperature: 0.1,
+        maxTokens: 80,
+        timeout: const Duration(seconds: 18),
+        retries: 2,
+        preferJsonMode: true,
+      );
 
-      if (response.statusCode != 200) {
-        _logger.warning(
-          'Effort estimation API error: ${response.statusCode} - ${response.body}',
-        );
+      final content = _extractAssistantContent(data);
+      if (content == null) {
         return null;
       }
-
-      final data = jsonDecode(utf8.decode(response.bodyBytes));
-      final content = data['choices'][0]['message']['content'].trim();
-      final cleanContent = _stripMarkdownCodeBlock(content);
-      final Map<String, dynamic> effortJson = jsonDecode(cleanContent);
+      final effortJson = _decodeJsonObject(_extractJsonPayload(content));
 
       final raw = effortJson['estimatedHours'];
       final value = raw is num ? raw.toDouble() : double.tryParse('$raw');
@@ -136,97 +146,159 @@ Context:
     }
 
     final now = DateTime.now();
-    final tagsContext = existingTags.isEmpty ? 'None' : existingTags.join(', ');
+    final trimmedExistingTags = existingTags
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .take(30)
+        .toList(growable: false);
 
-    final prompt =
-        '''
-You are an expert task parsing engine. Convert the user's natural language into ONE valid JSON object for a todo app.
-
-[Context]
-Current Time: ${now.toIso8601String()}
-Today is: ${['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'][now.weekday - 1]}
-Existing tags: $tagsContext
-
-[Output Schema - MUST follow exactly]
-{
-  "title": "Short task title",
-  "description": "Optional concise description",
-  "importance": 0,
-  "startDate": "ISO8601 string or null",
-  "deadline": "ISO8601 string or null",
-  "tags": ["tag1", "tag2"]
-}
-
-[Hard Constraints]
-1) Output ONLY raw JSON. No markdown, no code fence, no explanation.
-2) "importance" must be integer: 0 (Low), 1 (Normal), 2 (High).
-3) "startDate" and "deadline" must be ISO8601 or null.
-4) "tags" must be an array of short strings, max 4 items.
-5) Prefer the user's language style for title/description.
-
-[Time Parsing Rules]
-1) Resolve relative time from Current Time (today/tomorrow/next week/this weekend/in 2 hours, etc.).
-2) If only one time point is mentioned, treat it as "deadline".
-3) If a date is mentioned without time for deadline, default to 23:59 local time.
-4) If time is mentioned without date, use the nearest future time.
-5) If both start and end are implied (e.g., "8:30-10:30"), map start to "startDate" and end to "deadline".
-6) If no reliable time is found, keep missing fields as null.
-
-[Importance Heuristic]
-- 2 (High): explicit urgency/critical words, exam/interview/deadline soon, overdue, strong consequence.
-- 1 (Normal): ordinary actionable tasks with moderate urgency.
-- 0 (Low): optional, someday, low-pressure, no urgency.
-
-[Tag Rules]
-1) Reuse Existing tags when semantically close (case-insensitive match).
-2) Create new tags only when needed.
-3) Use compact noun-like tags (e.g., "study", "work", "health").
-
-[Quality Rules]
-1) "title" should be short and actionable.
-2) "description" should be concise, useful, and non-redundant.
-3) Do not invent highly specific facts not implied by input.
-
-User input: "$input"
-''';
+    final messages = [
+      {
+        'role': 'system',
+        'content': [
+          'Parse a natural-language todo into ONE JSON object ONLY (no markdown).',
+          'Keys: title, description, importance(0/1/2), startDate, deadline, tags(max4), estimatedHours(0.25-100).',
+          'Dates: ISO8601 string or null. If only one time -> deadline. Date-only deadline -> 23:59 local. Time-only -> nearest future time.',
+          'Tags: reuse existingTags when semantically close; else create compact noun tags. Do not invent facts.',
+        ].join(' '),
+      },
+      {
+        'role': 'user',
+        'content': jsonEncode({
+          'now': now.toIso8601String(),
+          'weekday': [
+            'Monday',
+            'Tuesday',
+            'Wednesday',
+            'Thursday',
+            'Friday',
+            'Saturday',
+            'Sunday',
+          ][now.weekday - 1],
+          'existingTags': trimmedExistingTags,
+          'input': input,
+        }),
+      },
+    ];
 
     try {
       _logger.info('AI parsing task: $input');
 
-      final response = await _httpClient
-          .post(
-            Uri.parse('${config.baseUrl}/chat/completions'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer ${config.apiKey}',
-            },
-            body: jsonEncode({
-              'model': config.model,
-              'messages': [
-                {'role': 'user', 'content': prompt},
-              ],
-              'temperature': 0.1,
-            }),
-          )
-          .timeout(const Duration(seconds: 30));
+      final data = await _chatCompletionsJson(
+        config,
+        messages: messages,
+        temperature: 0.1,
+        maxTokens: 220,
+        timeout: const Duration(seconds: 25),
+        retries: 2,
+        preferJsonMode: true,
+      );
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(utf8.decode(response.bodyBytes));
-        final content = data['choices'][0]['message']['content'].trim();
-
-        final cleanContent = _stripMarkdownCodeBlock(content);
-
-        final Map<String, dynamic> taskJson = jsonDecode(cleanContent);
-        _logger.info('AI parse success: ${taskJson['title']}');
-        return AIParseResult.fromJson(taskJson);
-      } else {
-        _logger.severe(
-          'AI API error: ${response.statusCode} - ${response.body}',
-        );
-        throw Exception('API Error: ${response.statusCode}');
+      final content = _extractAssistantContent(data);
+      if (content == null) {
+        throw const FormatException('Missing assistant content');
       }
+      final taskJson = _decodeJsonObject(_extractJsonPayload(content));
+
+      _logger.info('AI parse success: ${taskJson['title']}');
+      return AIParseResult.fromJson(taskJson);
     } catch (e, stack) {
       _logger.severe('Failed to parse task via AI', e, stack);
+      rethrow;
+    }
+  }
+
+  Future<List<AIParseResult>> parseTasks(
+    String input, {
+    List<String> existingTags = const [],
+  }) async {
+    final config = await _loadConfig();
+    if (config == null) {
+      _logger.warning('AI API configuration is missing');
+      throw Exception('AI configuration missing');
+    }
+
+    final now = DateTime.now();
+    final trimmedExistingTags = existingTags
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .take(30)
+        .toList(growable: false);
+
+    final messages = [
+      {
+        'role': 'system',
+        'content': [
+          'Parse the input into a JSON array of task objects ONLY (no markdown).',
+          'Each task keys: title, description, importance(0/1/2), startDate, deadline, tags(max4), estimatedHours(0.25-100).',
+          'Dates: ISO8601 string or null. If only one time -> deadline. Date-only deadline -> 23:59 local. Time-only -> nearest future time.',
+          'Tags: reuse existingTags when semantically close; else create compact noun tags. Do not invent facts.',
+        ].join(' '),
+      },
+      {
+        'role': 'user',
+        'content': jsonEncode({
+          'now': now.toIso8601String(),
+          'weekday': [
+            'Monday',
+            'Tuesday',
+            'Wednesday',
+            'Thursday',
+            'Friday',
+            'Saturday',
+            'Sunday',
+          ][now.weekday - 1],
+          'existingTags': trimmedExistingTags,
+          'input': input,
+        }),
+      },
+    ];
+
+    try {
+      _logger.info('AI parsing multiple tasks');
+
+      final data = await _chatCompletionsJson(
+        config,
+        messages: messages,
+        temperature: 0.1,
+        maxTokens: 600,
+        timeout: const Duration(seconds: 30),
+        retries: 2,
+        preferJsonMode: false,
+      );
+
+      final content = _extractAssistantContent(data);
+      if (content == null) {
+        throw const FormatException('Missing assistant content');
+      }
+      final payload = _extractJsonPayload(content);
+      final decoded = jsonDecode(payload);
+
+      List<dynamic> rawTasks;
+      if (decoded is List) {
+        rawTasks = decoded;
+      } else if (decoded is Map && decoded['tasks'] is List) {
+        rawTasks = decoded['tasks'] as List;
+      } else if (decoded is Map) {
+        rawTasks = [decoded];
+      } else {
+        throw const FormatException('Decoded payload must be a JSON list');
+      }
+
+      final results = rawTasks
+          .whereType<Map<String, dynamic>>()
+          .map(AIParseResult.fromJson)
+          .where((r) => r.title.trim().isNotEmpty)
+          .toList(growable: false);
+
+      if (results.isEmpty) {
+        throw const FormatException('No tasks parsed');
+      }
+
+      _logger.info('AI parse success: ${results.length} tasks');
+      return results;
+    } catch (e, stack) {
+      _logger.severe('Failed to parse tasks via AI', e, stack);
       rethrow;
     }
   }
@@ -248,17 +320,289 @@ User input: "$input"
     return _AIConfig(baseUrl: normalizedBaseUrl, apiKey: apiKey, model: model);
   }
 
-  String _stripMarkdownCodeBlock(String content) {
+  Future<_JsonMap> _chatCompletionsJson(
+    _AIConfig config, {
+    required List<_JsonMap> messages,
+    required double temperature,
+    required int maxTokens,
+    required Duration timeout,
+    required int retries,
+    required bool preferJsonMode,
+  }) async {
+    final uri = Uri.parse('${config.baseUrl}/chat/completions');
+    final headers = <String, String>{
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ${config.apiKey}',
+    };
+
+    _JsonMap buildBody({required bool jsonMode}) {
+      final body = <String, dynamic>{
+        'model': config.model,
+        'messages': messages,
+        'temperature': temperature,
+        'max_tokens': maxTokens,
+        'n': 1,
+        'stream': false,
+      };
+      if (jsonMode) {
+        body['response_format'] = {'type': 'json_object'};
+      }
+      return body;
+    }
+
+    Future<http.Response> doPost(_JsonMap body) => _postWithRetry(
+          uri,
+          headers: headers,
+          body: jsonEncode(body),
+          timeout: timeout,
+          retries: retries,
+        );
+
+    final preferredBody = buildBody(jsonMode: preferJsonMode);
+    final response = await doPost(preferredBody);
+
+    if (response.statusCode == 400 && preferJsonMode) {
+      final bodyText = utf8.decode(response.bodyBytes);
+      final unsupportedResponseFormat = bodyText.contains('response_format') &&
+          (bodyText.contains('unknown') ||
+              bodyText.contains('Unrecognized') ||
+              bodyText.contains('unsupported'));
+      if (unsupportedResponseFormat) {
+        final fallbackResponse = await doPost(buildBody(jsonMode: false));
+        return _decodeTopLevelJson(fallbackResponse);
+      }
+    }
+
+    return _decodeTopLevelJson(response);
+  }
+
+  Future<http.Response> _postWithRetry(
+    Uri uri, {
+    required Map<String, String> headers,
+    required String body,
+    required Duration timeout,
+    required int retries,
+  }) async {
+    Object? lastError;
+    StackTrace? lastStack;
+    http.Response? lastResponse;
+
+    for (var attempt = 0; attempt <= retries; attempt++) {
+      if (attempt > 0) {
+        final retryAfter = _parseRetryAfterSeconds(lastResponse?.headers);
+        final backoffMs = retryAfter != null
+            ? (retryAfter * 1000)
+            : (300 * (1 << (attempt - 1)));
+        await Future.delayed(Duration(milliseconds: backoffMs.clamp(200, 2500)));
+      }
+
+      try {
+        final response = await _httpClient
+            .post(uri, headers: headers, body: body)
+            .timeout(timeout);
+        lastResponse = response;
+
+        if (response.statusCode == 200) {
+          return response;
+        }
+
+        if (attempt >= retries) {
+          return response;
+        }
+
+        if (!_shouldRetryStatus(response.statusCode)) {
+          return response;
+        }
+      } catch (e, stack) {
+        lastError = e;
+        lastStack = stack;
+        if (attempt >= retries) {
+          Error.throwWithStackTrace(lastError, lastStack);
+        }
+      }
+    }
+
+    if (lastResponse != null) {
+      return lastResponse;
+    }
+    Error.throwWithStackTrace(
+      lastError ?? TimeoutException('Unknown network failure'),
+      lastStack ?? StackTrace.current,
+    );
+  }
+
+  bool _shouldRetryStatus(int statusCode) {
+    return statusCode == 408 ||
+        statusCode == 429 ||
+        statusCode == 500 ||
+        statusCode == 502 ||
+        statusCode == 503 ||
+        statusCode == 504;
+  }
+
+  int? _parseRetryAfterSeconds(Map<String, String>? headers) {
+    final value = headers?['retry-after'];
+    if (value == null) return null;
+    return int.tryParse(value);
+  }
+
+  _JsonMap _decodeTopLevelJson(http.Response response) {
+    if (response.statusCode != 200) {
+      _logger.severe(
+        'AI API error: ${response.statusCode} - ${utf8.decode(response.bodyBytes)}',
+      );
+      throw Exception('API Error: ${response.statusCode}');
+    }
+
+    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('Top-level response must be a JSON object');
+    }
+    return decoded;
+  }
+
+  String? _extractAssistantContent(_JsonMap data) {
+    final choices = data['choices'];
+    if (choices is! List || choices.isEmpty) return null;
+    final choice0 = choices.first;
+    if (choice0 is! Map) return null;
+    final message = choice0['message'];
+    if (message is! Map) return null;
+    final content = message['content'];
+    if (content is! String) return null;
+    return content.trim();
+  }
+
+  _JsonMap _decodeJsonObject(String payload) {
+    final decoded = jsonDecode(payload);
+    if (decoded is! Map<String, dynamic>) {
+      throw const FormatException('Decoded payload must be a JSON object');
+    }
+    return decoded;
+  }
+
+  String _extractJsonPayload(String content) {
     final trimmed = content.trim();
-    final codeBlockRegex = RegExp(
-      r'^```[a-zA-Z0-9_-]*\s*([\s\S]*?)```$',
+
+    final fenced = RegExp(
+      r'```[a-zA-Z0-9_-]*\s*([\s\S]*?)```',
       caseSensitive: false,
     );
-    final match = codeBlockRegex.firstMatch(trimmed);
-    if (match != null) {
-      return (match.group(1) ?? '').trim();
+    for (final match in fenced.allMatches(trimmed)) {
+      final candidate = (match.group(1) ?? '').trim();
+      final extracted = _scanFirstJsonValue(candidate);
+      if (extracted != null) {
+        return extracted;
+      }
     }
-    return content;
+
+    final extracted = _scanFirstJsonValue(trimmed);
+    if (extracted != null) {
+      return extracted;
+    }
+
+    return trimmed;
+  }
+
+  String? _scanFirstJsonValue(String input) {
+    final objectIndex = input.indexOf('{');
+    final arrayIndex = input.indexOf('[');
+
+    if (objectIndex < 0 && arrayIndex < 0) {
+      return null;
+    }
+    if (arrayIndex >= 0 && (objectIndex < 0 || arrayIndex < objectIndex)) {
+      return _scanFirstJsonArray(input);
+    }
+    return _scanFirstJsonObject(input);
+  }
+
+  String? _scanFirstJsonObject(String input) {
+    final start = input.indexOf('{');
+    if (start < 0) return null;
+
+    var depth = 0;
+    var inString = false;
+    var escape = false;
+
+    for (var i = start; i < input.length; i++) {
+      final char = input.codeUnitAt(i);
+
+      if (inString) {
+        if (escape) {
+          escape = false;
+          continue;
+        }
+        if (char == 0x5C) {
+          escape = true;
+          continue;
+        }
+        if (char == 0x22) {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char == 0x22) {
+        inString = true;
+        continue;
+      }
+
+      if (char == 0x7B) {
+        depth++;
+      } else if (char == 0x7D) {
+        depth--;
+        if (depth == 0) {
+          return input.substring(start, i + 1).trim();
+        }
+      }
+    }
+
+    return null;
+  }
+
+  String? _scanFirstJsonArray(String input) {
+    final start = input.indexOf('[');
+    if (start < 0) return null;
+
+    var depth = 0;
+    var inString = false;
+    var escape = false;
+
+    for (var i = start; i < input.length; i++) {
+      final char = input.codeUnitAt(i);
+
+      if (inString) {
+        if (escape) {
+          escape = false;
+          continue;
+        }
+        if (char == 0x5C) {
+          escape = true;
+          continue;
+        }
+        if (char == 0x22) {
+          inString = false;
+        }
+        continue;
+      }
+
+      if (char == 0x22) {
+        inString = true;
+        continue;
+      }
+
+      if (char == 0x5B) {
+        depth++;
+      } else if (char == 0x5D) {
+        depth--;
+        if (depth == 0) {
+          return input.substring(start, i + 1).trim();
+        }
+      }
+    }
+
+    return null;
   }
 }
 

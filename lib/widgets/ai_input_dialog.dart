@@ -24,6 +24,7 @@ class _AIInputDialogState extends State<AIInputDialog> {
   @override
   void dispose() {
     _controller.dispose();
+    _aiService.dispose();
     super.dispose();
   }
 
@@ -37,12 +38,12 @@ class _AIInputDialogState extends State<AIInputDialog> {
     });
 
     try {
-      final result = await _aiService.parseTask(
+      final results = await _aiService.parseTasks(
         input,
         existingTags: widget.existingTags,
       );
       if (mounted) {
-        Navigator.pop(context, result);
+        Navigator.pop(context, results);
       }
     } catch (e) {
       _logger.severe('AI parsing failed', e);

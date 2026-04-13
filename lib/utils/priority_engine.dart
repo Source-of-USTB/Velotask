@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:velotask/models/todo.dart';
 
+// TODO: 设计一个更好的优先级算法，考虑更多因素，比如任务之间的依赖关系、用户的习惯、历史完成情况等。
 enum PriorityNotificationTier { none, low, medium, high }
 
 enum UrgencyBand { relaxed, medium, high, impossible }

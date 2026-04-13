@@ -7,6 +7,8 @@ import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:velotask/services/ai_service.dart';
 
+// TODO: 增加更多测试用例，覆盖边界情况和异常情况，比如AI返回非JSON格式、缺失字段、网络异常等。
+// TODO: 实际测试中发现新版的AI解析算法速度明显变慢了，考虑对解析速度进行量化并尽可能地量化。
 void main() {
   group('AIParseResult.fromJson', () {
     test('parses complete payload correctly', () {
@@ -109,6 +111,36 @@ void main() {
       },
     );
 
+    test('extracts JSON when backend includes extra text', () async {
+      SharedPreferences.setMockInitialValues({
+        'ai_base_url': 'https://api.example.com/v1/',
+        'ai_api_key': 'test-key',
+        'ai_model': 'test-model',
+      });
+
+      final mockClient = MockClient((request) async {
+        final responsePayload = {
+          'choices': [
+            {
+              'message': {
+                'content':
+                    'Sure! Here you go:\\n```json\\n{"title":"Buy milk","description":"","importance":1,"startDate":null,"deadline":null,"tags":[],"estimatedHours":0.25}\\n```\\n',
+              },
+            },
+          ],
+        };
+        return http.Response(jsonEncode(responsePayload), 200);
+      });
+
+      final service = AIService(httpClient: mockClient);
+      final result = await service.parseTask('Buy milk');
+
+      expect(result, isNotNull);
+      expect(result!.title, 'Buy milk');
+      expect(result.importance, 1);
+      expect(result.estimatedEffortHours, 0.25);
+    });
+
     test('throws API Error when backend returns non-200', () async {
       SharedPreferences.setMockInitialValues({
         'ai_base_url': 'https://api.example.com/v1',
@@ -149,6 +181,37 @@ void main() {
         () => service.parseTask('test input'),
         throwsA(isA<TimeoutException>()),
       );
+    });
+  });
+
+  group('AIService.parseTasks', () {
+    test('parses list response into multiple tasks', () async {
+      SharedPreferences.setMockInitialValues({
+        'ai_base_url': 'https://api.example.com/v1/',
+        'ai_api_key': 'test-key',
+        'ai_model': 'test-model',
+      });
+
+      final mockClient = MockClient((request) async {
+        final responsePayload = {
+          'choices': [
+            {
+              'message': {
+                'content':
+                    '[{"title":"Task A","description":"","importance":1,"startDate":null,"deadline":null,"tags":["work"],"estimatedHours":1.0},{"title":"Task B","description":"","importance":0,"startDate":null,"deadline":null,"tags":[],"estimatedHours":0.5}]',
+              },
+            },
+          ],
+        };
+        return http.Response(jsonEncode(responsePayload), 200);
+      });
+
+      final service = AIService(httpClient: mockClient);
+      final results = await service.parseTasks('Task A; Task B');
+
+      expect(results.length, 2);
+      expect(results.first.title, 'Task A');
+      expect(results.last.title, 'Task B');
     });
   });
 }
