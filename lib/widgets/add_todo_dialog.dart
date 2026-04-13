@@ -37,7 +37,6 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
   @override
   void initState() {
     super.initState();
-    _loadTags();
     if (widget.todo != null) {
       _titleController.text = widget.todo!.title;
       _descController.text = widget.todo!.description;
@@ -45,14 +44,22 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
           widget.todo!.startDate ?? widget.todo!.createdAt ?? DateTime.now();
       _ddl = widget.todo!.ddl;
       _importance = widget.todo!.importance;
-      _selectedTags = widget.todo!.tags.toList();
+      // _selectedTags is initialized after _loadTags completes.
     }
+    _loadTags();
   }
 
   Future<void> _loadTags() async {
     final tags = await _storage.loadTags();
+    if (!mounted) {
+      return;
+    }
     setState(() {
       _availableTags = tags;
+      if (widget.todo != null) {
+        final todoTagIds = widget.todo!.tags.map((t) => t.id).toSet();
+        _selectedTags = tags.where((t) => todoTagIds.contains(t.id)).toList();
+      }
     });
   }
 

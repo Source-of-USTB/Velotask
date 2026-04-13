@@ -10,6 +10,8 @@ class TodoStorage {
 
   final AppDatabase _db = AppDatabase();
 
+  String _normalizeTagName(String name) => name.trim().toLowerCase();
+
   Tag _rowToTag(TagRow row) =>
       Tag(id: row.id, name: row.name, color: row.color);
 
@@ -61,19 +63,50 @@ class TodoStorage {
 
   Future<List<Tag>> loadTags() async {
     final rows = await _db.select(_db.tags).get();
-    return rows.map(_rowToTag).toList();
+    final dedup = <String, Tag>{};
+    for (final row in rows) {
+      final tag = _rowToTag(row);
+      final key = _normalizeTagName(tag.name);
+      dedup[key] = tag;
+    }
+    return dedup.values.toList();
   }
 
   Future<Tag> addTag(Tag tag) async {
+    final trimmedName = tag.name.trim();
+    if (trimmedName.isEmpty) {
+      throw ArgumentError('Tag name cannot be empty');
+    }
+
+    final existing =
+        await (_db.select(_db.tags)
+              ..where((t) => t.name.lower().equals(trimmedName.toLowerCase())))
+            .getSingleOrNull();
+
+    if (existing != null) {
+      await (_db.update(
+        _db.tags,
+      )..where((t) => t.id.equals(existing.id))).write(
+        TagsCompanion(
+          name: Value(existing.name),
+          color: Value(tag.color ?? existing.color),
+        ),
+      );
+      final updated = await (_db.select(
+        _db.tags,
+      )..where((t) => t.id.equals(existing.id))).getSingle();
+      return _rowToTag(updated);
+    }
+
     final id = await _db
         .into(_db.tags)
-        .insertOnConflictUpdate(
-          TagsCompanion.insert(name: tag.name, color: Value(tag.color)),
+        .insert(
+          TagsCompanion.insert(name: trimmedName, color: Value(tag.color)),
         );
-    final row = await (_db.select(
+    final inserted = await (_db.select(
       _db.tags,
     )..where((t) => t.id.equals(id))).getSingle();
-    return _rowToTag(row);
+    return _rowToTag(inserted);
   }
 
   Future<void> deleteTag(int id) async {

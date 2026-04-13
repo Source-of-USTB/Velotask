@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/tag.dart';
@@ -67,7 +69,12 @@ class _MainScreenState extends State<MainScreen> {
     if (l10n == null) {
       return;
     }
-    await _notificationService.syncForTodos(todos, l10n);
+    try {
+      await _notificationService.syncForTodos(todos, l10n);
+    } catch (e, stack) {
+      _logger.warning('Notification sync failed: $e');
+      _logger.fine('Notification sync stack: $stack');
+    }
   }
 
   Future<void> _loadTags() async {
@@ -96,6 +103,27 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  void _showSubmitFeedback({required bool isEdit, required bool estimating}) {
+    if (!mounted) {
+      return;
+    }
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) {
+      return;
+    }
+
+    final actionText = isEdit ? l10n.save : l10n.create;
+    final message = estimating
+        ? '$actionText · ${l10n.aiProcessing}'
+        : actionText;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
+      );
+  }
+
   Future<void> _addTodo(
     String title,
     String desc,
@@ -107,32 +135,74 @@ class _MainScreenState extends State<MainScreen> {
   }) async {
     if (title.isEmpty) return;
 
-    final estimatedEffortHours =
-        presetEffortHours ??
-        await _aiService.estimateEffortHours(
-          title: title,
-          description: desc,
-          importance: importance,
-          startDate: startDate,
-          ddl: ddl,
-        );
-
     final newTodo = Todo(
       title: title,
       description: desc,
       startDate: startDate,
       ddl: ddl,
       importance: importance,
-      estimatedEffortHours: estimatedEffortHours,
+      estimatedEffortHours: presetEffortHours,
     );
     newTodo.tags.addAll(tags);
 
-    await _storage.addTodo(newTodo);
+    final savedTodo = await _storage.addTodo(newTodo);
     if (mounted) {
       setState(() {
-        todos.add(newTodo);
+        todos.add(savedTodo);
       });
       await _syncNotifications();
+      _showSubmitFeedback(isEdit: false, estimating: presetEffortHours == null);
+    }
+
+    if (presetEffortHours == null) {
+      unawaited(
+        _reestimateAndPatchTodo(
+          savedTodo,
+          title: title,
+          desc: desc,
+          startDate: startDate,
+          ddl: ddl,
+          importance: importance,
+        ),
+      );
+    }
+  }
+
+  Future<void> _reestimateAndPatchTodo(
+    Todo todo, {
+    required String title,
+    required String desc,
+    required DateTime? startDate,
+    required DateTime? ddl,
+    required int importance,
+  }) async {
+    try {
+      final estimatedEffortHours = await _aiService.estimateEffortHours(
+        title: title,
+        description: desc,
+        importance: importance,
+        startDate: startDate,
+        ddl: ddl,
+      );
+      if (estimatedEffortHours == null) {
+        return;
+      }
+
+      final updated = todo.copyWith(estimatedEffortHours: estimatedEffortHours);
+      await _storage.updateTodo(updated, saveLinks: false);
+
+      if (mounted) {
+        setState(() {
+          final index = todos.indexWhere((t) => t.id == todo.id);
+          if (index != -1) {
+            todos[index] = updated;
+          }
+        });
+        await _syncNotifications();
+      }
+    } catch (e, stack) {
+      _logger.warning('Background effort estimation failed: $e');
+      _logger.fine('Background effort estimation stack: $stack');
     }
   }
 
@@ -148,8 +218,6 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _toggleTodo(Todo todo) async {
     final updatedTodo = todo.copyWith(isCompleted: !todo.isCompleted);
-    // Preserve tags to prevent flickering and data loss
-    updatedTodo.tags.addAll(todo.tags);
 
     if (mounted) {
       setState(() {
@@ -214,8 +282,8 @@ class _MainScreenState extends State<MainScreen> {
           .toList();
       todo.tags.addAll(resolvedTags);
 
-      await _storage.addTodo(todo);
-      newTodos.add(todo);
+      final savedTodo = await _storage.addTodo(todo);
+      newTodos.add(savedTodo);
     }
 
     if (mounted) {
@@ -232,36 +300,38 @@ class _MainScreenState extends State<MainScreen> {
       builder: (context) => AddTodoDialog(
         todo: todo,
         onAdd: (title, desc, startDate, ddl, importance, tags) async {
-          final estimatedEffortHours = await _aiService.estimateEffortHours(
-            title: title,
-            description: desc,
-            importance: importance,
-            startDate: startDate,
-            ddl: ddl,
-          );
+          // Mutate the existing todo instance directly to preserve object identity.
+          todo.title = title;
+          todo.description = desc;
+          todo.startDate = startDate;
+          todo.ddl = ddl;
+          todo.importance = importance;
+          todo.tags.clear();
+          todo.tags.addAll(tags);
 
-          final updatedTodo = todo.copyWith(
-            title: title,
-            description: desc,
-            startDate: startDate,
-            ddl: ddl,
-            importance: importance,
-            estimatedEffortHours:
-                estimatedEffortHours ?? todo.estimatedEffortHours,
-          );
-          updatedTodo.tags.clear();
-          updatedTodo.tags.addAll(tags);
+          await _storage.updateTodo(todo);
 
           if (mounted) {
             setState(() {
               final index = todos.indexWhere((t) => t.id == todo.id);
               if (index != -1) {
-                todos[index] = updatedTodo;
+                todos[index] = todo;
               }
             });
           }
-          await _storage.updateTodo(updatedTodo);
           await _syncNotifications();
+          _showSubmitFeedback(isEdit: true, estimating: true);
+
+          unawaited(
+            _reestimateAndPatchTodo(
+              todo,
+              title: title,
+              desc: desc,
+              startDate: startDate,
+              ddl: ddl,
+              importance: importance,
+            ),
+          );
         },
       ),
     );

@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -238,29 +239,72 @@ class NotificationService {
   }
 
   Future<void> _scheduleTaskReminder(int todoId, _TaskReminderPlan plan) async {
-    await _plugin.zonedSchedule(
-      todoId,
-      plan.title,
-      plan.body,
-      plan.scheduledDate,
-      NotificationDetails(
-        android: AndroidNotificationDetails(
-          _channelId,
-          _channelName,
-          channelDescription: _channelDescription,
-          importance: Importance.high,
-          priority: Priority.high,
+    try {
+      await _plugin.zonedSchedule(
+        todoId,
+        plan.title,
+        plan.body,
+        plan.scheduledDate,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _channelId,
+            _channelName,
+            channelDescription: _channelDescription,
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: const DarwinNotificationDetails(),
         ),
-        iOS: const DarwinNotificationDetails(),
-      ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
-      payload: 'todo_$todoId',
-    );
-    _logger.fine(
-      'Scheduled reminder for todo $todoId at ${plan.scheduledDate} (Urgency based)',
-    );
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        payload: 'todo_$todoId',
+      );
+      _logger.fine(
+        'Scheduled exact reminder for todo $todoId at ${plan.scheduledDate} (Urgency based)',
+      );
+    } catch (e) {
+      if (!_isExactAlarmsNotPermittedError(e)) {
+        rethrow;
+      }
+
+      _logger.warning(
+        'Exact alarms are not permitted; falling back to inexact reminder for todo $todoId',
+      );
+      await _plugin.zonedSchedule(
+        todoId,
+        plan.title,
+        plan.body,
+        plan.scheduledDate,
+        NotificationDetails(
+          android: AndroidNotificationDetails(
+            _channelId,
+            _channelName,
+            channelDescription: _channelDescription,
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: const DarwinNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        payload: 'todo_$todoId',
+      );
+      _logger.fine(
+        'Scheduled inexact reminder for todo $todoId at ${plan.scheduledDate}',
+      );
+    }
+  }
+
+  bool _isExactAlarmsNotPermittedError(Object error) {
+    if (error is! PlatformException) {
+      return false;
+    }
+    final code = error.code.toLowerCase();
+    final message = (error.message ?? '').toLowerCase();
+    return code.contains('exact_alarms_not_permitted') ||
+        message.contains('exact alarms are not permitted');
   }
 
   /// Finds the approximate time when the task reaches the target urgency.

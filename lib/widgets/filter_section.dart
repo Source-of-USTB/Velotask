@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo_filter.dart';
-import 'package:velotask/theme/app_theme.dart';
 
 class FilterSection extends StatelessWidget {
   final TodoFilter currentFilter;
@@ -20,44 +19,35 @@ class FilterSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return SliverToBoxAdapter(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Status Filters
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                _buildStatusChip(
-                  context,
-                  AppLocalizations.of(context)!.filterActive,
-                  TodoFilter.active,
-                ),
+                _buildStatusChip(context, l10n.filterActive, TodoFilter.active),
+                const SizedBox(width: 8),
+                _buildStatusChip(context, l10n.filterAll, TodoFilter.all),
                 const SizedBox(width: 8),
                 _buildStatusChip(
                   context,
-                  AppLocalizations.of(context)!.filterAll,
-                  TodoFilter.all,
-                ),
-                const SizedBox(width: 8),
-                _buildStatusChip(
-                  context,
-                  AppLocalizations.of(context)!.filterDone,
+                  l10n.filterDone,
                   TodoFilter.completed,
                 ),
                 const SizedBox(width: 8),
                 _buildStatusChip(
                   context,
-                  AppLocalizations.of(context)!.filterEmergency,
+                  l10n.filterEmergency,
                   TodoFilter.highPriority,
                 ),
               ],
             ),
           ),
-
-          // Tag Filters
           if (tags.isNotEmpty) ...[
             const SizedBox(height: 12),
             SingleChildScrollView(
@@ -85,30 +75,7 @@ class FilterSection extends StatelessWidget {
               ),
             ),
           ] else ...[
-            const SizedBox(height: 12),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.label_off_outlined,
-                    size: 18,
-                    color: Theme.of(
-                      context,
-                    ).colorScheme.outline.withValues(alpha: 0.5),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    AppLocalizations.of(context)!.noTags,
-                    style: AppTheme.bodyMediumStyle(context).copyWith(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.outline.withValues(alpha: 0.8),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            const SizedBox(height: 16),
           ],
         ],
       ),
@@ -124,18 +91,18 @@ class FilterSection extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    return FilterChip(
+    return ChoiceChip(
       showCheckmark: false,
-      label: Text(label),
+      label: Text(label, softWrap: false, overflow: TextOverflow.visible),
       selected: isSelected,
       onSelected: (_) => onFilterChanged(filter, currentTag),
-      materialTapTargetSize: MaterialTapTargetSize.padded,
       backgroundColor: Colors.transparent,
       selectedColor: theme.primaryColor,
-      labelStyle: AppTheme.chipLabelStyle(
-        context,
-        selected: isSelected,
+      labelStyle: TextStyle(
         color: isSelected ? colorScheme.onPrimary : colorScheme.secondary,
+        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+        fontSize: 13,
+        height: 1.1,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
@@ -145,8 +112,8 @@ class FilterSection extends StatelessWidget {
               : colorScheme.outline.withValues(alpha: 0.2),
         ),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-      visualDensity: VisualDensity.standard,
+      labelPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 
@@ -160,19 +127,19 @@ class FilterSection extends StatelessWidget {
     }
 
     return FilterChip(
-      label: Text(tag.name),
+      label: Text(tag.name, softWrap: false, overflow: TextOverflow.visible),
       selected: isSelected,
       onSelected: (bool selected) {
         onFilterChanged(currentFilter, selected ? tag : null);
       },
-      materialTapTargetSize: MaterialTapTargetSize.padded,
       backgroundColor: Colors.transparent,
       selectedColor: tagColor,
       checkmarkColor: Colors.white,
-      labelStyle: AppTheme.chipLabelStyle(
-        context,
-        selected: isSelected,
+      labelStyle: TextStyle(
         color: isSelected ? Colors.white : tagColor,
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        fontSize: 13,
+        height: 1.1,
       ),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
@@ -184,8 +151,8 @@ class FilterSection extends StatelessWidget {
         ),
       ),
       showCheckmark: false,
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 0),
-      visualDensity: VisualDensity.standard,
+      labelPadding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 }
