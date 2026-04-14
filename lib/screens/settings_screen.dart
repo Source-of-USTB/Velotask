@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:velotask/main.dart';
 import 'package:velotask/screens/tags_screen.dart';
 import 'package:package_info_plus/package_info_plus.dart';
-import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:velotask/services/autostart_service.dart';
 import 'package:velotask/l10n/app_localizations.dart';
@@ -28,7 +28,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadVersion() async {
     try {
-      final packageInfo = await PackageInfo.fromPlatform();
+      final packageInfo = kIsWeb
+          ? PackageInfo(
+              appName: 'Velotask',
+              packageName: 'velotask',
+              version: 'web',
+              buildNumber: 'web',
+              buildSignature: '',
+            )
+          : await PackageInfo.fromPlatform();
       if (mounted) {
         setState(() {
           _version = packageInfo.version;
@@ -119,14 +127,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
               );
             },
           ),
-          if (AutostartService.isSupported)
-            SwitchListTile(
-              secondary: const Icon(Icons.rocket_launch_outlined),
-              title: Text(l10n.autostartOnBoot),
-              subtitle: Text(l10n.autostartOnBootSubtitle),
-              value: _autostartEnabled,
-              onChanged: _setAutostart,
+          SwitchListTile(
+            secondary: const Icon(Icons.rocket_launch_outlined),
+            title: Text(l10n.autostartOnBoot),
+            subtitle: Text(
+              AutostartService.isSupported
+                  ? l10n.autostartOnBootSubtitle
+                  : '${l10n.autostartOnBootSubtitle} (Windows desktop only)',
             ),
+            value: AutostartService.isSupported && _autostartEnabled,
+            onChanged: AutostartService.isSupported ? _setAutostart : null,
+          ),
           const Divider(),
           _buildSectionHeader(context, l10n.organization),
           ListTile(
