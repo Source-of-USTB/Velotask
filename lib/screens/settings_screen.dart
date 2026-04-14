@@ -28,15 +28,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _loadVersion() async {
     try {
-      final packageInfo = kIsWeb
-          ? PackageInfo(
-              appName: 'Velotask',
-              packageName: 'velotask',
-              version: 'web',
-              buildNumber: 'web',
-              buildSignature: '',
-            )
-          : await PackageInfo.fromPlatform();
+      final packageInfo = await PackageInfo.fromPlatform();
       if (mounted) {
         setState(() {
           _version = packageInfo.version;
