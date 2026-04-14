@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
-import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/l10n/app_localizations.dart';
+import 'package:velotask/theme/app_theme.dart';
 
 class DialogInputRow extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
   final Widget child;
   final bool isInput;
 
   const DialogInputRow({
     super.key,
-    required this.icon,
+    this.icon,
     required this.child,
     this.isInput = false,
   });
@@ -19,12 +19,16 @@ class DialogInputRow extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
-        Icon(
-          icon,
-          size: 20,
-          color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.5),
-        ),
-        const SizedBox(width: 16),
+        if (icon != null) ...[
+          Icon(
+            icon,
+            size: 20,
+            color: Theme.of(
+              context,
+            ).colorScheme.secondary.withValues(alpha: 0.5),
+          ),
+          const SizedBox(width: 16),
+        ],
         Expanded(
           child: isInput
               ? Container(
@@ -109,10 +113,12 @@ class PrioritySelector extends StatelessWidget {
             const SizedBox(width: 6),
             Text(
               label,
-              style: TextStyle(
-                color: isSelected ? color : secondaryColor,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                fontSize: 14,
+              style: AppTheme.bodyStyle(context).merge(
+                AppTheme.selectableLabelStyle(
+                  context,
+                  selected: isSelected,
+                  color: isSelected ? color : secondaryColor,
+                ),
               ),
             ),
           ],
@@ -128,6 +134,7 @@ class DialogDatePicker extends StatelessWidget {
   final Function(DateTime?) onSelect;
   final bool isOptional;
   final DateTime? firstDate;
+  final bool includeTime;
 
   const DialogDatePicker({
     super.key,
@@ -136,6 +143,7 @@ class DialogDatePicker extends StatelessWidget {
     required this.onSelect,
     this.isOptional = false,
     this.firstDate,
+    this.includeTime = false,
   });
 
   @override
@@ -170,19 +178,41 @@ class DialogDatePicker extends StatelessWidget {
                   ),
                 ),
               ),
-              child: Transform.scale(
-                scale: 0.9,
-                child: MediaQuery(
-                  data: MediaQuery.of(
-                    context,
-                  ).copyWith(size: const Size(320, 400)),
-                  child: child!,
-                ),
-              ),
+              child: child!,
             );
           },
         );
-        onSelect(picked);
+        if (picked == null) {
+          onSelect(null);
+          return;
+        }
+
+        if (!includeTime) {
+          onSelect(picked);
+          return;
+        }
+
+        if (!context.mounted) return;
+
+        final initialTime = date != null
+            ? TimeOfDay(hour: date!.hour, minute: date!.minute)
+            : const TimeOfDay(hour: 23, minute: 59);
+
+        final pickedTime = await showTimePicker(
+          context: context,
+          initialTime: initialTime,
+        );
+
+        final effectiveTime = pickedTime ?? initialTime;
+        onSelect(
+          DateTime(
+            picked.year,
+            picked.month,
+            picked.day,
+            effectiveTime.hour,
+            effectiveTime.minute,
+          ),
+        );
       },
       borderRadius: BorderRadius.circular(8),
       child: Container(
@@ -194,15 +224,21 @@ class DialogDatePicker extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(label, style: TextStyle(color: secondaryColor, fontSize: 12)),
+            Text(
+              label,
+              style: AppTheme.smallRegularStyle(context, color: secondaryColor),
+            ),
             Text(
               date == null
-                  ? (isOptional ? '--/--' : l10n.today)
+                  ? (isOptional
+                        ? (includeTime ? '--/-- --:--' : '--/--')
+                        : l10n.today)
+                  : includeTime
+                  ? '${date!.month}/${date!.day} ${date!.hour.toString().padLeft(2, '0')}:${date!.minute.toString().padLeft(2, '0')}'
                   : '${date!.month}/${date!.day}',
-              style: TextStyle(
+              style: AppTheme.accentBodyStyle(
+                context,
                 color: theme.primaryColor,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
               ),
             ),
           ],

@@ -53,6 +53,209 @@ class AppTheme {
     );
   }
 
+  static TextStyle pageTitleStyle(BuildContext context, {Color? color}) {
+    return headerStyle(context).copyWith(
+      fontSize: 24,
+      fontWeight: FontWeight.w900,
+      letterSpacing: 0.8,
+      color: color ?? Theme.of(context).primaryColor,
+    );
+  }
+
+  static TextStyle sectionTitleStyle(BuildContext context, {Color? color}) {
+    return headerStyle(context).copyWith(
+      fontSize: 16,
+      fontWeight: FontWeight.w800,
+      letterSpacing: 0.4,
+      color: color ?? Theme.of(context).primaryColor,
+    );
+  }
+
+  static TextStyle dialogTitleStyle(BuildContext context, {Color? color}) {
+    return headerStyle(context).copyWith(
+      fontSize: 18,
+      fontWeight: FontWeight.w800,
+      letterSpacing: 0.4,
+      color: color ?? Theme.of(context).colorScheme.onSurface,
+    );
+  }
+
+  static TextStyle bodyStrongStyle(BuildContext context, {Color? color}) {
+    return bodyStyle(
+      context,
+      fontSize: 16,
+      fontWeight: FontWeight.w600,
+      color: color,
+    );
+  }
+
+  static TextStyle bodyMediumStrongStyle(BuildContext context, {Color? color}) {
+    return bodyStyle(
+      context,
+      fontSize: 15,
+      fontWeight: FontWeight.w600,
+      color: color,
+    );
+  }
+
+  static TextStyle captionStrongStyle(BuildContext context, {Color? color}) {
+    return bodyStyle(
+      context,
+      fontSize: 12,
+      fontWeight: FontWeight.w600,
+      color: color,
+    );
+  }
+
+  static TextStyle valueDisplayStyle(BuildContext context, {Color? color}) {
+    return headerStyle(context).copyWith(
+      fontSize: 24,
+      fontWeight: FontWeight.w800,
+      color: color ?? Theme.of(context).colorScheme.onSurface,
+      height: 1,
+    );
+  }
+
+  static TextStyle brandTitleStyle(BuildContext context, {Color? color}) {
+    return headerStyle(context).copyWith(
+      fontSize: 24,
+      fontWeight: FontWeight.w800,
+      letterSpacing: -0.5,
+      color: color ?? Theme.of(context).primaryColor,
+    );
+  }
+
+  static TextStyle bodyMediumStyle(BuildContext context, {Color? color}) {
+    return bodyStyle(
+      context,
+      fontSize: 14,
+      fontWeight: FontWeight.w500,
+      color: color,
+    );
+  }
+
+  static TextStyle smallMediumStyle(BuildContext context, {Color? color}) {
+    return bodyStyle(
+      context,
+      fontSize: 12,
+      fontWeight: FontWeight.w500,
+      color: color,
+    );
+  }
+
+  static TextStyle smallRegularStyle(BuildContext context, {Color? color}) {
+    return bodyStyle(
+      context,
+      fontSize: 12,
+      fontWeight: FontWeight.normal,
+      color: color,
+    );
+  }
+
+  static TextStyle tinyBoldStyle(BuildContext context, {Color? color}) {
+    return bodyStyle(
+      context,
+      fontSize: 10,
+      fontWeight: FontWeight.bold,
+      color: color,
+    );
+  }
+
+  static TextStyle stampStyle(BuildContext context, {Color? color}) {
+    return bodyStyle(
+      context,
+      fontSize: 10,
+      fontWeight: FontWeight.w800,
+      color: color,
+    ).copyWith(letterSpacing: 0.8);
+  }
+
+  static TextStyle progressValueStyle(BuildContext context, {Color? color}) {
+    return headerStyle(context).copyWith(
+      fontSize: 56,
+      fontWeight: FontWeight.w900,
+      color: color ?? Theme.of(context).primaryColor,
+      height: 1.0,
+      letterSpacing: -2.0,
+    );
+  }
+
+  static TextStyle progressSymbolStyle(BuildContext context, {Color? color}) {
+    return headerStyle(context).copyWith(
+      fontSize: 24,
+      fontWeight: FontWeight.w800,
+      color: color ?? Theme.of(context).colorScheme.secondary,
+    );
+  }
+
+  static TextStyle progressCaptionStyle(BuildContext context, {Color? color}) {
+    return headerStyle(context).copyWith(
+      fontSize: 11,
+      letterSpacing: 3.0,
+      fontWeight: FontWeight.bold,
+      color: color ?? Theme.of(context).colorScheme.secondary,
+    );
+  }
+
+  static TextStyle chipLabelStyle(
+    BuildContext context, {
+    required bool selected,
+    Color? color,
+  }) {
+    return bodyStyle(
+      context,
+      fontSize: 13,
+      fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+      color: color,
+    );
+  }
+
+  static TextStyle selectableLabelStyle(
+    BuildContext context, {
+    required bool selected,
+    Color? color,
+  }) {
+    return bodyStyle(
+      context,
+      fontSize: 14,
+      fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+      color: color,
+    );
+  }
+
+  static TextStyle accentBodyStyle(BuildContext context, {Color? color}) {
+    return bodyStyle(
+      context,
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+      color: color,
+    );
+  }
+
+  static TextStyle dateChipStyle(
+    BuildContext context, {
+    required bool urgent,
+    Color? color,
+  }) {
+    return bodyStyle(
+      context,
+      fontSize: 12,
+      fontWeight: urgent ? FontWeight.bold : FontWeight.w500,
+      color: color,
+    );
+  }
+
+  static TextStyle celebrationEmojiStyle(BuildContext context, {Color? color}) {
+    return valueDisplayStyle(context, color: color).copyWith(fontSize: 26);
+  }
+
+  static TextStyle weekdayCapsStyle(BuildContext context, {Color? color}) {
+    return captionStrongStyle(
+      context,
+      color: color,
+    ).copyWith(letterSpacing: 1.0);
+  }
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,

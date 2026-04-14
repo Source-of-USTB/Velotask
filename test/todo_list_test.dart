@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:velotask/l10n/app_localizations.dart';
+import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/models/todo_filter.dart';
 import 'package:velotask/screens/todo_list_view.dart';
@@ -85,9 +86,7 @@ void main() {
   });
 
   group('TodoItem Tests', () {
-    testWidgets('renders todo title', (
-      WidgetTester tester,
-    ) async {
+    testWidgets('renders todo title', (WidgetTester tester) async {
       final todo = Todo(title: 'Test Todo', description: 'Test Description');
 
       await tester.pumpWidget(
@@ -102,9 +101,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Title is shown in the list row; description is hidden until detail view.
+      // Current UI shows both title and short description in the list row.
       expect(find.text('Test Todo'), findsOneWidget);
-      expect(find.text('Test Description'), findsNothing);
+      expect(find.text('Test Description'), findsOneWidget);
     });
 
     testWidgets('tapping item opens detail dialog', (
@@ -149,6 +148,113 @@ void main() {
 
       // No tags loaded in test environment — tag row should not appear.
       expect(find.text('Tagged Todo'), findsOneWidget);
+    });
+
+    testWidgets('swipe right toggles and swipe left deletes', (
+      WidgetTester tester,
+    ) async {
+      final todo = Todo(title: 'Swipe Todo');
+      var toggled = false;
+      var deleted = false;
+      var visible = true;
+
+      await tester.pumpWidget(
+        createLocalizedWidgetForTesting(
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              if (!visible) {
+                return const SizedBox.shrink();
+              }
+              return TodoItem(
+                todo: todo,
+                onToggle: () {
+                  toggled = true;
+                },
+                onDelete: () {
+                  deleted = true;
+                  setState(() {
+                    visible = false;
+                  });
+                },
+                onEdit: () {},
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(TodoItem), const Offset(400, 0));
+      await tester.pumpAndSettle();
+
+      expect(toggled, isTrue);
+      expect(deleted, isFalse);
+
+      toggled = false;
+      await tester.drag(find.byType(TodoItem), const Offset(-400, 0));
+      await tester.pumpAndSettle();
+
+      expect(toggled, isFalse);
+      expect(deleted, isTrue);
+      expect(find.byType(TodoItem), findsNothing);
+    });
+
+    testWidgets('swipe works when tags are visible', (
+      WidgetTester tester,
+    ) async {
+      final todo = Todo(
+        title: 'Tagged Swipe Todo',
+        tags: const [
+          Tag(id: 1, name: 'work', color: '#ff9800'),
+          Tag(id: 2, name: 'urgent', color: '#f44336'),
+        ],
+      );
+      var toggled = false;
+      var deleted = false;
+      var visible = true;
+
+      await tester.pumpWidget(
+        createLocalizedWidgetForTesting(
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              if (!visible) {
+                return const SizedBox.shrink();
+              }
+              return TodoItem(
+                todo: todo,
+                onToggle: () {
+                  toggled = true;
+                },
+                onDelete: () {
+                  deleted = true;
+                  setState(() {
+                    visible = false;
+                  });
+                },
+                onEdit: () {},
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('WORK'), findsOneWidget);
+      expect(find.text('URGENT'), findsOneWidget);
+
+      await tester.drag(find.byType(TodoItem), const Offset(400, 0));
+      await tester.pumpAndSettle();
+
+      expect(toggled, isTrue);
+      expect(deleted, isFalse);
+
+      toggled = false;
+      await tester.drag(find.byType(TodoItem), const Offset(-400, 0));
+      await tester.pumpAndSettle();
+
+      expect(toggled, isFalse);
+      expect(deleted, isTrue);
+      expect(find.byType(TodoItem), findsNothing);
     });
   });
 

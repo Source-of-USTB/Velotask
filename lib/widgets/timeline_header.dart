@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/l10n/app_localizations.dart';
+import 'package:velotask/theme/app_theme.dart';
 
 class TimelineHeader extends StatelessWidget {
   final DateTime today;
@@ -38,11 +38,9 @@ class TimelineHeader extends StatelessWidget {
               children: [
                 Text(
                   _getWeekday(context, date.weekday).toUpperCase(),
-                  style: AppTheme.headerStyle(context).copyWith(
-                    fontSize: 10,
+                  style: AppTheme.weekdayCapsStyle(
+                    context,
                     color: isToday ? theme.primaryColor : secondaryColor,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.0,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -65,9 +63,8 @@ class TimelineHeader extends StatelessWidget {
                       : null,
                   child: Text(
                     date.day.toString(),
-                    style: AppTheme.headerStyle(context).copyWith(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
+                    style: AppTheme.bodyStrongStyle(
+                      context,
                       color: isToday
                           ? theme.colorScheme.onPrimary
                           : theme.colorScheme.onSurface,

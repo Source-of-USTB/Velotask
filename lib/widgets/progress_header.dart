@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/theme/app_theme.dart';
-import 'package:velotask/l10n/app_localizations.dart';
 
 class ProgressHeader extends StatelessWidget {
   final List<Todo> todos;
@@ -13,6 +13,7 @@ class ProgressHeader extends StatelessWidget {
     int completedCount = todos.where((todo) => todo.isCompleted).length;
     int totalCount = todos.length;
     double progress = totalCount == 0 ? 0 : completedCount / totalCount;
+    final allCompleted = totalCount > 0 && completedCount == totalCount;
 
     if (totalCount == 0) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
@@ -41,55 +42,84 @@ class ProgressHeader extends StatelessWidget {
                 SizedBox(
                   width: 140,
                   height: 140,
-                  child: CircularProgressIndicator(
-                    value: progress,
-                    color: Theme.of(context).primaryColor,
-                    backgroundColor: Colors.transparent,
-                    strokeWidth: 16,
-                    strokeCap: StrokeCap.butt,
+                  child: TweenAnimationBuilder<double>(
+                    duration: const Duration(milliseconds: 1000),
+                    curve: Curves.easeOutCubic,
+                    tween: Tween<double>(begin: 0, end: progress),
+                    builder: (context, value, child) {
+                      return CircularProgressIndicator(
+                        value: value,
+                        color: Theme.of(context).primaryColor,
+                        backgroundColor: Colors.transparent,
+                        strokeWidth: 16,
+                        strokeCap: StrokeCap.butt,
+                      );
+                    },
                   ),
                 ),
-                Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
+                TweenAnimationBuilder<double>(
+                  duration: const Duration(milliseconds: 1000),
+                  curve: Curves.easeOutCubic,
+                  tween: Tween<double>(begin: 0, end: progress),
+                  builder: (context, value, child) {
+                    return Column(
                       mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.baseline,
-                      textBaseline: TextBaseline.alphabetic,
                       children: [
-                        Text(
-                          '${(progress * 100).toInt()}',
-                          style: AppTheme.headerStyle(context).copyWith(
-                            fontSize: 56,
-                            fontWeight: FontWeight.w900,
-                            color: Theme.of(context).primaryColor,
-                            height: 1.0,
-                            letterSpacing: -2.0,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: [
+                            Text(
+                              '${(value * 100).toInt()}',
+                              style: AppTheme.progressValueStyle(
+                                context,
+                                color: Theme.of(context).primaryColor,
+                              ),
+                            ),
+                            Text(
+                              '%',
+                              style: AppTheme.progressSymbolStyle(
+                                context,
+                                color: Theme.of(context).colorScheme.secondary,
+                              ),
+                            ),
+                          ],
                         ),
+                        const SizedBox(height: 4),
                         Text(
-                          '%',
-                          style: AppTheme.headerStyle(context).copyWith(
-                            fontSize: 24,
-                            fontWeight: FontWeight.w800,
+                          AppLocalizations.of(context)!.completed,
+                          style: AppTheme.progressCaptionStyle(
+                            context,
                             color: Theme.of(context).colorScheme.secondary,
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      AppLocalizations.of(context)!.completed,
-                      style: AppTheme.headerStyle(context).copyWith(
-                        fontSize: 11,
-                        letterSpacing: 3.0,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.secondary,
-                      ),
-                    ),
-                  ],
+                    );
+                  },
                 ),
               ],
+            ),
+            const SizedBox(height: 12),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 260),
+              switchInCurve: Curves.easeOutBack,
+              switchOutCurve: Curves.easeInCubic,
+              child: allCompleted
+                  ? TweenAnimationBuilder<double>(
+                      key: const ValueKey('all_done_celebration'),
+                      duration: const Duration(milliseconds: 380),
+                      curve: Curves.easeOutBack,
+                      tween: Tween<double>(begin: 0.85, end: 1.0),
+                      builder: (context, value, child) {
+                        return Transform.scale(scale: value, child: child);
+                      },
+                      child: Text(
+                        '🎉',
+                        style: AppTheme.celebrationEmojiStyle(context),
+                      ),
+                    )
+                  : const SizedBox.shrink(key: ValueKey('no_celebration')),
             ),
           ],
         ),

@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:velotask/l10n/app_localizations.dart';
+import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/theme/app_theme.dart';
-import 'package:velotask/l10n/app_localizations.dart';
+import 'package:velotask/utils/priority_engine.dart';
 
-class TodoItem extends StatelessWidget {
+class TodoItem extends StatefulWidget {
   final Todo todo;
   final VoidCallback onToggle;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
+  final List<Tag>? visibleTags; // For testing or explicit tag display
 
   const TodoItem({
     super.key,
@@ -15,10 +18,16 @@ class TodoItem extends StatelessWidget {
     required this.onToggle,
     required this.onDelete,
     required this.onEdit,
+    this.visibleTags,
   });
 
-  Color _importanceColor() {
-    switch (todo.importance) {
+  @override
+  State<TodoItem> createState() => _TodoItemState();
+}
+
+class _TodoItemState extends State<TodoItem> {
+  Color _getImportanceColor() {
+    switch (widget.todo.importance) {
       case 2:
         return AppTheme.highPriority;
       case 0:
@@ -28,321 +37,361 @@ class TodoItem extends StatelessWidget {
     }
   }
 
+  Color _urgencyColor(BuildContext context, UrgencyBand band) {
+    final cs = Theme.of(context).colorScheme;
+    return switch (band) {
+      UrgencyBand.relaxed => cs.secondary,
+      UrgencyBand.medium => AppTheme.mediumPriority,
+      UrgencyBand.high => AppTheme.highPriority,
+      UrgencyBand.impossible => cs.error,
+    };
+  }
+
   String _formatDate(BuildContext context, DateTime date) {
     final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final tomorrow = today.add(const Duration(days: 1));
     final target = DateTime(date.year, date.month, date.day);
-    if (target == today) return l10n.today;
-    if (target == tomorrow) return l10n.tomorrow;
-    return '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')}';
-  }
+    final timeStr =
+        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
 
-  void _showDetail(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Text(
-          todo.title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        content: todo.description.isEmpty
-            ? null
-            : SingleChildScrollView(
-                child: Text(
-                  todo.description,
-                  style: const TextStyle(fontSize: 15, height: 1.6),
-                ),
-              ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              onEdit();
-            },
-            child: Text(l10n.edit),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.cancel),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showContextMenu(BuildContext context, Offset globalPosition) {
-    final l10n = AppLocalizations.of(context)!;
-    final renderBox = context.findRenderObject() as RenderBox;
-    final localPosition = renderBox.globalToLocal(globalPosition);
-    final rect = RelativeRect.fromLTRB(
-      globalPosition.dx,
-      globalPosition.dy,
-      globalPosition.dx + 1,
-      globalPosition.dy + 1,
-    );
-    // ignore: unused_local_variable
-    final _ = localPosition;
-
-    showMenu<_MenuAction>(
-      context: context,
-      position: rect,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      items: [
-        PopupMenuItem(
-          value: _MenuAction.toggle,
-          child: Row(
-            children: [
-              Icon(
-                todo.isCompleted
-                    ? Icons.radio_button_unchecked
-                    : Icons.check_circle_outline,
-                size: 18,
-              ),
-              const SizedBox(width: 10),
-              Text(
-                todo.isCompleted ? l10n.filterActive : l10n.completed,
-                style: const TextStyle(fontSize: 14),
-              ),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: _MenuAction.edit,
-          child: Row(
-            children: [
-              const Icon(Icons.edit_outlined, size: 18),
-              const SizedBox(width: 10),
-              Text(l10n.edit, style: const TextStyle(fontSize: 14)),
-            ],
-          ),
-        ),
-        const PopupMenuDivider(),
-        PopupMenuItem(
-          value: _MenuAction.delete,
-          child: Row(
-            children: [
-              Icon(Icons.delete_outline,
-                  size: 18, color: Theme.of(context).colorScheme.error),
-              const SizedBox(width: 10),
-              Text(
-                l10n.delete,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Theme.of(context).colorScheme.error,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ).then((action) {
-      if (action == null) return;
-      switch (action) {
-        case _MenuAction.toggle:
-          onToggle();
-        case _MenuAction.edit:
-          onEdit();
-        case _MenuAction.delete:
-          onDelete();
-      }
-    });
+    if (target == today) {
+      return '${l10n.today} $timeStr';
+    } else if (target == tomorrow) {
+      return '${l10n.tomorrow} $timeStr';
+    } else {
+      return '${date.month.toString().padLeft(2, '0')}/${date.day.toString().padLeft(2, '0')} $timeStr';
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDone = todo.isCompleted;
+    final isDone = widget.todo.isCompleted;
+    final l10n = AppLocalizations.of(context)!;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+    final dateStr = widget.todo.ddl != null
+        ? _formatDate(context, widget.todo.ddl!)
+        : '-';
+    final isUrgent =
+        widget.todo.ddl != null &&
+        (() {
+          final ddlDay = DateTime(
+            widget.todo.ddl!.year,
+            widget.todo.ddl!.month,
+            widget.todo.ddl!.day,
+          );
+          return ddlDay == today || ddlDay == tomorrow;
+        })();
+    final statusLabel = isDone ? l10n.filterDone : l10n.filterActive;
+    final priorityLabel = widget.todo.importance == 2
+        ? l10n.priorityHigh
+        : widget.todo.importance == 0
+        ? l10n.priorityLow
+        : l10n.priorityMed;
+    final urgencyValue = PriorityEngine.urgency(widget.todo);
+    final urgencyBand = PriorityEngine.urgencyBand(widget.todo);
+    final urgencyColor = _urgencyColor(context, urgencyBand);
+    final urgencyText = urgencyValue >= 9.99
+        ? '9.99+'
+        : urgencyValue.toStringAsFixed(2);
 
-    return GestureDetector(
-      onTap: () => _showDetail(context),
-      onSecondaryTapUp: (details) =>
-          _showContextMenu(context, details.globalPosition),
-      onLongPressStart: (details) =>
-          _showContextMenu(context, details.globalPosition),
-      child: Container(
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: Theme.of(context)
-                  .colorScheme
-                  .secondary
-                  .withValues(alpha: 0.1),
+    return Dismissible(
+      key: Key(widget.todo.id.toString()),
+      background: Container(
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.14),
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.only(left: 20),
+        child: Icon(
+          isDone ? Icons.undo_rounded : Icons.done_rounded,
+          color: Theme.of(context).primaryColor,
+        ),
+      ),
+      secondaryBackground: Container(
+        color: Theme.of(context).colorScheme.error,
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.only(right: 20),
+        child: const Icon(Icons.delete_outline, color: Colors.white),
+      ),
+      direction: DismissDirection.horizontal,
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          widget.onToggle();
+          return false;
+        }
+        return true;
+      },
+      onDismissed: (direction) {
+        if (direction == DismissDirection.endToStart) {
+          widget.onDelete();
+        }
+      },
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        opacity: isDone ? 0.6 : 1.0,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOutCubic,
+          decoration: BoxDecoration(
+            color: isDone
+                ? Theme.of(
+                    context,
+                  ).colorScheme.secondary.withValues(alpha: 0.04)
+                : Colors.transparent,
+            border: Border(
+              bottom: BorderSide(
+                color: Theme.of(
+                  context,
+                ).colorScheme.secondary.withValues(alpha: 0.1),
+              ),
             ),
           ),
-        ),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        child: Row(
-          children: [
-            // Checkbox
-            GestureDetector(
-              onTap: onToggle,
-              behavior: HitTestBehavior.opaque,
-              child: SizedBox(
-                width: 40,
-                child: Center(
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    curve: Curves.easeInOut,
-                    width: 20,
-                    height: 20,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.rectangle,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                        color: isDone
-                            ? Theme.of(context).colorScheme.secondary
-                            : Theme.of(context).primaryColor,
-                        width: 2,
-                      ),
-                      color: isDone
-                          ? Theme.of(context).colorScheme.secondary
-                          : Colors.transparent,
-                    ),
-                    child: AnimatedOpacity(
-                      duration: const Duration(milliseconds: 200),
-                      opacity: isDone ? 1.0 : 0.0,
-                      child: Icon(
-                        Icons.check,
-                        size: 14,
-                        color: Theme.of(context).colorScheme.onSecondary,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-            // Title + Tags
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (todo.tags.isNotEmpty)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 4),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children: todo.tags.map((tag) {
-                              Color tagColor = Colors.blue;
-                              if (tag.color != null) {
-                                try {
-                                  tagColor = Color(
-                                    int.parse(
-                                        tag.color!.replaceAll('#', '0xFF')),
-                                  );
-                                } catch (_) {}
-                              }
-                              return Container(
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
-                                margin: const EdgeInsets.only(right: 6),
-                                decoration: BoxDecoration(
-                                  color: tagColor.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  tag.name.toUpperCase(),
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: tagColor,
-                                  ),
-                                ),
-                              );
-                            }).toList(),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Content
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      if ((widget.visibleTags ?? widget.todo.tags).isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: Row(
+                              children: (widget.visibleTags ?? widget.todo.tags)
+                                  .map((tag) {
+                                    Color tagColor = Colors.blue;
+                                    if (tag.color != null) {
+                                      try {
+                                        tagColor = Color(
+                                          int.parse(
+                                            tag.color!.replaceAll('#', '0xFF'),
+                                          ),
+                                        );
+                                      } catch (_) {}
+                                    }
+                                    return Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 6,
+                                        vertical: 2,
+                                      ),
+                                      margin: const EdgeInsets.only(right: 6),
+                                      decoration: BoxDecoration(
+                                        color: tagColor.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: Text(
+                                        tag.name.toUpperCase(),
+                                        style: AppTheme.tinyBoldStyle(
+                                          context,
+                                          color: tagColor,
+                                        ),
+                                      ),
+                                    );
+                                  })
+                                  .toList(),
+                            ),
                           ),
                         ),
+                      // 第一层：标题 + 状态
+                      Row(
+                        children: [
+                          Expanded(
+                            child: AnimatedDefaultTextStyle(
+                              duration: const Duration(milliseconds: 200),
+                              style: AppTheme.bodyMediumStyle(context).copyWith(
+                                decoration: isDone
+                                    ? TextDecoration.lineThrough
+                                    : TextDecoration.none,
+                                color: isDone
+                                    ? Theme.of(context).colorScheme.secondary
+                                    : Theme.of(context).primaryColor,
+                                decorationColor: Theme.of(
+                                  context,
+                                ).colorScheme.secondary,
+                              ),
+                              child: Text(
+                                widget.todo.title,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          if (isDone)
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 180),
+                              switchInCurve: Curves.easeOutCubic,
+                              switchOutCurve: Curves.easeInCubic,
+                              transitionBuilder: (child, animation) {
+                                return FadeTransition(
+                                  opacity: animation,
+                                  child: ScaleTransition(
+                                    scale: Tween<double>(
+                                      begin: 0.92,
+                                      end: 1.0,
+                                    ).animate(animation),
+                                    child: child,
+                                  ),
+                                );
+                              },
+                              child: Transform.rotate(
+                                key: ValueKey(
+                                  'stamp_${widget.todo.id}_$isDone',
+                                ),
+                                angle: -0.08,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 9,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(6),
+                                    border: Border.all(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.error,
+                                      width: 1.4,
+                                    ),
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.error.withValues(alpha: 0.08),
+                                  ),
+                                  child: Text(
+                                    statusLabel.toUpperCase(),
+                                    style: AppTheme.stampStyle(
+                                      context,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.error,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
-                    AnimatedDefaultTextStyle(
-                      duration: const Duration(milliseconds: 200),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        decoration: isDone
-                            ? TextDecoration.lineThrough
-                            : TextDecoration.none,
-                        color: isDone
-                            ? Theme.of(context).colorScheme.secondary
-                            : Theme.of(context).primaryColor,
-                        decorationColor:
-                            Theme.of(context).colorScheme.secondary,
+                      if (widget.todo.description.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 2),
+                          child: Text(
+                            widget.todo.description,
+                            style: AppTheme.smallRegularStyle(context).copyWith(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.secondary.withValues(alpha: 0.8),
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      const SizedBox(height: 8),
+                      // 第二层：DDL + 优先级 + 编辑
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isUrgent
+                                  ? Theme.of(
+                                      context,
+                                    ).primaryColor.withValues(alpha: 0.12)
+                                  : Theme.of(context).colorScheme.secondary
+                                        .withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              dateStr,
+                              style: AppTheme.dateChipStyle(
+                                context,
+                                urgent: isUrgent,
+                                color: isUrgent
+                                    ? Theme.of(context).primaryColor
+                                    : Theme.of(context).colorScheme.secondary,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: _getImportanceColor().withValues(
+                                alpha: 0.1,
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              priorityLabel,
+                              style: AppTheme.tinyBoldStyle(
+                                context,
+                                color: _getImportanceColor(),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: urgencyColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'U: $urgencyText',
+                              style: AppTheme.tinyBoldStyle(
+                                context,
+                                color: urgencyColor,
+                              ),
+                            ),
+                          ),
+                          const Spacer(),
+                          SizedBox(
+                            width: 44,
+                            height: 44,
+                            child: IconButton(
+                              icon: Icon(
+                                Icons.edit_outlined,
+                                size: 18,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.secondary.withValues(alpha: 0.5),
+                              ),
+                              onPressed: widget.onEdit,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(
+                                minWidth: 44,
+                                minHeight: 44,
+                              ),
+                              splashRadius: 22,
+                              hoverColor: Colors.transparent,
+                            ),
+                          ),
+                        ],
                       ),
-                      child: Text(
-                        todo.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-
-            // DDL
-            SizedBox(
-              width: 80,
-              child: Builder(
-                builder: (context) {
-                  final l10n = AppLocalizations.of(context)!;
-                  final dateStr =
-                      todo.ddl != null ? _formatDate(context, todo.ddl!) : '-';
-                  final isUrgent =
-                      dateStr == l10n.today || dateStr == l10n.tomorrow;
-                  return Text(
-                    dateStr,
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: isUrgent
-                          ? Theme.of(context).primaryColor
-                          : Theme.of(context).colorScheme.secondary,
-                      fontWeight:
-                          isUrgent ? FontWeight.bold : FontWeight.normal,
-                      fontFamily: 'monospace',
-                    ),
-                    textAlign: TextAlign.center,
-                  );
-                },
-              ),
-            ),
-
-            // Priority badge
-            SizedBox(
-              width: 60,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: _importanceColor().withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    todo.importance == 2
-                        ? AppLocalizations.of(context)!.priorityHigh
-                        : todo.importance == 0
-                            ? AppLocalizations.of(context)!.priorityLow
-                            : AppLocalizations.of(context)!.priorityMed,
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: _importanceColor(),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
-
-enum _MenuAction { toggle, edit, delete }

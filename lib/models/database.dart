@@ -26,6 +26,7 @@ class Todos extends Table {
   IntColumn get importance => integer().withDefault(const Constant(1))();
   // 0 = task, 1 = deadline  (enum index)
   IntColumn get taskType => integer().withDefault(const Constant(0))();
+  RealColumn get estimatedEffortHours => real().nullable()();
 }
 
 /// Junction table for the many-to-many Todo ↔ Tag relationship.
@@ -46,7 +47,19 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (Migrator m) async {
+      await m.createAll();
+    },
+    onUpgrade: (Migrator m, int from, int to) async {
+      if (from < 2) {
+        await m.addColumn(todos, todos.estimatedEffortHours);
+      }
+    },
+  );
 
   static QueryExecutor _openConnection() {
     return driftDatabase(name: 'velotask_db');

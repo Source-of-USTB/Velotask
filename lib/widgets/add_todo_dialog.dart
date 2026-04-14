@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/services/todo_storage.dart';
+import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/widgets/dialog_components.dart';
-import 'package:velotask/l10n/app_localizations.dart';
 
 class AddTodoDialog extends StatefulWidget {
   final Todo? todo;
@@ -14,7 +15,6 @@ class AddTodoDialog extends StatefulWidget {
     DateTime? ddl,
     int importance,
     List<Tag> tags,
-    TaskType taskType,
   )
   onAdd;
 
@@ -30,7 +30,6 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
   DateTime _startDate = DateTime.now();
   DateTime? _ddl;
   int _importance = 1;
-  TaskType _taskType = TaskType.task;
   List<Tag> _availableTags = [];
   List<Tag> _selectedTags = [];
   final TodoStorage _storage = TodoStorage();
@@ -45,17 +44,18 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
           widget.todo!.startDate ?? widget.todo!.createdAt ?? DateTime.now();
       _ddl = widget.todo!.ddl;
       _importance = widget.todo!.importance;
-      _taskType = widget.todo!.taskType;
-      // _selectedTags will be set after _loadTags completes (tags must be loaded first)
+      // _selectedTags is initialized after _loadTags completes.
     }
     _loadTags();
   }
 
   Future<void> _loadTags() async {
     final tags = await _storage.loadTags();
+    if (!mounted) {
+      return;
+    }
     setState(() {
       _availableTags = tags;
-      // Initialise selection by matching on id after tags are loaded.
       if (widget.todo != null) {
         final todoTagIds = widget.todo!.tags.map((t) => t.id).toSet();
         _selectedTags = tags.where((t) => todoTagIds.contains(t.id)).toList();
@@ -73,35 +73,42 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final dialogWidth = screenWidth > 700 ? 560.0 : screenWidth - 40;
+    final maxDialogBodyHeight = screenHeight * 0.72;
+    final useVerticalDateLayout = screenWidth < 420;
+
     return AlertDialog(
+      insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       title: Text(
         widget.todo == null ? l10n.newTask : l10n.editTask,
-        style: const TextStyle(fontWeight: FontWeight.bold),
+        style: AppTheme.dialogTitleStyle(context),
       ),
-      content: SingleChildScrollView(
-        child: SizedBox(
-          width: 400,
+      content: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: dialogWidth,
+          maxHeight: maxDialogBodyHeight,
+        ),
+        child: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Title Input
               DialogInputRow(
-                icon: Icons.edit_outlined,
                 isInput: true,
                 child: TextField(
                   controller: _titleController,
                   autofocus: true,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: AppTheme.bodyStrongStyle(context),
                   decoration: InputDecoration(
                     hintText: l10n.titleHint,
                     hintStyle: TextStyle(
                       color: Colors.grey.withValues(alpha: 0.5),
-                      fontWeight: FontWeight.normal,
                     ),
                     filled: false,
                     border: InputBorder.none,
@@ -116,11 +123,10 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
 
               // Description Input
               DialogInputRow(
-                icon: Icons.description_outlined,
                 isInput: true,
                 child: TextField(
                   controller: _descController,
-                  style: const TextStyle(fontSize: 16),
+                  style: AppTheme.bodyStrongStyle(context),
                   decoration: InputDecoration(
                     hintText: l10n.descHint,
                     hintStyle: TextStyle(
@@ -139,42 +145,38 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
               ),
               const SizedBox(height: 24),
 
-              // Task Type Selector
-              DialogInputRow(
-                icon: Icons.category_outlined,
-                child: Row(
-                  children: [
-                    _TypeChip(
-                      label: l10n.taskTypeTask,
-                      selected: _taskType == TaskType.task,
-                      onTap: () => setState(() => _taskType = TaskType.task),
-                    ),
-                    const SizedBox(width: 8),
-                    _TypeChip(
-                      label: l10n.taskTypeDeadline,
-                      selected: _taskType == TaskType.deadline,
-                      onTap: () => setState(() {
-                        _taskType = TaskType.deadline;
-                        // deadline only needs ddl; clear startDate usage
-                      }),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-
               // Date Picker
               DialogInputRow(
-                icon: Icons.calendar_today_outlined,
-                child: _taskType == TaskType.deadline
-                    ? DialogDatePicker(
-                        label: l10n.dateTo,
-                        date: _ddl,
-                        firstDate: DateTime.now().subtract(
-                          const Duration(days: 1),
-                        ),
-                        onSelect: (d) => setState(() => _ddl = d),
-                        isOptional: true,
+                child: useVerticalDateLayout
+                    ? Column(
+                        children: [
+                          DialogDatePicker(
+                            label: l10n.dateFrom,
+                            date: _startDate,
+                            firstDate: DateTime.now().subtract(
+                              const Duration(days: 1),
+                            ),
+                            onSelect: (d) {
+                              if (d != null) {
+                                setState(() {
+                                  _startDate = d;
+                                  if (_ddl != null && _ddl!.isBefore(d)) {
+                                    _ddl = null;
+                                  }
+                                });
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 12),
+                          DialogDatePicker(
+                            label: l10n.dateTo,
+                            date: _ddl,
+                            firstDate: _startDate,
+                            onSelect: (d) => setState(() => _ddl = d),
+                            isOptional: true,
+                            includeTime: true,
+                          ),
+                        ],
                       )
                     : Row(
                         children: [
@@ -205,6 +207,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                               firstDate: _startDate,
                               onSelect: (d) => setState(() => _ddl = d),
                               isOptional: true,
+                              includeTime: true,
                             ),
                           ),
                         ],
@@ -214,7 +217,6 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
 
               // Priority Row
               DialogInputRow(
-                icon: Icons.flag_outlined,
                 child: PrioritySelector(
                   selectedPriority: _importance,
                   onPriorityChanged: (val) => setState(() => _importance = val),
@@ -225,10 +227,9 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
               if (_availableTags.isNotEmpty) ...[
                 const SizedBox(height: 16),
                 DialogInputRow(
-                  icon: Icons.label_outline,
                   child: Wrap(
                     spacing: 8,
-                    runSpacing: 4,
+                    runSpacing: 8,
                     children: _availableTags.map((tag) {
                       final isSelected = _selectedTags.any(
                         (t) => t.id == tag.id,
@@ -253,6 +254,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                             }
                           });
                         },
+                        materialTapTargetSize: MaterialTapTargetSize.padded,
                         backgroundColor: Colors.transparent,
                         selectedColor: tagColor.withValues(alpha: 0.2),
                         labelStyle: TextStyle(
@@ -294,11 +296,10 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
               widget.onAdd(
                 _titleController.text,
                 _descController.text,
-                _taskType == TaskType.deadline ? null : _startDate,
+                _startDate,
                 _ddl,
                 _importance,
                 _selectedTags,
-                _taskType,
               );
               Navigator.pop(context);
             }
@@ -313,50 +314,13 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
           ),
           child: Text(
             widget.todo == null ? l10n.create : l10n.save,
-            style: const TextStyle(fontWeight: FontWeight.bold),
+            style: AppTheme.bodyStrongStyle(
+              context,
+              color: Theme.of(context).colorScheme.onPrimary,
+            ),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _TypeChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  const _TypeChip({
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = Theme.of(context).primaryColor;
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: selected ? color.withValues(alpha: 0.12) : Colors.transparent,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: selected ? color : Colors.grey.withValues(alpha: 0.3),
-          ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-            color: selected
-                ? color
-                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-        ),
-      ),
     );
   }
 }

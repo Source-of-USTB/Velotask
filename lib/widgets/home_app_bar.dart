@@ -1,19 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:velotask/l10n/app_localizations.dart';
+import 'package:velotask/main.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/screens/settings_screen.dart';
 import 'package:velotask/theme/app_theme.dart';
-import 'package:velotask/main.dart';
-import 'package:velotask/l10n/app_localizations.dart';
 
 class HomeAppBar extends StatelessWidget {
   final List<Todo> todos;
   final VoidCallback? onSettingsClosed;
+  final VoidCallback? onAIAction;
 
-  const HomeAppBar({super.key, required this.todos, this.onSettingsClosed});
+  const HomeAppBar({
+    super.key,
+    required this.todos,
+    this.onSettingsClosed,
+    this.onAIAction,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return SliverAppBar(
       floating: true,
       pinned: true,
@@ -24,12 +31,10 @@ class HomeAppBar extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Text(
-            AppLocalizations.of(context)!.appName,
-            style: AppTheme.headerStyle(context).copyWith(
+            l10n.appName,
+            style: AppTheme.brandTitleStyle(
+              context,
               color: Theme.of(context).primaryColor,
-              fontWeight: FontWeight.w800,
-              fontSize: 24,
-              letterSpacing: -0.5,
             ),
           ),
         ],
@@ -37,9 +42,19 @@ class HomeAppBar extends StatelessWidget {
       actions: [
         IconButton(
           icon: Icon(
+            Icons.auto_awesome_outlined,
+            color: Theme.of(context).primaryColor,
+          ),
+          tooltip: l10n.aiQuickAdd,
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          onPressed: onAIAction,
+        ),
+        IconButton(
+          icon: Icon(
             Icons.settings_outlined,
             color: Theme.of(context).primaryColor,
           ),
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
           onPressed: () async {
             await Navigator.push(
               context,
@@ -58,6 +73,7 @@ class HomeAppBar extends StatelessWidget {
                     : Icons.dark_mode_outlined,
                 color: Theme.of(context).primaryColor,
               ),
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               onPressed: () async {
                 final newMode = mode == ThemeMode.dark
                     ? ThemeMode.light

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/widgets/add_todo_dialog.dart';
 
@@ -26,7 +26,7 @@ void main() {
                   showDialog(
                     context: context,
                     builder: (context) => AddTodoDialog(
-                      onAdd: (title, desc, startDate, ddl, importance, tags, taskType) {
+                      onAdd: (title, desc, startDate, ddl, importance, tags) {
                         selectedStartDate = startDate;
                         selectedDdl = ddl;
                       },
@@ -72,6 +72,10 @@ void main() {
     // Since we constrained the start date to today (18th), we must pick a future date.
     // TODO: If today is after 25th, this test may fail. In real tests, we should control the date.
     await tester.tap(find.text('25'));
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    // Deadline now includes time selection; confirm default time.
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
 

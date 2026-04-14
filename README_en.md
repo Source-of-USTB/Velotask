@@ -22,6 +22,15 @@ Velotask is a modern, efficient, and user-friendly task management application b
   * **Scheduling**: Set Start Dates and Deadlines to manage your time effectively.
   * Add detailed descriptions to your tasks.
 
+* **🔔 Smart Local Notifications**
+  * **Urgency-driven reminder**: Triggers a single reminder at the most meaningful pre-deadline moment based on task urgency.
+  * **Deadline fallback strategy**: Automatically falls back to a later pre-deadline reminder when urgency-threshold timing is not available.
+  * **Daily summary notification**: Sends one scheduled summary notification per day.
+  * **Works in background**: Uses system local scheduling, so reminders can arrive even when the app is not running.
+
+* **🤖 Intelligent Input**
+  * Supports natural language task parsing (for example, “Buy milk tomorrow at 5pm”).
+
 * **🎨 Modern UI & Customization**
   * **Theme Support**: Switch between Light and Dark modes.
   * **Theme Persistence**: Your theme preference is saved automatically.
@@ -36,7 +45,8 @@ Velotask is a modern, efficient, and user-friendly task management application b
 
 * **Framework**: [Flutter](https://flutter.dev/)
 * **Language**: [Dart](https://dart.dev/)
-* **Database**: [Isar](https://isar.dev/) (v3.1.0)
+* **Database**: [Drift](https://drift.simonbinder.eu/)
+* **Notifications**: [flutter_local_notifications](https://pub.dev/packages/flutter_local_notifications) + [timezone](https://pub.dev/packages/timezone)
 
 ## 🚀 Getting Started
 

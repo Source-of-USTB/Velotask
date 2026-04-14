@@ -7,6 +7,7 @@ enum TaskType { task, deadline }
 /// The actual Drift table definition lives in database.dart (Todos table).
 class Todo {
   final int id;
+
   String title;
   String description;
   bool isCompleted;
@@ -15,6 +16,7 @@ class Todo {
   DateTime? ddl;
   int importance; // 0: Low, 1: Normal, 2: High
   TaskType taskType;
+  double? estimatedEffortHours;
 
   /// Tags associated with this todo (loaded alongside the todo).
   List<Tag> tags;
@@ -29,8 +31,9 @@ class Todo {
     this.ddl,
     this.importance = 1,
     this.taskType = TaskType.task,
-    this.tags = const [],
-  });
+    List<Tag> tags = const [],
+    this.estimatedEffortHours,
+  }) : tags = List<Tag>.from(tags);
 
   Todo copyWith({
     int? id,
@@ -43,6 +46,7 @@ class Todo {
     int? importance,
     TaskType? taskType,
     List<Tag>? tags,
+    double? estimatedEffortHours,
   }) {
     return Todo(
       id: id ?? this.id,
@@ -55,6 +59,7 @@ class Todo {
       importance: importance ?? this.importance,
       taskType: taskType ?? this.taskType,
       tags: tags ?? this.tags,
+      estimatedEffortHours: estimatedEffortHours ?? this.estimatedEffortHours,
     );
   }
 }

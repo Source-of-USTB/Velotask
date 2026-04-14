@@ -186,10 +186,9 @@ class TimelineTaskRow extends StatelessWidget {
                 todo.title,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppTheme.headerStyle(context).copyWith(
+                style: AppTheme.captionStrongStyle(
+                  context,
                   color: theme.colorScheme.onSurface,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
