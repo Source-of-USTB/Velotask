@@ -2,15 +2,10 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:velotask/main.dart';
-import 'package:velotask/screens/tags_screen.dart';
 import 'package:http/http.dart' as http;
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:velotask/services/autostart_service.dart';
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/main.dart';
 import 'package:velotask/screens/tags_screen.dart';
@@ -25,7 +20,6 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String _version = '';
-  bool _autostartEnabled = false;
   bool _isTestingModel = false;
   final TextEditingController _aiBaseUrlController = TextEditingController();
   final TextEditingController _aiApiKeyController = TextEditingController();
@@ -35,7 +29,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _loadVersion();
-    _loadAutostart();
     _loadAISettings();
   }
 
@@ -197,25 +190,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _loadAutostart() async {
-    if (!AutostartService.isSupported) return;
-    final enabled = await AutostartService.isEnabled();
-    if (mounted) {
-      setState(() {
-        _autostartEnabled = enabled;
-      });
-    }
-  }
-
-  Future<void> _setAutostart(bool value) async {
-    await AutostartService.setEnabled(value);
-    if (mounted) {
-      setState(() {
-        _autostartEnabled = value;
-      });
-    }
-  }
-
   Future<void> _setTheme(ThemeMode mode) async {
     themeNotifier.value = mode;
     final prefs = await SharedPreferences.getInstance();
@@ -280,17 +254,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onTap: () => _showLanguageDialog(context, currentLocale),
               );
             },
-          ),
-          SwitchListTile(
-            secondary: const Icon(Icons.rocket_launch_outlined),
-            title: Text(l10n.autostartOnBoot),
-            subtitle: Text(
-              AutostartService.isSupported
-                  ? l10n.autostartOnBootSubtitle
-                  : '${l10n.autostartOnBootSubtitle} (Windows desktop only)',
-            ),
-            value: AutostartService.isSupported && _autostartEnabled,
-            onChanged: AutostartService.isSupported ? _setAutostart : null,
           ),
           const Divider(),
           _buildSectionHeader(context, l10n.organization),

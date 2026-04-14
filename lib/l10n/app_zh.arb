@@ -74,10 +74,6 @@
   "shortWeekdayFri": "五",
   "shortWeekdaySat": "六",
   "shortWeekdaySun": "日",
-  "taskTypeTask": "任务",
-  "taskTypeDeadline": "截止日期",
-  "autostartOnBoot": "开机自启动",
-  "autostartOnBootSubtitle": "Windows 启动时自动启动"
   "aiAssistant": "AI 助手",
   "aiSettings": "AI 设置",
   "aiBaseUrl": "API 基础链接",
