@@ -74,6 +74,11 @@
   "shortWeekdayFri": "Fri",
   "shortWeekdaySat": "Sat",
   "shortWeekdaySun": "Sun",
+  "taskTypeTask": "Task",
+  "taskTypeDeadline": "Deadline",
+  "autostartOnBoot": "Launch at Startup",
+  "autostartOnBootSubtitle": "Automatically launch when Windows starts"
+}
   "aiAssistant": "AI Assistant",
   "aiSettings": "AI Settings",
   "aiBaseUrl": "API Base URL",

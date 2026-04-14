@@ -1,0 +1,20 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Velotask (Edge)",
+            "request": "launch",
+            "type": "dart",
+            "web": true,
+            "flutterMode": "debug",
+            "deviceId": "edge"
+        },
+        {
+            "name": "Velotask (Windows)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "debug",
+            "deviceId": "windows"
+        }
+    ]
+}
