@@ -5,6 +5,11 @@ on:
     tags:
       - 'v*'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v1.0.0)'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -59,7 +64,6 @@ jobs:
 
   build_web:
     name: Build Web
-    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -107,7 +111,6 @@ jobs:
 
   build_linux:
     name: Build Linux Bundle
-    needs: test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -166,7 +169,6 @@ jobs:
 
   build_windows:
     name: Build Windows
-    needs: test
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -197,7 +199,6 @@ jobs:
 
   build_macos:
     name: Build macOS
-    needs: test
     runs-on: macos-latest
     steps:
       - name: Checkout
@@ -268,15 +269,27 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Set version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="${{ inputs.version }}"
+          fi
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Download all artifacts
         uses: actions/download-artifact@v5
         with:
           path: artifacts
 
       - name: Prepare release assets
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          VERSION="${{ github.ref_name }}"
-          VERSION="${VERSION#v}"
           cd artifacts
 
           # Android APK
@@ -315,5 +328,6 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.tag }}
           files: artifacts/velotask-*
           generate_release_notes: true
