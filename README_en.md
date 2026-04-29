@@ -1,82 +1,74 @@
 # Velotask
 
-[中文](README.md) | English
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE) [![GitHub stars](https://img.shields.io/github/stars/Source-of-USTB/Velotask?style=social)](https://github.com/Source-of-USTB/Velotask/stargazers) [![Issues](https://img.shields.io/github/issues/Source-of-USTB/Velotask)](https://github.com/Source-of-USTB/Velotask/issues) [![GitHub Actions](https://img.shields.io/github/actions/workflow/status/Source-of-USTB/Velotask/build.yml?branch=main)](https://github.com/Source-of-USTB/Velotask/actions) [![Platform](https://img.shields.io/badge/platform-Flutter-blue.svg)](https://flutter.dev)
 
-Velotask is a modern, efficient, and user-friendly task management application built with Flutter. It is designed to help you organize your life, track your progress, and stay productive with a clean and intuitive interface.
+![banner](banner.jpg)
 
 > Velotask doesn't just help you check off items quickly; it gives your day direction.
 
+[中文](README.md) | English
+
+Velotask is a simple, fast task app. Built with Flutter.
+
 ## ✨ Features
 
-* **📝 Comprehensive Task Management**
-  * Create, edit, and delete tasks easily.
-  * Mark tasks as completed with a simple toggle.
-  * **Optimistic UI Updates**: Experience instant feedback when interacting with tasks.
+- **📝 Task Management**
+  * Add, edit, delete tasks.
+  * Swipe right to mark done.
 
-* **🏷️ Rich Task Details**
-  * **Categorization**: Organize tasks by types:
-    * **DDL**: Deadline-driven tasks.
-    * **TDL**: Standard To-Do List items.
-    * **WTD**: "Want To Do" - personal goals or wishlists.
-  * **Prioritization**: Set importance levels (Low, Normal, High) to focus on what matters.
-  * **Scheduling**: Set Start Dates and Deadlines to manage your time effectively.
-  * Add detailed descriptions to your tasks.
+- **🏷️ Task Details**
+  * Organize by tags.
+  * Set priority, start, and due dates.
+  * Add descriptions.
 
-* **🔔 Smart Local Notifications**
-  * **Urgency-driven reminder**: Triggers a single reminder at the most meaningful pre-deadline moment based on task urgency.
-  * **Deadline fallback strategy**: Automatically falls back to a later pre-deadline reminder when urgency-threshold timing is not available.
-  * **Daily summary notification**: Sends one scheduled summary notification per day.
-  * **Works in background**: Uses system local scheduling, so reminders can arrive even when the app is not running.
+- **🤖 AI Features**
+  * Configure API key to use AI features (OpenAI-compatible).
+  * Let AI parse task text – supports multiple tasks at once!
+  * All data stays local – never uploaded to the cloud.
 
-* **🤖 Intelligent Input**
-  * Supports natural language task parsing (for example, “Buy milk tomorrow at 5pm”).
+- **🎨 Custom UI**
+  * Light and dark themes.
+  * See task progress.
+  * Filter active or done tasks.
 
-* **🎨 Modern UI & Customization**
-  * **Theme Support**: Switch between Light and Dark modes.
-  * **Theme Persistence**: Your theme preference is saved automatically.
-  * **Progress Tracking**: Visual indicators of your task completion progress.
-  * **Filtering**: Easily filter tasks to see what's active or completed.
-
-* **🚀 High Performance**
-  * Powered by **Isar Database** for lightning-fast local data storage.
-  * Offline-first architecture.
+- **🚀 Fast and Offline**
+  * Powered by Drift database. Works offline.
 
 ## 🛠️ Tech Stack
 
-* **Framework**: [Flutter](https://flutter.dev/)
-* **Language**: [Dart](https://dart.dev/)
-* **Database**: [Drift](https://drift.simonbinder.eu/)
-* **Notifications**: [flutter_local_notifications](https://pub.dev/packages/flutter_local_notifications) + [timezone](https://pub.dev/packages/timezone)
+- **Framework**: [Flutter](https://flutter.dev/)
+- **Language**: [Dart](https://dart.dev/)
+- **Database**: [Drift](https://drift.simonbinder.eu/)
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-* [Flutter SDK](https://docs.flutter.dev/get-started/install) installed.
-* An IDE (VS Code or Android Studio) configured for Flutter development.
+- Install [Flutter SDK](https://docs.flutter.dev/get-started/install).
+- Set up IDE (VS Code or Android Studio).
 
 ### Installation
 
-1. **Clone the repository**
+1. Clone the repo:
 
     ```bash
     git clone https://github.com/Source-of-USTB/Velotask.git
     cd velotask
     ```
 
-2. **Install dependencies**
+2. Install dependencies:
 
     ```bash
     flutter pub get
     ```
 
-3. **Run the code generator** (required for Isar database)
+3. Run code generator:
 
     ```bash
     dart run build_runner build
     ```
 
-4. **Run the app**
+4. Run the app:
 
     ```bash
     flutter run
@@ -86,21 +78,21 @@ Velotask is a modern, efficient, and user-friendly task management application b
 
 ### Android
 
-To build an APK for Android devices:
+Build APK:
 
 ```bash
 flutter build apk
 ```
 
-* **Note**: To reduce file size for specific architectures, use:
+To reduce size:
 
-    ```bash
-    flutter build apk --split-per-abi
-    ```
+```bash
+flutter build apk --split-per-abi
+```
 
 ### Windows
 
-To build a Windows executable:
+Build Windows executable:
 
 ```bash
 flutter build windows
@@ -108,19 +100,19 @@ flutter build windows
 
 ### Others
 
-We haven't tested on other platforms yet.
+Not tested yet.
 
 ## 🤝 Contributing
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+Your contributions are very welcome! If you find any bugs or have suggestions for new features, feel free to submit an Issue or Pull Request.
 
-Check out our [Development Roadmap](ROADMAP.md) to see what's planned for the future.
+Check [Roadmap](docs/ROADMAP_en.md) for our future plans.
 
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+1. Fork repo.
+2. Create branch (`git checkout -b feature/AmazingFeature`).
+3. Commit changes (`git commit -m 'Add AmazingFeature'`).
+4. Push branch (`git push origin feature/AmazingFeature`).
+5. Open Pull Request.
 
 ## 📄 License
 
