@@ -1,0 +1,17 @@
+# Default: auto-detect text files and normalize line endings
+* text=auto
+
+# Dart / Flutter
+*.dart text
+*.arb text
+*.yaml text
+*.yml text
+*.json text
+*.md text
+
+# Shell scripts require LF
+*.sh text eol=lf
+
+# Windows batch files require CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
