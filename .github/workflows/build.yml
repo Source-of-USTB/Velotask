@@ -6,11 +6,13 @@ on:
       - main
       - master
       - develop
+    tags:
+      - 'v*'
   pull_request:
   workflow_dispatch:
     inputs:
       run_builds:
-        description: "Build Android/Web/Linux artifacts"
+        description: "Build all platform artifacts (Android, Web, Linux, Windows, macOS)"
         required: true
         type: boolean
         default: true
@@ -103,7 +105,7 @@ jobs:
 
   build_android:
     name: Build Android APK
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_builds }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_builds) || startsWith(github.ref, 'refs/tags/v') }}
     needs: [prepare, test]
     runs-on: ubuntu-latest
 
@@ -153,7 +155,7 @@ jobs:
 
   build_web:
     name: Build Web
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_builds }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_builds) || startsWith(github.ref, 'refs/tags/v') }}
     needs: [prepare, test]
     runs-on: ubuntu-latest
 
@@ -203,7 +205,7 @@ jobs:
 
   build_bundle:
     name: Build Linux Bundle
-    if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_builds }}
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_builds) || startsWith(github.ref, 'refs/tags/v') }}
     needs: [prepare, test]
     runs-on: ubuntu-latest
 
@@ -262,6 +264,72 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+  build_windows:
+    name: Build Windows
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_builds) || startsWith(github.ref, 'refs/tags/v') }}
+    needs: [prepare, test]
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build Windows
+        run: flutter build windows --release
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v5
+        with:
+          name: windows-release
+          path: build/windows/x64/runner/Release/
+          if-no-files-found: error
+          retention-days: 30
+
+  build_macos:
+    name: Build macOS
+    if: ${{ (github.event_name == 'workflow_dispatch' && inputs.run_builds) || startsWith(github.ref, 'refs/tags/v') }}
+    needs: [prepare, test]
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Generate code
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build macOS
+        run: flutter build macos --release
+
+      - name: Upload macOS build
+        uses: actions/upload-artifact@v5
+        with:
+          name: macos-release
+          path: build/macos/Build/Products/Release/velotask.app
+          if-no-files-found: error
+          retention-days: 30
+
   build_deb:
     name: Build Debian package
     needs: build_bundle
@@ -297,3 +365,32 @@ jobs:
           path: build/deb/*.deb
           if-no-files-found: error
           retention-days: 30
+
+  github_release:
+    name: Create GitHub Release
+    needs: [build_android, build_web, build_bundle, build_deb, build_windows, build_macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v5
+        with:
+          path: artifacts
+
+      - name: Prepare release assets
+        run: |
+          cd artifacts
+          for dir in */; do
+            name="${dir%/}"
+            zip -r "${name}.zip" "$name"
+          done
+          ls -la *.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.zip
+          generate_release_notes: true
