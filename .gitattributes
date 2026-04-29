@@ -1,11 +1,13 @@
 # Default: auto-detect text files and normalize line endings
 * text=auto
 
+.gitattributes text eol=lf
+
 # Dart / Flutter
 *.dart text
 *.arb text
 *.yaml text
-*.yml text
+*.yml text eol=lf
 *.json text
 *.md text
 
