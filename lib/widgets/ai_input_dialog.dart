@@ -54,7 +54,7 @@ class _AIInputDialogState extends State<AIInputDialog> {
           if (e.toString().contains('AI configuration missing')) {
             _error = 'config_missing';
           } else {
-            _error = '${l10n.aiParseError}: ${e.toString().split('\n').first}';
+            _error = '${l10n.aiParseError}: $e';
           }
         });
       }
@@ -96,46 +96,53 @@ class _AIInputDialogState extends State<AIInputDialog> {
           Text(l10n.aiQuickAdd, style: AppTheme.dialogTitleStyle(context)),
         ],
       ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextField(
-            controller: _controller,
-            decoration: InputDecoration(
-              hintText: l10n.aiInputHint,
-              border: const OutlineInputBorder(),
-              suffixIcon: _controller.text.isNotEmpty
-                  ? IconButton(
-                      icon: const Icon(Icons.clear),
-                      onPressed: () {
-                        setState(() {
-                          _controller.clear();
-                        });
-                      },
-                    )
-                  : null,
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _controller,
+              decoration: InputDecoration(
+                hintText: l10n.aiInputHint,
+                border: const OutlineInputBorder(),
+                suffixIcon: _controller.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          setState(() {
+                            _controller.clear();
+                          });
+                        },
+                      )
+                    : null,
+              ),
+              maxLines: 3,
+              enabled: !_isProcessing,
+              autofocus: true,
+              onChanged: (_) => setState(() {}),
             ),
-            maxLines: 3,
-            enabled: !_isProcessing,
-            autofocus: true,
-            onChanged: (value) {
-              setState(() {});
-            },
-          ),
-          if (_error != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              _error!,
-              style: AppTheme.smallRegularStyle(context, color: Colors.red),
-            ),
+            if (_error != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                constraints: const BoxConstraints(maxHeight: 100),
+                decoration: BoxDecoration(
+                  color: Colors.red.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                padding: const EdgeInsets.all(10),
+                child: SingleChildScrollView(
+                  child: Text(
+                    _error!,
+                    style:
+                        AppTheme.smallRegularStyle(context, color: Colors.red),
+                  ),
+                ),
+              ),
+            ],
           ],
-          if (_isProcessing) ...[
-            const SizedBox(height: 16),
-            const CircularProgressIndicator(),
-            const SizedBox(height: 8),
-            Text(l10n.aiProcessing, style: AppTheme.smallMediumStyle(context)),
-          ],
-        ],
+        ),
       ),
       actions: [
         TextButton(
@@ -144,7 +151,20 @@ class _AIInputDialogState extends State<AIInputDialog> {
         ),
         ElevatedButton(
           onPressed: _isProcessing ? null : _processInput,
-          child: Text(l10n.aiSubmit),
+          child: _isProcessing
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(l10n.aiProcessing),
+                  ],
+                )
+              : Text(l10n.aiSubmit),
         ),
       ],
     );

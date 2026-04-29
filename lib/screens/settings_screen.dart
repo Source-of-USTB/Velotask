@@ -157,7 +157,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '${l10n.aiParseError}: ${e.toString().split('\n').first}',
+            '${l10n.aiParseError}: $e',
           ),
         ),
       );
