@@ -14,6 +14,7 @@ class GanttChart extends StatelessWidget {
   final DateTime chartStart;
   final int totalDays;
   final double totalWidth;
+  final DateTime now;
 
   const GanttChart({
     super.key,
@@ -23,6 +24,7 @@ class GanttChart extends StatelessWidget {
     required this.chartStart,
     required this.totalDays,
     required this.totalWidth,
+    required this.now,
     this.onTaskDoubleTap,
   });
 
@@ -43,6 +45,7 @@ class GanttChart extends StatelessWidget {
               chartStart: chartStart,
               daysToShow: totalDays,
               dayWidth: dayWidth,
+              now: now,
             ),
           ),
           Expanded(
@@ -53,12 +56,23 @@ class GanttChart extends StatelessWidget {
                     scrollDirection: Axis.horizontal,
                     child: SizedBox(
                       width: totalWidth,
-                      child: ListView.builder(
-                        itemCount: tasks.length,
-                        itemExtent: TimelineTaskRow.rowHeight,
-                        itemBuilder: (_, i) => TimelineTaskRow(
-                          todo: tasks[i],
-                          onDoubleTap: onTaskDoubleTap,
+                      child: CustomPaint(
+                        painter: _WeekendStripePainter(
+                          chartStart: chartStart,
+                          totalDays: totalDays,
+                          dayWidth: dayWidth,
+                          weekendColor: Theme.of(context)
+                              .colorScheme
+                              .surfaceContainerHighest,
+                        ),
+                        child: ListView.builder(
+                          itemCount: tasks.length,
+                          itemExtent: TimelineTaskRow.rowHeight,
+                          itemBuilder: (_, i) => TimelineTaskRow(
+                            todo: tasks[i],
+                            now: now,
+                            onDoubleTap: onTaskDoubleTap,
+                          ),
                         ),
                       ),
                     ),
@@ -68,6 +82,40 @@ class GanttChart extends StatelessWidget {
       ),
     );
   }
+}
+
+class _WeekendStripePainter extends CustomPainter {
+  final DateTime chartStart;
+  final int totalDays;
+  final double dayWidth;
+  final Color weekendColor;
+
+  const _WeekendStripePainter({
+    required this.chartStart,
+    required this.totalDays,
+    required this.dayWidth,
+    required this.weekendColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = weekendColor;
+    for (int i = 0; i < totalDays; i++) {
+      final date = chartStart.add(Duration(days: i));
+      if (date.weekday == DateTime.saturday ||
+          date.weekday == DateTime.sunday) {
+        final x = i * dayWidth;
+        canvas.drawRect(Rect.fromLTWH(x, 0, dayWidth, size.height), paint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _WeekendStripePainter old) =>
+      old.chartStart != chartStart ||
+      old.totalDays != totalDays ||
+      old.dayWidth != dayWidth ||
+      old.weekendColor != weekendColor;
 }
 
 class _EmptyState extends StatelessWidget {

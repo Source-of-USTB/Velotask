@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/todo.dart';
@@ -29,6 +31,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
   late final double _totalWidth;
   bool _syncing = false;
   bool _didAutoScroll = false;
+  late Timer _nowTimer;
+  DateTime _now = DateTime.now();
 
   @override
   void initState() {
@@ -44,11 +48,16 @@ class _TimelineScreenState extends State<TimelineScreen> {
     _bodyCtrl.addListener(_syncBody);
     _headerCtrl.addListener(_syncHeader);
 
+    _nowTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
+    });
+
     WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToToday());
   }
 
   @override
   void dispose() {
+    _nowTimer.cancel();
     _headerCtrl
       ..removeListener(_syncHeader)
       ..dispose();
@@ -159,6 +168,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
         chartStart: _chartStart,
         totalDays: _totalDays,
         totalWidth: _totalWidth,
+        now: _now,
         onTaskDoubleTap: widget.onTaskDoubleTap,
       ),
     );

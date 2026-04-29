@@ -5,15 +5,20 @@ import 'package:velotask/widgets/timeline_layout.dart';
 
 class TimelineTaskRow extends StatelessWidget {
   final Todo todo;
+  final DateTime now;
   final void Function(Todo)? onDoubleTap;
 
   static const double rowHeight = 52.0;
   static const double _barHeight = 34.0;
   static const double _barPadding = (rowHeight - _barHeight) / 2;
+  static const double _triangleHeight = _barHeight;
+  static const double _triangleWidth = _barHeight * 0.7;
+  static const double _triangleTop = (rowHeight - _triangleHeight) / 2;
 
   const TimelineTaskRow({
     super.key,
     required this.todo,
+    required this.now,
     this.onDoubleTap,
   });
 
@@ -54,6 +59,8 @@ class TimelineTaskRow extends StatelessWidget {
 
     final endMinutes = ddl.difference(layout.chartStart).inMinutes;
     final x = (endMinutes / minutesPerDay * layout.dayWidth).clamp(0.0, layout.totalWidth);
+    final nowMinutes = now.difference(layout.chartStart).inMinutes;
+    final nowX = (nowMinutes / minutesPerDay * layout.dayWidth).clamp(0.0, layout.totalWidth);
 
     return SizedBox(
       height: rowHeight,
@@ -71,10 +78,10 @@ class TimelineTaskRow extends StatelessWidget {
               color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
             ),
           ),
-          // 菱形标记 + 标题
+          // 正三角标记（尖端朝上指向日期刻度）+ 标题
           Positioned(
-            left: x - _barHeight / 2,
-            top: _barPadding,
+            left: x - _triangleWidth / 2,
+            top: _triangleTop,
             child: GestureDetector(
               onDoubleTap: () => onDoubleTap?.call(todo),
               child: MouseRegion(
@@ -82,23 +89,9 @@ class TimelineTaskRow extends StatelessWidget {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Transform.rotate(
-                      angle: 0.785, // 45°
-                      child: Container(
-                        width: _barHeight * 0.6,
-                        height: _barHeight * 0.6,
-                        decoration: BoxDecoration(
-                          color: color,
-                          borderRadius: BorderRadius.circular(3),
-                          boxShadow: [
-                            BoxShadow(
-                              color: color.withValues(alpha: 0.3),
-                              blurRadius: 4,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                      ),
+                    CustomPaint(
+                      size: const Size(_triangleWidth, _triangleHeight),
+                      painter: _TrianglePainter(color: color),
                     ),
                     const SizedBox(width: 6),
                     Text(
@@ -115,6 +108,13 @@ class TimelineTaskRow extends StatelessWidget {
                 ),
               ),
             ),
+          ),
+          // 当前时间红线（最上层）
+          Positioned(
+            left: nowX - 1,
+            top: 0,
+            bottom: 0,
+            child: Container(width: 2, color: theme.colorScheme.error),
           ),
         ],
       ),
@@ -145,6 +145,8 @@ class TimelineTaskRow extends StatelessWidget {
       minWidth,
       layout.totalWidth - left,
     );
+    final nowMinutes = now.difference(layout.chartStart).inMinutes;
+    final nowX = (nowMinutes / minutesPerDay * layout.dayWidth).clamp(0.0, layout.totalWidth);
 
     return SizedBox(
       height: rowHeight,
@@ -162,7 +164,6 @@ class TimelineTaskRow extends StatelessWidget {
               color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
             ),
           ),
-
           // 任务条
           Positioned(
             left: left,
@@ -195,6 +196,13 @@ class TimelineTaskRow extends StatelessWidget {
                 ),
               ),
             ),
+          ),
+          // 当前时间红线（最上层）
+          Positioned(
+            left: nowX - 1,
+            top: 0,
+            bottom: 0,
+            child: Container(width: 2, color: theme.colorScheme.error),
           ),
         ],
       ),
@@ -238,4 +246,26 @@ class _TaskBar extends StatelessWidget {
       ),
     );
   }
+}
+
+class _TrianglePainter extends CustomPainter {
+  final Color color;
+  const _TrianglePainter({required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(size.width / 2, 0)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+
+    final shadowPath = path.shift(const Offset(0, 2));
+    canvas.drawPath(shadowPath, Paint()..color = color.withValues(alpha: 0.3));
+
+    canvas.drawPath(path, Paint()..color = color);
+  }
+
+  @override
+  bool shouldRepaint(covariant _TrianglePainter old) => old.color != color;
 }

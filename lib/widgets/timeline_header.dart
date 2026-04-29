@@ -11,17 +11,22 @@ class TimelineHeader extends StatelessWidget {
   final DateTime chartStart;
   final int daysToShow;
   final double dayWidth;
+  final DateTime now;
 
   const TimelineHeader({
     super.key,
     required this.chartStart,
     required this.daysToShow,
     required this.dayWidth,
+    required this.now,
   });
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
+
+    final weekendColor = cs.surfaceContainerHighest;
+    final weekdayColor = cs.surfaceContainerLow;
 
     return RepaintBoundary(
       child: SizedBox(
@@ -33,11 +38,14 @@ class TimelineHeader extends StatelessWidget {
             daysToShow: daysToShow,
             dayWidth: dayWidth,
             today: DateTime.now(),
-            bgColor: cs.surfaceContainerHighest,
+            now: now,
+            bgColor: weekdayColor,
+            weekendColor: weekendColor,
             dividerColor: cs.outlineVariant,
             textColor: cs.onSurface,
             mutedColor: cs.onSurfaceVariant,
             todayColor: cs.primary,
+            nowColor: cs.error,
           ),
         ),
       ),
@@ -50,11 +58,14 @@ class _HeaderPainter extends CustomPainter {
   final int daysToShow;
   final double dayWidth;
   final DateTime today;
+  final DateTime now;
   final Color bgColor;
+  final Color weekendColor;
   final Color dividerColor;
   final Color textColor;
   final Color mutedColor;
   final Color todayColor;
+  final Color nowColor;
 
   static const double _monthRowH = TimelineHeader.monthRowHeight;
   static const double _dayRowH = TimelineHeader.dayRowHeight;
@@ -64,11 +75,14 @@ class _HeaderPainter extends CustomPainter {
     required this.daysToShow,
     required this.dayWidth,
     required this.today,
+    required this.now,
     required this.bgColor,
+    required this.weekendColor,
     required this.dividerColor,
     required this.textColor,
     required this.mutedColor,
     required this.todayColor,
+    required this.nowColor,
   });
 
   @override
@@ -122,11 +136,19 @@ class _HeaderPainter extends CustomPainter {
         canvas.drawLine(Offset(x, 0), Offset(x, _monthRowH), thinLine);
       }
 
+      // 周末背景
+      if (isWeekend) {
+        canvas.drawRect(
+          Rect.fromLTWH(x, 0, dayWidth, size.height),
+          Paint()..color = weekendColor,
+        );
+      }
+
       // 日期行
       if (isToday) {
         canvas.drawRect(
           Rect.fromLTWH(x, _monthRowH, dayWidth, _dayRowH),
-          Paint()..color = todayColor.withValues(alpha: 0.12),
+          Paint()..color = todayColor.withValues(alpha: 0.16),
         );
       }
 
@@ -158,6 +180,18 @@ class _HeaderPainter extends CustomPainter {
         ..color = dividerColor
         ..strokeWidth = 1,
     );
+
+    // 当前时间红线
+    final nowX = now.difference(chartStart).inMinutes / 1440.0 * dayWidth;
+    if (nowX >= 0 && nowX <= size.width) {
+      canvas.drawLine(
+        Offset(nowX, 0),
+        Offset(nowX, size.height),
+        Paint()
+          ..color = nowColor
+          ..strokeWidth = 2,
+      );
+    }
   }
 
   bool _isSameDay(DateTime a, DateTime b) =>
@@ -198,9 +232,12 @@ class _HeaderPainter extends CustomPainter {
       old.chartStart != chartStart ||
       old.daysToShow != daysToShow ||
       old.dayWidth != dayWidth ||
+      old.now != now ||
       old.bgColor != bgColor ||
+      old.weekendColor != weekendColor ||
       old.dividerColor != dividerColor ||
       old.textColor != textColor ||
       old.mutedColor != mutedColor ||
-      old.todayColor != todayColor;
+      old.todayColor != todayColor ||
+      old.nowColor != nowColor;
 }
