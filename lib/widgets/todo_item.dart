@@ -98,37 +98,50 @@ class _TodoItemState extends State<TodoItem> {
         ? '9.99+'
         : urgencyValue.toStringAsFixed(2);
 
-    return Dismissible(
-      key: Key(widget.todo.id.toString()),
-      background: Container(
-        color: Theme.of(context).primaryColor.withValues(alpha: 0.14),
-        alignment: Alignment.centerLeft,
-        padding: const EdgeInsets.only(left: 20),
-        child: Icon(
-          isDone ? Icons.undo_rounded : Icons.done_rounded,
-          color: Theme.of(context).primaryColor,
+    return GestureDetector(
+      onSecondaryTapUp: (details) => _showContextMenu(
+        context,
+        details.globalPosition,
+        isDone,
+        l10n,
+      ),
+      onLongPressStart: (details) => _showContextMenu(
+        context,
+        details.globalPosition,
+        isDone,
+        l10n,
+      ),
+      child: Dismissible(
+        key: Key(widget.todo.id.toString()),
+        background: Container(
+          color: Theme.of(context).primaryColor.withValues(alpha: 0.14),
+          alignment: Alignment.centerLeft,
+          padding: const EdgeInsets.only(left: 20),
+          child: Icon(
+            isDone ? Icons.undo_rounded : Icons.done_rounded,
+            color: Theme.of(context).primaryColor,
+          ),
         ),
-      ),
-      secondaryBackground: Container(
-        color: Theme.of(context).colorScheme.error,
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        child: const Icon(Icons.delete_outline, color: Colors.white),
-      ),
-      direction: DismissDirection.horizontal,
-      confirmDismiss: (direction) async {
-        if (direction == DismissDirection.startToEnd) {
-          widget.onToggle();
-          return false;
-        }
-        return true;
-      },
-      onDismissed: (direction) {
-        if (direction == DismissDirection.endToStart) {
-          widget.onDelete();
-        }
-      },
-      child: AnimatedOpacity(
+        secondaryBackground: Container(
+          color: Theme.of(context).colorScheme.error,
+          alignment: Alignment.centerRight,
+          padding: const EdgeInsets.only(right: 20),
+          child: const Icon(Icons.delete_outline, color: Colors.white),
+        ),
+        direction: DismissDirection.horizontal,
+        confirmDismiss: (direction) async {
+          if (direction == DismissDirection.startToEnd) {
+            widget.onToggle();
+            return false;
+          }
+          return true;
+        },
+        onDismissed: (direction) {
+          if (direction == DismissDirection.endToStart) {
+            widget.onDelete();
+          }
+        },
+        child: AnimatedOpacity(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
         opacity: isDone ? 0.6 : 1.0,
@@ -390,6 +403,114 @@ class _TodoItemState extends State<TodoItem> {
               ),
             ],
           ),
+        ),
+      ),
+      ),
+    );
+  }
+
+  void _showContextMenu(
+    BuildContext context,
+    Offset position,
+    bool isDone,
+    AppLocalizations l10n,
+  ) {
+    showGeneralDialog(
+      context: context,
+      barrierColor: Colors.transparent,
+      barrierDismissible: true,
+      barrierLabel: 'Dismiss',
+      transitionDuration: const Duration(milliseconds: 100),
+      pageBuilder: (ctx, anim, secAnim) => GestureDetector(
+        onTap: () => Navigator.pop(ctx),
+        behavior: HitTestBehavior.opaque,
+        child: Stack(
+          children: [
+            Positioned(
+              left: position.dx - 8,
+              top: position.dy - 8,
+              child: Material(
+                color: Theme.of(context).colorScheme.surface,
+                borderRadius: BorderRadius.circular(12),
+                elevation: 8,
+                child: IntrinsicWidth(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _PopupItem(
+                        icon: isDone ? Icons.undo_rounded : Icons.done_rounded,
+                        label: isDone ? l10n.filterActive : l10n.filterDone,
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          widget.onToggle();
+                        },
+                      ),
+                      const Divider(height: 1),
+                      _PopupItem(
+                        icon: Icons.edit_outlined,
+                        label: l10n.edit,
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          widget.onEdit();
+                        },
+                      ),
+                      const Divider(height: 1),
+                      _PopupItem(
+                        icon: Icons.delete_outline,
+                        label: l10n.delete,
+                        color: Colors.red,
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          widget.onDelete();
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      transitionBuilder: (ctx, anim, secAnim, child) {
+        return FadeTransition(
+          opacity: CurvedAnimation(parent: anim, curve: Curves.easeOutCubic),
+          child: child,
+        );
+      },
+    );
+  }
+}
+
+class _PopupItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color? color;
+  final VoidCallback onTap;
+
+  const _PopupItem({
+    required this.icon,
+    required this.label,
+    this.color,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? Theme.of(context).colorScheme.onSurface;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(0),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 18, color: c),
+            const SizedBox(width: 12),
+            Text(label, style: TextStyle(color: c, fontSize: 14)),
+          ],
         ),
       ),
     );
