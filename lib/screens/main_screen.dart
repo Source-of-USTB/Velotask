@@ -387,7 +387,11 @@ class _MainScreenState extends State<MainScreen> {
                 onAIAction: _showAIInputDialog,
               )
             : _selectedIndex == 1
-            ? TimelineScreen(key: const ValueKey('timeline'), todos: todos)
+            ? TimelineScreen(
+                key: const ValueKey('timeline'),
+                todos: todos,
+                onTaskDoubleTap: _editTodo,
+              )
             : DashboardScreen(key: const ValueKey('dashboard'), todos: todos),
       ),
       bottomNavigationBar: NavigationBar(

@@ -2,112 +2,165 @@ import 'package:flutter/material.dart';
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/theme/app_theme.dart';
-import 'package:velotask/widgets/timeline_header.dart';
-import 'package:velotask/widgets/timeline_task_row.dart';
+import 'package:velotask/widgets/gantt_chart.dart';
 
-class TimelineScreen extends StatelessWidget {
+class TimelineScreen extends StatefulWidget {
   final List<Todo> todos;
+  final void Function(Todo task)? onTaskDoubleTap;
 
-  const TimelineScreen({super.key, required this.todos});
+  const TimelineScreen({
+    super.key,
+    required this.todos,
+    this.onTaskDoubleTap,
+  });
+
+  @override
+  State<TimelineScreen> createState() => _TimelineScreenState();
+}
+
+class _TimelineScreenState extends State<TimelineScreen> {
+  static const double _dayWidth = GanttChart.dayWidth;
+  static const int _yearsAroundToday = 2;
+
+  late final ScrollController _headerCtrl;
+  late final ScrollController _bodyCtrl;
+  late final DateTime _chartStart;
+  late final int _totalDays;
+  late final double _totalWidth;
+  bool _syncing = false;
+  bool _didAutoScroll = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _chartStart = DateTime(now.year - _yearsAroundToday, 1, 1);
+    final chartEnd = DateTime(now.year + _yearsAroundToday, 12, 31);
+    _totalDays = chartEnd.difference(_chartStart).inDays;
+    _totalWidth = _totalDays * _dayWidth;
+
+    _headerCtrl = ScrollController();
+    _bodyCtrl = ScrollController();
+    _bodyCtrl.addListener(_syncBody);
+    _headerCtrl.addListener(_syncHeader);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToToday());
+  }
+
+  @override
+  void dispose() {
+    _headerCtrl
+      ..removeListener(_syncHeader)
+      ..dispose();
+    _bodyCtrl
+      ..removeListener(_syncBody)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _syncBody() {
+    if (_syncing || !_headerCtrl.hasClients) return;
+    _syncing = true;
+    _headerCtrl.jumpTo(_bodyCtrl.offset);
+    _syncing = false;
+  }
+
+  void _syncHeader() {
+    if (_syncing || !_bodyCtrl.hasClients) return;
+    _syncing = true;
+    _bodyCtrl.jumpTo(_headerCtrl.offset);
+    _syncing = false;
+  }
+
+  void _scrollToToday() {
+    if (!_bodyCtrl.hasClients) return;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final todayX = today.difference(_chartStart).inDays * _dayWidth;
+    final target = (todayX - _dayWidth / 2).clamp(
+      0.0,
+      _bodyCtrl.position.maxScrollExtent,
+    );
+    _bodyCtrl.jumpTo(target);
+  }
+
+  List<Todo> _filteredTodos() {
+    if (widget.todos.isEmpty) return [];
+
+    final now = DateTime.now();
+    final chartEnd = DateTime(now.year + _yearsAroundToday, 12, 31);
+
+    return widget.todos.where((todo) {
+      if (todo.taskType == TaskType.deadline) {
+        final deadline = todo.ddl;
+        if (deadline == null) return false;
+        final deadlineDay = DateTime(deadline.year, deadline.month, deadline.day);
+        return !deadlineDay.isBefore(_chartStart) &&
+            !deadlineDay.isAfter(chartEnd);
+      }
+      final start = DateTime(
+        (todo.startDate ?? todo.createdAt ?? _chartStart).year,
+        (todo.startDate ?? todo.createdAt ?? _chartStart).month,
+        (todo.startDate ?? todo.createdAt ?? _chartStart).day,
+      );
+      final end = DateTime(
+        (todo.ddl ?? start).year,
+        (todo.ddl ?? start).month,
+        (todo.ddl ?? start).day,
+      );
+      return !end.isBefore(_chartStart) && !start.isAfter(chartEnd);
+    }).toList()
+      ..sort((a, b) {
+        final startA = a.startDate ?? a.createdAt ?? a.ddl ?? now;
+        final startB = b.startDate ?? b.createdAt ?? b.ddl ?? now;
+        final byDate = startA.compareTo(startB);
+        if (byDate != 0) return byDate;
+        return b.importance.compareTo(a.importance);
+      });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final nextMonth = today.add(const Duration(days: 30));
-
-    // Filter tasks that overlap with the next 30 days
-    final timelineTasks = todos.where((todo) {
-      if (todo.isCompleted) return false;
-
-      if (todo.taskType == TaskType.deadline) {
-        // Deadlines: show if ddl falls within the window
-        if (todo.ddl == null) return false;
-        final ddlDay = DateTime(todo.ddl!.year, todo.ddl!.month, todo.ddl!.day);
-        return !ddlDay.isBefore(today) && ddlDay.isBefore(nextMonth);
-      }
-
-      // Task: show if date range overlaps with the window
-      final start = todo.startDate ?? todo.createdAt ?? today;
-      final end = todo.ddl ?? start;
-
-      final startDate = DateTime(start.year, start.month, start.day);
-      final endDate = DateTime(
-        end.year,
-        end.month,
-        end.day,
-      ).add(const Duration(days: 1)).subtract(const Duration(seconds: 1));
-
-      return startDate.isBefore(nextMonth) && endDate.isAfter(today);
-    }).toList();
-
-    // Sort by start date
-    timelineTasks.sort((a, b) {
-      final startA = a.startDate ?? a.createdAt ?? today;
-      final startB = b.startDate ?? b.createdAt ?? today;
-      return startA.compareTo(startB);
-    });
-
-    const double dayWidth = 60.0;
-    const int daysToShow = 30;
-    final double totalWidth = dayWidth * daysToShow;
+    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final timelineTasks = _filteredTodos();
+
+    if (!_didAutoScroll && timelineTasks.isNotEmpty && _bodyCtrl.hasClients) {
+      _didAutoScroll = true;
+      _scrollToToday();
+    }
 
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
         title: Text(
           l10n.timeline.toUpperCase(),
           style: AppTheme.pageTitleStyle(
             context,
-            color: Theme.of(context).primaryColor,
+            color: theme.colorScheme.primary,
           ),
         ),
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        backgroundColor: theme.scaffoldBackgroundColor,
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false,
+        actions: [
+          IconButton(
+            tooltip: l10n.today,
+            onPressed: _scrollToToday,
+            icon: const Icon(Icons.today_outlined),
+          ),
+        ],
       ),
-      body: timelineTasks.isEmpty
-          ? Center(
-              child: Text(
-                l10n.noTasksTimeline,
-                style: TextStyle(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.secondary.withValues(alpha: 0.6),
-                ),
-              ),
-            )
-          : SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SizedBox(
-                width: totalWidth,
-                child: Column(
-                  children: [
-                    TimelineHeader(
-                      today: today,
-                      daysToShow: daysToShow,
-                      dayWidth: dayWidth,
-                    ),
-                    Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        itemCount: timelineTasks.length,
-                        itemBuilder: (context, index) {
-                          return TimelineTaskRow(
-                            todo: timelineTasks[index],
-                            today: today,
-                            daysToShow: daysToShow,
-                            dayWidth: dayWidth,
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+      body: GanttChart(
+        tasks: timelineTasks,
+        headerCtrl: _headerCtrl,
+        bodyCtrl: _bodyCtrl,
+        chartStart: _chartStart,
+        totalDays: _totalDays,
+        totalWidth: _totalWidth,
+        onTaskDoubleTap: widget.onTaskDoubleTap,
+      ),
     );
   }
 }
