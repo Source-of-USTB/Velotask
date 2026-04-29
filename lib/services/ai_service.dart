@@ -152,15 +152,37 @@ class AIService {
         .take(30)
         .toList(growable: false);
 
+    final tomorrow = now.add(const Duration(days: 1));
+    final tomorrowStr =
+        '${tomorrow.toIso8601String().split('T').first}T15:00:00';
+
     final messages = [
       {
         'role': 'system',
         'content': [
-          'Parse a natural-language todo into ONE JSON object ONLY (no markdown).',
-          'Keys: title, description, importance(0/1/2), startDate, deadline, tags(max4), estimatedHours(0.25-100).',
-          'Dates: ISO8601 string or null. If only one time -> deadline. Date-only deadline -> 23:59 local. Time-only -> nearest future time.',
-          'Tags: reuse existingTags when semantically close; else create compact noun tags. Do not invent facts.',
-        ].join(' '),
+          'Convert user input into ONE JSON task object. Output raw JSON only — no markdown fences, no backticks, no explanation text.',
+          '',
+          'Keys:',
+          '  title: concise task name, 2-15 words',
+          '  description: details or empty string ""',
+          '  importance: 0=low, 1=normal, 2=urgent (default 1)',
+          '  startDate: ISO8601 string or null',
+          '  deadline: ISO8601 string or null',
+          '  tags: string array, max 4, reuse existingTags if semantically close',
+          '  estimatedHours: number 0.25-100',
+          '',
+          'Date rules (reference "now" and "weekday" from user input):',
+          '- "today" = now\'s date. "tomorrow" = now + 1 day. "next Monday" = the upcoming Monday.',
+          '- Date-only deadline → append T23:59:00. Time-only → nearest future occurrence.',
+          '- Single date/time mentioned → put it in deadline, leave startDate as null.',
+          '- Two dates/times → earlier is startDate, later is deadline.',
+          '- Format: "2026-04-30T15:00:00" (seconds always :00).',
+          '',
+          'Tags: pick exact match from existingTags when possible. Otherwise 1-2 word noun labels.',
+          '',
+          'Example — Input: "明天下午3点前交报告"',
+          'Output: {"title":"交报告","description":"","importance":1,"startDate":null,"deadline":"$tomorrowStr","tags":["报告"],"estimatedHours":2}',
+        ].join('\n'),
       },
       {
         'role': 'user',
@@ -196,7 +218,7 @@ class AIService {
 
       final content = _extractAssistantContent(data);
       if (content == null) {
-        throw const FormatException('Missing assistant content');
+        throw const FormatException('AI returned empty response');
       }
       final taskJson = _decodeJsonObject(_extractJsonPayload(content));
 
@@ -225,15 +247,42 @@ class AIService {
         .take(30)
         .toList(growable: false);
 
+    final tomorrow = now.add(const Duration(days: 1));
+    final tomorrowStr =
+        '${tomorrow.toIso8601String().split('T').first}T15:00:00';
+    final daysUntilFri = (DateTime.friday - now.weekday + 7) % 7;
+    final friday = now.add(Duration(days: daysUntilFri == 0 ? 7 : daysUntilFri));
+    final fridayStr =
+        '${friday.toIso8601String().split('T').first}T23:59:00';
+
     final messages = [
       {
         'role': 'system',
         'content': [
-          'Parse the input into a JSON array of task objects ONLY (no markdown).',
-          'Each task keys: title, description, importance(0/1/2), startDate, deadline, tags(max4), estimatedHours(0.25-100).',
-          'Dates: ISO8601 string or null. If only one time -> deadline. Date-only deadline -> 23:59 local. Time-only -> nearest future time.',
-          'Tags: reuse existingTags when semantically close; else create compact noun tags. Do not invent facts.',
-        ].join(' '),
+          'Convert user input into a JSON array of task objects. Output raw JSON only — no markdown fences, no backticks, no explanation text.',
+          'If input contains multiple tasks (separated by semicolons, newlines, or numbered items), split accordingly.',
+          '',
+          'Each task keys:',
+          '  title: concise task name, 2-15 words',
+          '  description: details or empty string ""',
+          '  importance: 0=low, 1=normal, 2=urgent (default 1)',
+          '  startDate: ISO8601 string or null',
+          '  deadline: ISO8601 string or null',
+          '  tags: string array, max 4, reuse existingTags if semantically close',
+          '  estimatedHours: number 0.25-100',
+          '',
+          'Date rules (reference "now" and "weekday" from user input):',
+          '- "today" = now\'s date. "tomorrow" = now + 1 day. "next Monday" = the upcoming Monday.',
+          '- Date-only deadline → append T23:59:00. Time-only → nearest future occurrence.',
+          '- Single date/time mentioned → put it in deadline, leave startDate as null.',
+          '- Two dates/times → earlier is startDate, later is deadline.',
+          '- Format: "2026-04-30T15:00:00" (seconds always :00).',
+          '',
+          'Tags: pick exact match from existingTags when possible. Otherwise 1-2 word noun labels.',
+          '',
+          'Example — Input: "明天下午3点交报告; 周五前买书"',
+          'Output: [{"title":"交报告","description":"","importance":1,"startDate":null,"deadline":"$tomorrowStr","tags":["报告"],"estimatedHours":2},{"title":"买书","description":"","importance":1,"startDate":null,"deadline":"$fridayStr","tags":["购物"],"estimatedHours":0.5}]',
+        ].join('\n'),
       },
       {
         'role': 'user',
