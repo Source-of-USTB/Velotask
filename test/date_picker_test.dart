@@ -45,17 +45,10 @@ void main() {
     await tester.tap(find.text('Open Dialog'));
     await tester.pumpAndSettle();
 
-    // Verify initial state (Start Date is Today, DDL is optional/empty)
-    // Note: "Today" logic in DialogDatePicker might display "Today" or date depending on implementation
-    // Looking at code: date == null ? (isOptional ? '--/--' : 'Today') : '${date!.month}/${date!.day}'
-    // In AddTodoDialog, _startDate is initialized to DateTime.now(), so it's not null.
-    // So it should display month/day.
+    // Verify initial state: Start Date is now with includeTime, so it shows M/d HH:mm
     final now = DateTime.now();
-    final expectedDateStr = '${now.month}/${now.day}';
-    expect(
-      find.text(expectedDateStr),
-      findsOneWidget,
-    ); // Should find at least one (Start Date)
+    final expectedDateStr = '${now.month}/${now.day} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    expect(find.text(expectedDateStr), findsOneWidget);
 
     // Find the "To" date picker (DDL)
     // It has label 'To'
