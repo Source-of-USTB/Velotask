@@ -469,7 +469,7 @@ class AIService {
     final message = choice0['message'];
     if (message is! Map) return null;
     final content = message['content'];
-    if (content is! String) return null;
+    if (content is! String || content.trim().isEmpty) return null;
     return content.trim();
   }
 
@@ -483,6 +483,9 @@ class AIService {
 
   String _extractJsonPayload(String content) {
     final trimmed = content.trim();
+    if (trimmed.isEmpty) {
+      throw const FormatException('AI returned empty response');
+    }
 
     final fenced = RegExp(
       r'```[a-zA-Z0-9_-]*\s*([\s\S]*?)```',
@@ -501,7 +504,7 @@ class AIService {
       return extracted;
     }
 
-    return trimmed;
+    throw FormatException('AI response is not valid JSON: ${trimmed.length > 200 ? '${trimmed.substring(0, 200)}...' : trimmed}');
   }
 
   String? _scanFirstJsonValue(String input) {
