@@ -73,7 +73,6 @@ app.*.map.json
 **/linux/flutter/generated_plugins.cmake
 
 # Web
-lib/generated_plugin_registrant.dart
 
 # =========================
 # Added by Copilot Recommendations
