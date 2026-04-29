@@ -68,10 +68,9 @@ void main() {
     await tester.tap(toPicker);
     await tester.pumpAndSettle();
 
-    // Select a date (e.g., 25th of current month)
-    // Since we constrained the start date to today (18th), we must pick a future date.
-    // TODO: If today is after 25th, this test may fail. In real tests, we should control the date.
-    await tester.tap(find.text('25'));
+    // Select today's date (always valid since "To" picker's firstDate is _startDate = now)
+    final targetDay = now.day;
+    await tester.tap(find.text('$targetDay'));
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
 
@@ -79,28 +78,14 @@ void main() {
     await tester.tap(find.text('OK'));
     await tester.pumpAndSettle();
 
-    // Verify "To" picker now shows "M/15"
-    // We need to know the month. The date picker defaults to current month.
-    // So it should be "M/15".
-    // However, if today is past 15th, picking 15 might be disabled if firstDate is constrained?
-    // AddTodoDialog uses firstDate: DateTime(2000), so past dates are allowed.
-
-    // Let's verify the text update.
-    // We expect to find "M/15"
-    // Note: If current month is single digit, it's "M", if double, "MM".
-    // The code uses `${date!.month}`.
-    // We don't know exactly which month is shown if we don't control the date picker's initial date perfectly,
-    // but it defaults to initialDate which is _ddl (null) or now.
-    // So it shows current month.
-
-    // Let's just fill in the title and save, then check the callback values.
+    // Fill in the title and save, then check the callback values.
     await tester.enterText(find.byType(TextField).first, 'Test Task');
     await tester.tap(find.text('Create'));
     await tester.pumpAndSettle();
 
     // Verify callback
     expect(selectedDdl, isNotNull);
-    expect(selectedDdl!.day, 25);
+    expect(selectedDdl!.day, targetDay);
     expect(selectedStartDate, isNotNull);
   });
 }
