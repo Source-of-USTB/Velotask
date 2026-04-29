@@ -90,7 +90,7 @@ class PrioritySelector extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       hoverColor: Colors.transparent,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
@@ -201,6 +201,20 @@ class DialogDatePicker extends StatelessWidget {
         final pickedTime = await showTimePicker(
           context: context,
           initialTime: initialTime,
+          builder: (context, child) {
+            final theme = Theme.of(context);
+            return Theme(
+              data: theme.copyWith(
+                timePickerTheme: TimePickerThemeData(
+                  backgroundColor: theme.colorScheme.surface,
+                  hourMinuteShape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              child: child!,
+            );
+          },
         );
 
         final effectiveTime = pickedTime ?? initialTime;
@@ -228,6 +242,7 @@ class DialogDatePicker extends StatelessWidget {
               label,
               style: AppTheme.smallRegularStyle(context, color: secondaryColor),
             ),
+            const SizedBox(width: 16),
             Text(
               date == null
                   ? (isOptional

@@ -15,10 +15,17 @@ class AddTodoDialog extends StatefulWidget {
     DateTime? ddl,
     int importance,
     List<Tag> tags,
+    TaskType taskType,
   )
   onAdd;
+  final VoidCallback? onDelete;
 
-  const AddTodoDialog({super.key, required this.onAdd, this.todo});
+  const AddTodoDialog({
+    super.key,
+    required this.onAdd,
+    this.todo,
+    this.onDelete,
+  });
 
   @override
   State<AddTodoDialog> createState() => _AddTodoDialogState();
@@ -30,6 +37,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
   DateTime _startDate = DateTime.now();
   DateTime? _ddl;
   int _importance = 1;
+  TaskType _taskType = TaskType.task;
   List<Tag> _availableTags = [];
   List<Tag> _selectedTags = [];
   final TodoStorage _storage = TodoStorage();
@@ -44,6 +52,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
           widget.todo!.startDate ?? widget.todo!.createdAt ?? DateTime.now();
       _ddl = widget.todo!.ddl;
       _importance = widget.todo!.importance;
+      _taskType = widget.todo!.taskType;
       // _selectedTags is initialized after _loadTags completes.
     }
     _loadTags();
@@ -75,14 +84,14 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
     final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    final dialogWidth = screenWidth > 700 ? 560.0 : screenWidth - 40;
+    final dialogWidth = screenWidth > 700 ? 640.0 : screenWidth - 32;
     final maxDialogBodyHeight = screenHeight * 0.72;
-    final useVerticalDateLayout = screenWidth < 420;
+    final useVerticalDateLayout = screenWidth < 440;
 
     return AlertDialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       title: Text(
         widget.todo == null ? l10n.newTask : l10n.editTask,
@@ -166,6 +175,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                                 });
                               }
                             },
+                            includeTime: true,
                           ),
                           const SizedBox(height: 12),
                           DialogDatePicker(
@@ -197,6 +207,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                                   });
                                 }
                               },
+                              includeTime: true,
                             ),
                           ),
                           const SizedBox(width: 12),
@@ -213,6 +224,13 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                         ],
                       ),
               ),
+              const SizedBox(height: 16),
+
+              // Task Type Selector
+              DialogInputRow(
+                child: _buildTaskTypeSelector(context),
+              ),
+
               const SizedBox(height: 16),
 
               // Priority Row
@@ -281,46 +299,135 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
         ),
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          style: TextButton.styleFrom(
-            foregroundColor: Theme.of(
-              context,
-            ).colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
-          child: Text(l10n.cancel),
-        ),
-        FilledButton(
-          onPressed: () {
-            if (_titleController.text.isNotEmpty) {
-              widget.onAdd(
-                _titleController.text,
-                _descController.text,
-                _startDate,
-                _ddl,
-                _importance,
-                _selectedTags,
-              );
-              Navigator.pop(context);
-            }
-          },
-          style: FilledButton.styleFrom(
-            backgroundColor: Theme.of(context).primaryColor,
-            foregroundColor: Theme.of(context).colorScheme.onPrimary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+        Row(
+          children: [
+            if (widget.todo != null)
+              TextButton(
+                onPressed: () {
+                  widget.onDelete?.call();
+                  if (context.mounted) Navigator.pop(context);
+                },
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                ),
+                child: Text(l10n.delete),
+              ),
+            const Spacer(),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(
+                  context,
+                ).colorScheme.onSurface.withValues(alpha: 0.6),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              ),
+              child: Text(l10n.cancel),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          ),
-          child: Text(
-            widget.todo == null ? l10n.create : l10n.save,
-            style: AppTheme.bodyStrongStyle(
-              context,
-              color: Theme.of(context).colorScheme.onPrimary,
+            const SizedBox(width: 8),
+            FilledButton(
+              onPressed: () {
+                if (_titleController.text.isNotEmpty) {
+                  widget.onAdd(
+                    _titleController.text,
+                    _descController.text,
+                    _startDate,
+                    _ddl,
+                    _importance,
+                    _selectedTags,
+                    _taskType,
+                  );
+                  Navigator.pop(context);
+                }
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: Text(
+                widget.todo == null ? l10n.create : l10n.save,
+                style: AppTheme.bodyStrongStyle(
+                  context,
+                  color: Theme.of(context).colorScheme.onPrimary,
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ],
+    );
+  }
+
+  Widget _buildTaskTypeSelector(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Row(
+      children: [
+        _buildTaskTypeChip(
+          context,
+          TaskType.task,
+          l10n.taskTypeTask,
+          Icons.task_alt_outlined,
+        ),
+        const SizedBox(width: 8),
+        _buildTaskTypeChip(
+          context,
+          TaskType.deadline,
+          l10n.taskTypeDeadline,
+          Icons.flag_outlined,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTaskTypeChip(
+    BuildContext context,
+    TaskType value,
+    String label,
+    IconData icon,
+  ) {
+    final isSelected = _taskType == value;
+    final theme = Theme.of(context);
+    final secondaryColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    final color = isSelected ? theme.primaryColor : secondaryColor;
+
+    return InkWell(
+      onTap: () => setState(() => _taskType = value),
+      borderRadius: BorderRadius.circular(8),
+      hoverColor: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? theme.primaryColor.withValues(alpha: 0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? theme.primaryColor : secondaryColor.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: AppTheme.bodyStyle(context).merge(
+                AppTheme.selectableLabelStyle(
+                  context,
+                  selected: isSelected,
+                  color: color,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

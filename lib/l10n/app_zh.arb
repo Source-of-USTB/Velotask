@@ -92,6 +92,8 @@
   "aiTestModel": "测试模型",
   "aiSettingsValidationError": "请先填写 API Base URL / API Key / Model",
   "aiTestSuccess": "模型测试成功，可正常调用",
+  "taskTypeTask": "任务",
+  "taskTypeDeadline": "截止",
   "dailyReminderTitle": "每日任务概览",
   "dailyReminderBody": "今天您有 {count} 个待办任务。"
 }

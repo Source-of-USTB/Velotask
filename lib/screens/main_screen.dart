@@ -23,6 +23,7 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+  int _previousIndex = 0;
   List<Todo> todos = [];
   List<Tag> tags = [];
   bool _isLoading = true;
@@ -130,7 +131,8 @@ class _MainScreenState extends State<MainScreen> {
     DateTime? startDate,
     DateTime? ddl,
     int importance,
-    List<Tag> tags, {
+    List<Tag> tags,
+    TaskType taskType, {
     double? presetEffortHours,
   }) async {
     if (title.isEmpty) return;
@@ -141,6 +143,7 @@ class _MainScreenState extends State<MainScreen> {
       startDate: startDate,
       ddl: ddl,
       importance: importance,
+      taskType: taskType,
       estimatedEffortHours: presetEffortHours,
     );
     newTodo.tags.addAll(tags);
@@ -299,13 +302,15 @@ class _MainScreenState extends State<MainScreen> {
       context: context,
       builder: (context) => AddTodoDialog(
         todo: todo,
-        onAdd: (title, desc, startDate, ddl, importance, tags) async {
+        onDelete: () => _deleteTodo(todo),
+        onAdd: (title, desc, startDate, ddl, importance, tags, taskType) async {
           // Mutate the existing todo instance directly to preserve object identity.
           todo.title = title;
           todo.description = desc;
           todo.startDate = startDate;
           todo.ddl = ddl;
           todo.importance = importance;
+          todo.taskType = taskType;
           todo.tags.clear();
           todo.tags.addAll(tags);
 
@@ -363,13 +368,19 @@ class _MainScreenState extends State<MainScreen> {
       body: AnimatedSwitcher(
         duration: const Duration(milliseconds: 300),
         transitionBuilder: (Widget child, Animation<double> animation) {
+          final slideBegin = _selectedIndex > _previousIndex
+              ? const Offset(0.05, 0.0)
+              : const Offset(-0.05, 0.0);
           return FadeTransition(
             opacity: animation,
             child: SlideTransition(
               position: Tween<Offset>(
-                begin: const Offset(0.0, 0.02),
+                begin: slideBegin,
                 end: Offset.zero,
-              ).animate(animation),
+              ).animate(CurvedAnimation(
+                parent: animation,
+                curve: Curves.easeOutCubic,
+              )),
               child: child,
             ),
           );
@@ -398,6 +409,7 @@ class _MainScreenState extends State<MainScreen> {
         selectedIndex: _selectedIndex,
         onDestinationSelected: (index) {
           setState(() {
+            _previousIndex = _selectedIndex;
             _selectedIndex = index;
           });
         },

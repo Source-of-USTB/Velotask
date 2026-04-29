@@ -92,6 +92,8 @@
   "aiTestModel": "Test Model",
   "aiSettingsValidationError": "Please fill in API Base URL / API Key / Model",
   "aiTestSuccess": "Model test successful, can be called normally",
+  "taskTypeTask": "Task",
+  "taskTypeDeadline": "Deadline",
   "dailyReminderTitle": "Daily Overview",
   "dailyReminderBody": "You have {count} active tasks today."
 }
