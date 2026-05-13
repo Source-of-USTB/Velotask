@@ -8,7 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/main.dart';
-import 'package:velotask/screens/color_settings_screen.dart';
+import 'package:velotask/screens/color_editor_screen.dart';
 import 'package:velotask/screens/tags_screen.dart';
 import 'package:velotask/theme/app_theme.dart';
 
@@ -279,7 +279,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => const ColorSettingsScreen()),
+                    builder: (context) => const ColorEditorScreen()),
               );
             },
           ),

@@ -6,9 +6,9 @@ import 'package:velotask/services/color_config_manager.dart';
 import 'package:velotask/theme/app_theme.dart';
 
 class ColorEditorScreen extends StatefulWidget {
-  final ColorPreset preset;
+  final String? presetId;
 
-  const ColorEditorScreen({super.key, required this.preset});
+  const ColorEditorScreen({super.key, this.presetId});
 
   @override
   State<ColorEditorScreen> createState() => _ColorEditorScreenState();
@@ -16,12 +16,15 @@ class ColorEditorScreen extends StatefulWidget {
 
 class _ColorEditorScreenState extends State<ColorEditorScreen> {
   final _mgr = ColorConfigManager.instance;
-  late ColorPreset _editing;
-  String? _nameError;
-
+  final _nameCtrl = TextEditingController();
   final _controllers = <String, TextEditingController>{};
   final _focusNodes = <String, FocusNode>{};
   final _channelErrors = <String, String?>{};
+  String? _nameError;
+
+  late String _editingPresetId;
+  late ColorPreset _editing;
+  String? _pendingNewId;
 
   static const _channels = ['R', 'G', 'B', 'A'];
 
@@ -39,24 +42,63 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
   @override
   void initState() {
     super.initState();
-    _editing = ColorPreset(
-      id: widget.preset.id,
-      name: widget.preset.name,
-      brightness: widget.preset.brightness,
-      isBuiltin: widget.preset.isBuiltin,
-      primaryColor: widget.preset.primaryColor,
-      backgroundColor: widget.preset.backgroundColor,
-      surfaceColor: widget.preset.surfaceColor,
-      highPriority: widget.preset.highPriority,
-      mediumPriority: widget.preset.mediumPriority,
-      lowPriority: widget.preset.lowPriority,
-      errorColor: widget.preset.errorColor,
-      accentColor: widget.preset.accentColor,
-    );
-    _initControllers();
+    _mgr.addListener(_onConfigChanged);
+
+    final initialId = widget.presetId ?? _activeIdForCurrentBrightness();
+    _loadPreset(initialId);
+    _initChannelControllers();
   }
 
-  void _initControllers() {
+  String _activeIdForCurrentBrightness() {
+    final brightness = MediaQuery.of(context).platformBrightness;
+    return brightness == Brightness.light
+        ? _mgr.activeLightPresetId
+        : _mgr.activeDarkPresetId;
+  }
+
+  void _onConfigChanged() {
+    if (!mounted) return;
+    if (_pendingNewId != null) {
+      final exists = _mgr.presetById(_pendingNewId!);
+      if (exists != null) {
+        _loadPreset(_pendingNewId!);
+        _pendingNewId = null;
+      }
+    }
+    setState(() {});
+  }
+
+  void _loadPreset(String id) {
+    final p = _mgr.presetById(id);
+    if (p == null) {
+      final fallback = _mgr.activeLightPreset ?? ColorPreset.defaultLight();
+      _editingPresetId = fallback.id;
+      _editing = _copyPreset(fallback);
+    } else {
+      _editingPresetId = id;
+      _editing = _copyPreset(p);
+    }
+    _nameCtrl.text = _editing.name;
+    _nameError = null;
+    _syncAllControllers();
+  }
+
+  ColorPreset _copyPreset(ColorPreset p) => ColorPreset(
+        id: p.id,
+        name: p.name,
+        brightness: p.brightness,
+        isBuiltin: p.isBuiltin,
+        primaryColor: p.primaryColor,
+        backgroundColor: p.backgroundColor,
+        surfaceColor: p.surfaceColor,
+        highPriority: p.highPriority,
+        mediumPriority: p.mediumPriority,
+        lowPriority: p.lowPriority,
+        errorColor: p.errorColor,
+        accentColor: p.accentColor,
+      );
+
+  void _initChannelControllers() {
     for (final key in _colorFields) {
       final c = _getColor(key);
       for (final ch in _channels) {
@@ -64,6 +106,19 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
         _controllers[id] = TextEditingController(text: _channelText(c, ch));
         _focusNodes[id] = FocusNode();
         _focusNodes[id]!.addListener(() => _onFocusChange(id, key));
+      }
+    }
+  }
+
+  void _syncAllControllers() {
+    for (final key in _colorFields) {
+      final c = _getColor(key);
+      for (final ch in _channels) {
+        final id = '$key-$ch';
+        if (!_focusNodes[id]!.hasFocus) {
+          _controllers[id]!.text = _channelText(c, ch);
+        }
+        _channelErrors[id] = null;
       }
     }
   }
@@ -111,12 +166,12 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
         final b = ch == 'B' ? parsed : (prevColor.b * 255).round();
         final a = ch == 'A' ? parsed : (prevColor.a * 255).round();
         _setColor(colorKey, r, g, b, a);
-        _syncControllersFor(colorKey);
+        _syncChannelDisplays(colorKey);
       }
     }
   }
 
-  void _syncControllersFor(String key) {
+  void _syncChannelDisplays(String key) {
     final c = _getColor(key);
     for (final ch in _channels) {
       final id = '$key-$ch';
@@ -171,6 +226,14 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
     }
   }
 
+  List<ColorPreset> _presetsForCurrentBrightness() {
+    final b = _editing.brightness;
+    return _mgr.presets.where((p) => p.brightness == b).toList();
+  }
+
+  bool get _canDelete =>
+      _mgr.canDeletePreset(_editingPresetId);
+
   bool _validateAll() {
     final l10n = AppLocalizations.of(context)!;
     bool valid = true;
@@ -182,11 +245,9 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
       _nameError = null;
     }
 
-    // Commit all focused fields before checking
     for (final key in _colorFields) {
       for (final ch in _channels) {
-        final id = '$key-$ch';
-        _commitChannel(id, key);
+        _commitChannel('$key-$ch', key);
       }
     }
 
@@ -199,22 +260,107 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
 
   Future<void> _apply() async {
     if (!_validateAll()) return;
+    _editing.name = _nameCtrl.text.trim();
     await _mgr.updatePreset(_editing);
-    if (mounted) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${AppLocalizations.of(context)!.apply}: ${_editing.name}')),
+    );
+    Navigator.pop(context);
+  }
+
+  Future<void> _deletePreset() async {
+    if (!_canDelete) return;
+    final l10n = AppLocalizations.of(context)!;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.deletePreset),
+        content: Text('${l10n.deletePreset} "${_editing.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final deletedId = _editingPresetId;
+    final siblings = _presetsForCurrentBrightness()
+        .where((p) => p.id != deletedId)
+        .toList();
+    final nextId = siblings.first.id;
+    await _mgr.deletePreset(deletedId);
+    if (!mounted) return;
+    _loadPreset(nextId);
+  }
+
+  void _switchPreset(String id) {
+    _loadPreset(id);
+  }
+
+  Future<void> _createNewPreset() async {
+    final l10n = AppLocalizations.of(context)!;
+    final newPreset = ColorPreset(
+      name: '',
+      brightness: _editing.brightness,
+      primaryColor: _editing.primaryColor,
+      backgroundColor: _editing.backgroundColor,
+      surfaceColor: _editing.surfaceColor,
+      highPriority: _editing.highPriority,
+      mediumPriority: _editing.mediumPriority,
+      lowPriority: _editing.lowPriority,
+      errorColor: _editing.errorColor,
+      accentColor: _editing.accentColor,
+    );
+    _pendingNewId = newPreset.id;
+    final ok = await _mgr.addPreset(newPreset);
+    if (!ok && mounted) {
+      _pendingNewId = null;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${AppLocalizations.of(context)!.apply}: ${_editing.name}')),
+        SnackBar(content: Text(l10n.presetNameHint)),
       );
-      Navigator.pop(context, true);
+    }
+  }
+
+  Future<void> _confirmReset() async {
+    final l10n = AppLocalizations.of(context)!;
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.resetBuiltins),
+        content: Text(l10n.resetBuiltins),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.resetBuiltins),
+          ),
+        ],
+      ),
+    );
+    if (ok == true) {
+      await _mgr.resetBuiltins();
     }
   }
 
   @override
   void dispose() {
-    for (final id in _controllers.keys) {
-      _controllers[id]?.dispose();
+    _mgr.removeListener(_onConfigChanged);
+    _nameCtrl.dispose();
+    for (final c in _controllers.values) {
+      c.dispose();
     }
-    for (final id in _focusNodes.keys) {
-      _focusNodes[id]?.dispose();
+    for (final f in _focusNodes.values) {
+      f.dispose();
     }
     super.dispose();
   }
@@ -227,26 +373,41 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          l10n.editPreset,
+          l10n.colorSettings,
           style: AppTheme.pageTitleStyle(context, color: theme.primaryColor),
         ),
         actions: [
+          IconButton(
+            icon: Icon(Icons.delete_outline,
+                color: _canDelete
+                    ? theme.colorScheme.error
+                    : theme.disabledColor),
+            onPressed: _canDelete ? _deletePreset : null,
+            tooltip: l10n.deletePreset,
+          ),
+          const SizedBox(width: 4),
           FilledButton(
             onPressed: _apply,
             child: Text(l10n.apply),
           ),
+          const SizedBox(width: 8),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(24, 16, 24, 16),
+            children: [
+          _buildPresetSelector(context),
+          const SizedBox(height: 20),
           TextField(
             decoration: InputDecoration(
               labelText: l10n.presetName,
               hintText: l10n.presetNameHint,
               errorText: _nameError,
             ),
-            controller: TextEditingController(text: _editing.name),
+            controller: _nameCtrl,
             onChanged: (v) {
               setState(() {
                 _editing.name = v;
@@ -256,8 +417,119 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
           ),
           const SizedBox(height: 24),
           ..._colorFields.map((key) => _buildColorRow(context, key)),
+          const SizedBox(height: 24),
+          TextButton.icon(
+            onPressed: _confirmReset,
+            icon: const Icon(Icons.restore),
+            label: Text(l10n.resetBuiltins),
+          ),
         ],
       ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPresetSelector(BuildContext context) {
+    final theme = Theme.of(context);
+    final presets = _presetsForCurrentBrightness();
+    final activeId = _editing.brightness == Brightness.light
+        ? _mgr.activeLightPresetId
+        : _mgr.activeDarkPresetId;
+
+    return PopupMenuButton<String>(
+      initialValue: _editingPresetId,
+      onSelected: (id) {
+        if (id == '__new__') {
+          _createNewPreset();
+        } else {
+          _switchPreset(id);
+        }
+      },
+      offset: const Offset(0, 48),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          border: Border.all(color: theme.colorScheme.outlineVariant),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 24,
+              height: 24,
+              decoration: BoxDecoration(
+                color: _editing.primaryColor,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                _editing.name.isEmpty ? '…' : _editing.name,
+                style: AppTheme.bodyMediumStrongStyle(context),
+              ),
+            ),
+            if (_editingPresetId == activeId)
+              Text(
+                AppLocalizations.of(context)!.activePresetLabel,
+                style: AppTheme.smallMediumStyle(
+                  context,
+                  color: theme.colorScheme.primary,
+                ),
+              ),
+            const SizedBox(width: 8),
+            const Icon(Icons.arrow_drop_down),
+          ],
+        ),
+      ),
+      itemBuilder: (ctx) => [
+        ...presets.map((p) {
+          final isActive = p.id == _editingPresetId;
+          final isActiveGlobal = p.id == activeId;
+          return PopupMenuItem<String>(
+            value: p.id,
+            child: Row(
+              children: [
+                Container(
+                  width: 20,
+                  height: 20,
+                  decoration: BoxDecoration(
+                    color: p.primaryColor,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(child: Text(p.name)),
+                if (isActiveGlobal)
+                  Text(
+                    AppLocalizations.of(context)!.activePresetLabel,
+                    style: AppTheme.tinyBoldStyle(
+                      ctx,
+                      color: Theme.of(ctx).colorScheme.primary,
+                    ),
+                  ),
+                if (isActive)
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8),
+                    child: Icon(Icons.check, size: 16),
+                  ),
+              ],
+            ),
+          );
+        }),
+        const PopupMenuDivider(),
+        PopupMenuItem<String>(
+          value: '__new__',
+          child: Row(
+            children: [
+              const Icon(Icons.add, size: 18),
+              const SizedBox(width: 10),
+              Text(AppLocalizations.of(context)!.newPreset),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
@@ -265,7 +537,6 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
     final color = _getColor(key);
     final label = _fieldLabel(context, key);
     final theme = Theme.of(context);
-
     final rowHasError = _channels.any((ch) => _channelErrors['$key-$ch'] != null);
 
     return Padding(
@@ -277,13 +548,13 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
           const SizedBox(height: 8),
           Row(
             children: [
-              _channelInput(key: key, ch: 'R', color: color),
+              _channelInput(key: key, ch: 'R'),
               const SizedBox(width: 8),
-              _channelInput(key: key, ch: 'G', color: color),
+              _channelInput(key: key, ch: 'G'),
               const SizedBox(width: 8),
-              _channelInput(key: key, ch: 'B', color: color),
+              _channelInput(key: key, ch: 'B'),
               const SizedBox(width: 8),
-              _channelInput(key: key, ch: 'A', color: color),
+              _channelInput(key: key, ch: 'A'),
               const SizedBox(width: 12),
               Container(
                 width: 36,
@@ -309,11 +580,7 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
     );
   }
 
-  Widget _channelInput({
-    required String key,
-    required String ch,
-    required Color color,
-  }) {
+  Widget _channelInput({required String key, required String ch}) {
     final id = '$key-$ch';
     final hasError = _channelErrors[id] != null;
 

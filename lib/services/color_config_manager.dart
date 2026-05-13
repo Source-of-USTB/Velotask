@@ -136,18 +136,32 @@ class ColorConfigManager extends ChangeNotifier {
 
   Future<bool> deletePreset(String id) async {
     final preset = presetById(id);
-    if (preset == null || preset.isBuiltin) return false;
+    if (preset == null) return false;
+    final sameBrightness =
+        _presets.where((p) => p.brightness == preset.brightness).length;
+    if (sameBrightness <= 1) return false;
     _presets.removeWhere((p) => p.id == id);
     if (_activeLightPresetId == id) {
-      _activeLightPresetId = '_builtin_light';
+      _activeLightPresetId =
+          _presets.firstWhere((p) => p.brightness == Brightness.light).id;
     }
     if (_activeDarkPresetId == id) {
-      _activeDarkPresetId = '_builtin_dark';
+      _activeDarkPresetId =
+          _presets.firstWhere((p) => p.brightness == Brightness.dark).id;
     }
     await _save();
     notifyListeners();
     _log.info('Deleted preset: $id');
     return true;
+  }
+
+  bool canDeletePreset(String id) {
+    final preset = presetById(id);
+    if (preset == null) return false;
+    return _presets
+            .where((p) => p.brightness == preset.brightness)
+            .length >
+        1;
   }
 
   Future<void> setActivePreset(String id) async {
@@ -164,14 +178,12 @@ class ColorConfigManager extends ChangeNotifier {
   }
 
   Future<void> resetBuiltins() async {
-    final lightIdx = _presets.indexWhere((p) => p.id == '_builtin_light');
-    if (lightIdx != -1) {
-      _presets[lightIdx] = ColorPreset.defaultLight();
-    }
-    final darkIdx = _presets.indexWhere((p) => p.id == '_builtin_dark');
-    if (darkIdx != -1) {
-      _presets[darkIdx] = ColorPreset.defaultDark();
-    }
+    _presets.removeWhere((p) => p.id == '_builtin_light');
+    _presets.removeWhere((p) => p.id == '_builtin_dark');
+    _presets.insert(0, ColorPreset.defaultLight());
+    _presets.add(ColorPreset.defaultDark());
+    _activeLightPresetId = '_builtin_light';
+    _activeDarkPresetId = '_builtin_dark';
     await _save();
     notifyListeners();
     _log.info('Reset builtin presets to defaults');
