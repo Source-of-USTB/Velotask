@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/main.dart';
+import 'package:velotask/screens/color_settings_screen.dart';
 import 'package:velotask/screens/tags_screen.dart';
 import 'package:velotask/theme/app_theme.dart';
 
@@ -266,6 +267,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const TagsScreen()),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.palette_outlined),
+            title: Text(l10n.colorSettings),
+            subtitle: Text(l10n.colorSettingsSubtitle),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (context) => const ColorSettingsScreen()),
               );
             },
           ),

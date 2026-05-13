@@ -109,6 +109,15 @@ class TodoStorage {
     return _rowToTag(inserted);
   }
 
+  Future<void> updateTag(Tag tag) async {
+    await (_db.update(_db.tags)..where((t) => t.id.equals(tag.id))).write(
+      TagsCompanion(
+        name: Value(tag.name),
+        color: Value(tag.color),
+      ),
+    );
+  }
+
   Future<void> deleteTag(int id) async {
     await (_db.delete(_db.todoTags)..where((tt) => tt.tagId.equals(id))).go();
     await (_db.delete(_db.tags)..where((t) => t.id.equals(id))).go();

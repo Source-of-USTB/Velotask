@@ -19,18 +19,21 @@ class _TagsScreenState extends State<TagsScreen> {
   Color _selectedColor = Colors.blue;
   static final Logger _logger = AppLogger.getLogger('TagsScreen');
 
-  final List<Color> _availableColors = [
-    Colors.blue,
-    Colors.red,
-    Colors.green,
-    Colors.orange,
-    Colors.purple,
-    Colors.teal,
-    Colors.pink,
-    Colors.indigo,
-    Colors.brown,
-    Colors.grey,
-  ];
+  List<Color> get _availableColors {
+    final colors = <Color>[];
+    for (int h = 0; h < 360; h += 24) {
+      for (int v = 0; v < 3; v++) {
+        final s = v == 0 ? 0.5 : v == 1 ? 0.75 : 1.0;
+        colors.add(HSVColor.fromAHSV(1, h.toDouble(), s, 1.0).toColor());
+      }
+    }
+    // Add grays
+    for (int i = 0; i < 6; i++) {
+      final v = (0xFF - i * 0x28).clamp(0, 255);
+      colors.add(Color.fromARGB(255, v, v, v));
+    }
+    return colors;
+  }
 
   @override
   void initState() {
@@ -42,9 +45,11 @@ class _TagsScreenState extends State<TagsScreen> {
   Future<void> _loadTags() async {
     try {
       final tags = await _storage.loadTags();
-      setState(() {
-        _tags = tags;
-      });
+      if (mounted) {
+        setState(() {
+          _tags = tags;
+        });
+      }
     } catch (e) {
       _logger.severe('Failed to load tags', e);
     }
@@ -58,7 +63,6 @@ class _TagsScreenState extends State<TagsScreen> {
       return;
     }
 
-    // Use toARGB32() instead of deprecated .value
     final colorHex =
         '#${_selectedColor.toARGB32().toRadixString(16).substring(2)}';
     final newTag = Tag.unsaved(name: name, color: colorHex);
@@ -67,7 +71,6 @@ class _TagsScreenState extends State<TagsScreen> {
       await _storage.addTag(newTag);
       _logger.info('Successfully added tag: ${newTag.name}');
     } catch (e) {
-      // If insertion failed (e.g., unique constraint), show a friendly message
       if (mounted) {
         ScaffoldMessenger.of(
           context,
@@ -94,6 +97,17 @@ class _TagsScreenState extends State<TagsScreen> {
     }
   }
 
+  Color _parseTagColor(Tag tag) {
+    if (tag.color == null) return Colors.blue;
+    try {
+      return Color(
+        int.parse(tag.color!.replaceAll('#', '0xFF')),
+      );
+    } catch (_) {
+      return Colors.blue;
+    }
+  }
+
   BoxDecoration _surfaceDecoration(BuildContext context) {
     return BoxDecoration(
       color: Theme.of(context).colorScheme.surfaceContainerLowest,
@@ -106,67 +120,152 @@ class _TagsScreenState extends State<TagsScreen> {
 
   void _showAddTagDialog() {
     final l10n = AppLocalizations.of(context)!;
+    _selectedColor = Colors.blue;
+    _tagNameController.clear();
     showDialog(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => AlertDialog(
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
           title: Text(
             l10n.addNewTag,
             style: AppTheme.dialogTitleStyle(context),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _tagNameController,
-                decoration: InputDecoration(
-                  labelText: l10n.tagName,
-                  border: OutlineInputBorder(),
+          content: SizedBox(
+            width: 320,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: _tagNameController,
+                  decoration: InputDecoration(
+                    labelText: l10n.tagName,
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                l10n.selectColor,
-                style: AppTheme.captionStrongStyle(context),
-              ),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: _availableColors.map((color) {
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedColor = color;
-                      });
-                    },
-                    child: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: color,
-                        shape: BoxShape.circle,
-                        border: _selectedColor == color
-                            ? Border.all(
-                                color: Theme.of(context).primaryColor,
-                                width: 2,
-                              )
-                            : null,
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
-            ],
+                const SizedBox(height: 16),
+                Text(
+                  l10n.selectColor,
+                  style: AppTheme.captionStrongStyle(context),
+                ),
+                const SizedBox(height: 8),
+                _buildColorGrid((c) => setDialogState(() => _selectedColor = c)),
+              ],
+            ),
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.pop(ctx),
               child: Text(l10n.cancel),
             ),
             FilledButton(onPressed: _addTag, child: Text(l10n.create)),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showEditTagDialog(Tag tag) {
+    final l10n = AppLocalizations.of(context)!;
+    final nameCtrl = TextEditingController(text: tag.name);
+    Color editColor = _parseTagColor(tag);
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          title: Text(
+            l10n.editTagColor,
+            style: AppTheme.dialogTitleStyle(context),
+          ),
+          content: SizedBox(
+            width: 320,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameCtrl,
+                  decoration: InputDecoration(
+                    labelText: l10n.tagName,
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  l10n.selectColor,
+                  style: AppTheme.captionStrongStyle(context),
+                ),
+                const SizedBox(height: 8),
+                _buildColorGrid((c) => setDialogState(() => editColor = c),
+                    selected: editColor),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final name = nameCtrl.text.trim();
+                if (name.isEmpty) return;
+                final colorHex =
+                    '#${editColor.toARGB32().toRadixString(16).substring(2)}';
+                await _storage.updateTag(
+                  tag.copyWith(name: name, color: colorHex),
+                );
+                if (ctx.mounted) Navigator.pop(ctx);
+                _loadTags();
+              },
+              child: Text(l10n.save),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildColorGrid(void Function(Color) onSelect,
+      {Color? selected}) {
+    return ConstrainedBox(
+      constraints: const BoxConstraints(maxHeight: 200),
+      child: GridView.builder(
+        shrinkWrap: true,
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 10,
+          mainAxisSpacing: 6,
+          crossAxisSpacing: 6,
+          childAspectRatio: 1,
+        ),
+        itemCount: _availableColors.length,
+        itemBuilder: (context, index) {
+          final color = _availableColors[index];
+          final isSelected = selected != null &&
+              selected.toARGB32() == color.toARGB32();
+          return GestureDetector(
+            onTap: () {
+              onSelect(color);
+              if (selected == null) {
+                setState(() => _selectedColor = color);
+              }
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                color: color,
+                shape: BoxShape.circle,
+                border: isSelected
+                    ? Border.all(
+                        color: Theme.of(context).primaryColor,
+                        width: 2.5,
+                      )
+                    : Border.all(
+                        color: Theme.of(context).dividerColor,
+                        width: 0.5,
+                      ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -221,14 +320,7 @@ class _TagsScreenState extends State<TagsScreen> {
               separatorBuilder: (context, index) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final tag = _tags[index];
-                Color tagColor = Colors.blue;
-                if (tag.color != null) {
-                  try {
-                    tagColor = Color(
-                      int.parse(tag.color!.replaceAll('#', '0xFF')),
-                    );
-                  } catch (_) {}
-                }
+                final tagColor = _parseTagColor(tag);
                 return Container(
                   decoration: _surfaceDecoration(context),
                   child: ListTile(
@@ -236,27 +328,49 @@ class _TagsScreenState extends State<TagsScreen> {
                       horizontal: 12,
                       vertical: 4,
                     ),
-                    leading: Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: tagColor.withValues(alpha: 0.14),
-                        borderRadius: BorderRadius.circular(8),
+                    leading: GestureDetector(
+                      onTap: () => _showEditTagDialog(tag),
+                      child: Container(
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: tagColor.withValues(alpha: 0.14),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(Icons.label, color: tagColor, size: 18),
                       ),
-                      child: Icon(Icons.label, color: tagColor, size: 18),
                     ),
                     title: Text(tag.name),
                     titleTextStyle: AppTheme.bodyMediumStrongStyle(
                       context,
-                    ).copyWith(color: Theme.of(context).colorScheme.onSurface),
-                    trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline),
-                      onPressed: () => _deleteTag(tag),
-                      constraints: const BoxConstraints(
-                        minWidth: 44,
-                        minHeight: 44,
-                      ),
+                    ).copyWith(
+                        color: Theme.of(context).colorScheme.onSurface),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            color: tagColor,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Theme.of(context).dividerColor,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: () => _deleteTag(tag),
+                          constraints: const BoxConstraints(
+                            minWidth: 44,
+                            minHeight: 44,
+                          ),
+                        ),
+                      ],
                     ),
+                    onTap: () => _showEditTagDialog(tag),
                   ),
                 );
               },
