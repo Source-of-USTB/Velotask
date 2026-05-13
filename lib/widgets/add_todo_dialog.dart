@@ -37,7 +37,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
   DateTime _startDate = DateTime.now();
   DateTime? _ddl;
   int _importance = 1;
-  TaskType _taskType = TaskType.task;
+  TaskType _taskType = TaskType.deadline;
   List<Tag> _availableTags = [];
   List<Tag> _selectedTags = [];
   final TodoStorage _storage = TodoStorage();
