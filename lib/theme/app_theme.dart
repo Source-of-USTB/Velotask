@@ -1,27 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:velotask/services/color_config_manager.dart';
 
 class AppTheme {
-  // Velocity Palette (Deep Steel & Asphalt)
-  static const Color primaryColor = Color(
-    0xFF2C3E50,
-  ); // Midnight Blue (Desaturated)
-  static const Color secondaryColor = Color(0xFF95A5A6); // Concrete Grey
-  static const Color backgroundColor = Color(0xFFF5F6FA); // Light Grey Tint
-  static const Color surfaceColor = Colors.white;
+  static Color get primaryColor =>
+      ColorConfigManager.instance.activeLightPreset?.primaryColor ??
+      const Color(0xFF2C3E50);
 
-  // Importance Colors (Vivid & Fast)
-  static const Color highPriority = Color(0xFFFF3F34); // Racing Red
-  static const Color mediumPriority = Color(0xFFFFA801); // Signal Orange
-  static const Color lowPriority = Color(0xFF0BE881); // Neon Green
-  static const Color errorColor = Color(0xFFFF5E57);
-
-  // Dark Theme Colors
-  static const Color darkBackgroundColor = Color(0xFF121212);
-  static const Color darkSurfaceColor = Color(0xFF1E1E1E);
-  static const Color darkPrimaryColor = Color(0xFFECF0F1); // Light text/icons
-  static const Color darkSecondaryColor = Color(0xFFB0BEC5);
-  static const Color darkAccentColor = Color(0xFF3498DB);
+  static Color get highPriority =>
+      ColorConfigManager.instance.activeLightPreset?.highPriority ??
+      const Color(0xFFFF3F34);
+  static Color get mediumPriority =>
+      ColorConfigManager.instance.activeLightPreset?.mediumPriority ??
+      const Color(0xFFFFA801);
+  static Color get lowPriority =>
+      ColorConfigManager.instance.activeLightPreset?.lowPriority ??
+      const Color(0xFF0BE881);
+  static Color get errorColor =>
+      ColorConfigManager.instance.activeLightPreset?.errorColor ??
+      const Color(0xFFFF5E57);
 
   static TextStyle headerStyle(BuildContext context) {
     final locale = Localizations.localeOf(context);
@@ -256,10 +253,47 @@ class AppTheme {
     ).copyWith(letterSpacing: 1.0);
   }
 
+  static ColorScheme _lightColorScheme() =>
+      ColorConfigManager.instance.toColorScheme(Brightness.light);
+
+  static ColorScheme _darkColorScheme() =>
+      ColorConfigManager.instance.toColorScheme(Brightness.dark);
+
+  static Color _lightPrimary() =>
+      ColorConfigManager.instance.activeLightPreset?.primaryColor ??
+      const Color(0xFF2C3E50);
+
+  static Color _lightBg() =>
+      ColorConfigManager.instance.activeLightPreset?.backgroundColor ??
+      const Color(0xFFF5F6FA);
+
+  static Color _lightSurface() =>
+      ColorConfigManager.instance.activeLightPreset?.surfaceColor ?? Colors.white;
+
+  static Color _darkPrimary() =>
+      ColorConfigManager.instance.activeDarkPreset?.primaryColor ??
+      const Color(0xFFECF0F1);
+
+  static Color _darkBg() =>
+      ColorConfigManager.instance.activeDarkPreset?.backgroundColor ??
+      const Color(0xFF121212);
+
+  static Color _darkSurface() =>
+      ColorConfigManager.instance.activeDarkPreset?.surfaceColor ??
+      const Color(0xFF1E1E1E);
+
+  static Color _darkAccent() =>
+      ColorConfigManager.instance.activeDarkPreset?.accentColor ??
+      const Color(0xFF3498DB);
+
   static ThemeData get lightTheme {
+    final primary = _lightPrimary();
+    final surface = _lightSurface();
+    final bg = _lightBg();
+
     return ThemeData(
       useMaterial3: true,
-      scaffoldBackgroundColor: backgroundColor,
+      scaffoldBackgroundColor: bg,
       textTheme: GoogleFonts.notoSansScTextTheme().copyWith(
         bodyLarge: GoogleFonts.notoSansSc(fontSize: 16),
         bodyMedium: GoogleFonts.notoSansSc(fontSize: 14),
@@ -277,41 +311,32 @@ class AppTheme {
           fontWeight: FontWeight.w600,
         ),
       ),
-      primaryColor: primaryColor,
-      colorScheme: const ColorScheme.light(
-        primary: primaryColor,
-        onPrimary: Colors.white,
-        secondary: primaryColor,
-        onSecondary: Colors.white,
-        surface: surfaceColor,
-      ),
+      primaryColor: primary,
+      colorScheme: _lightColorScheme(),
 
-      // AppBar Style
-      appBarTheme: const AppBarTheme(
-        backgroundColor: backgroundColor,
+      appBarTheme: AppBarTheme(
+        backgroundColor: bg,
         elevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
-          color: primaryColor,
+          color: primary,
           fontSize: 28,
           fontWeight: FontWeight.w800,
         ),
-        iconTheme: IconThemeData(color: primaryColor),
+        iconTheme: IconThemeData(color: primary),
       ),
 
-      // FAB Style
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: primaryColor,
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: primary,
         foregroundColor: Colors.white,
         elevation: 4,
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
       ),
 
-      // Card Style
       cardTheme: CardThemeData(
-        color: surfaceColor,
+        color: surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -323,7 +348,6 @@ class AppTheme {
         margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 20),
       ),
 
-      // Input Decoration
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: const Color(0xFFF5F5F5),
@@ -337,23 +361,21 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: primaryColor, width: 1),
+          borderSide: BorderSide(color: primary, width: 1),
         ),
         contentPadding: const EdgeInsets.all(16),
-        labelStyle: const TextStyle(color: secondaryColor),
+        labelStyle: const TextStyle(color: Color(0xFF95A5A6)),
       ),
 
-      // Dialog Style
       dialogTheme: DialogThemeData(
-        backgroundColor: surfaceColor,
+        backgroundColor: surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 0,
       ),
 
-      // Button Styles
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryColor,
+          backgroundColor: primary,
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -365,7 +387,7 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: primaryColor,
+          foregroundColor: primary,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
@@ -376,9 +398,14 @@ class AppTheme {
   }
 
   static ThemeData get darkTheme {
+    final primary = _darkPrimary();
+    final surface = _darkSurface();
+    final bg = _darkBg();
+    final accent = _darkAccent();
+
     return ThemeData(
       useMaterial3: true,
-      scaffoldBackgroundColor: darkBackgroundColor,
+      scaffoldBackgroundColor: bg,
       textTheme: GoogleFonts.notoSansScTextTheme(ThemeData.dark().textTheme)
           .copyWith(
             bodyLarge: GoogleFonts.notoSansSc(fontSize: 16),
@@ -397,41 +424,32 @@ class AppTheme {
               fontWeight: FontWeight.w600,
             ),
           ),
-      primaryColor: darkPrimaryColor,
-      colorScheme: const ColorScheme.dark(
-        primary: darkPrimaryColor,
-        onPrimary: darkSurfaceColor,
-        secondary: darkSecondaryColor,
-        onSecondary: darkSurfaceColor,
-        surface: darkSurfaceColor,
-      ),
+      primaryColor: primary,
+      colorScheme: _darkColorScheme(),
 
-      // AppBar Style
-      appBarTheme: const AppBarTheme(
-        backgroundColor: darkBackgroundColor,
+      appBarTheme: AppBarTheme(
+        backgroundColor: bg,
         elevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
-          color: darkPrimaryColor,
+          color: primary,
           fontSize: 28,
           fontWeight: FontWeight.w800,
         ),
-        iconTheme: IconThemeData(color: darkPrimaryColor),
+        iconTheme: IconThemeData(color: primary),
       ),
 
-      // FAB Style
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: darkAccentColor,
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: accent,
         foregroundColor: Colors.white,
         elevation: 4,
-        shape: RoundedRectangleBorder(
+        shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.all(Radius.circular(12)),
         ),
       ),
 
-      // Card Style
       cardTheme: CardThemeData(
-        color: darkSurfaceColor,
+        color: surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -443,7 +461,6 @@ class AppTheme {
         margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 20),
       ),
 
-      // Input Decoration
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: const Color(0xFF2C2C2C),
@@ -457,23 +474,21 @@ class AppTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: darkAccentColor, width: 1),
+          borderSide: BorderSide(color: accent, width: 1),
         ),
         contentPadding: const EdgeInsets.all(16),
-        labelStyle: const TextStyle(color: darkSecondaryColor),
+        labelStyle: const TextStyle(color: Color(0xFFB0BEC5)),
       ),
 
-      // Dialog Style
       dialogTheme: DialogThemeData(
-        backgroundColor: darkSurfaceColor,
+        backgroundColor: surface,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         elevation: 0,
       ),
 
-      // Button Styles
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: darkAccentColor,
+          backgroundColor: accent,
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -485,7 +500,7 @@ class AppTheme {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: darkAccentColor,
+          foregroundColor: accent,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),

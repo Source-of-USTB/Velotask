@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/screens/main_screen.dart';
+import 'package:velotask/services/color_config_manager.dart';
 import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/utils/logger.dart';
 
@@ -13,6 +14,9 @@ final ValueNotifier<Locale?> localeNotifier = ValueNotifier(null);
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AppLogger.setup();
+
+  await ColorConfigManager.instance.init();
+
   final prefs = await SharedPreferences.getInstance();
 
   // Load Theme
@@ -30,7 +34,7 @@ Future<void> main() async {
     localeNotifier.value = Locale(savedLocale);
   }
 
-  runApp(const MyApp()); //
+  runApp(const MyApp());
 }
 
 // 根组件
@@ -40,7 +44,11 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListenableBuilder(
       // 监听
-      listenable: Listenable.merge([themeNotifier, localeNotifier]),
+      listenable: Listenable.merge([
+        themeNotifier,
+        localeNotifier,
+        ColorConfigManager.instance,
+      ]),
       builder: (context, child) {
         return MaterialApp(
           title: 'Velotask',
