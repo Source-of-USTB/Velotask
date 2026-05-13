@@ -120,11 +120,21 @@ class _TimelineScreenState extends State<TimelineScreen> {
       return !end.isBefore(_chartStart) && !start.isAfter(chartEnd);
     }).toList()
       ..sort((a, b) {
-        final startA = a.startDate ?? a.createdAt ?? a.ddl ?? now;
-        final startB = b.startDate ?? b.createdAt ?? b.ddl ?? now;
-        final byDate = startA.compareTo(startB);
-        if (byDate != 0) return byDate;
-        return b.importance.compareTo(a.importance);
+        if (a.taskType != b.taskType) {
+          return a.taskType == TaskType.deadline ? -1 : 1;
+        }
+        if (a.taskType == TaskType.deadline) {
+          final ddlA = a.ddl ?? DateTime(9999);
+          final ddlB = b.ddl ?? DateTime(9999);
+          return ddlA.compareTo(ddlB);
+        }
+        final startA = a.startDate ?? a.createdAt ?? now;
+        final startB = b.startDate ?? b.createdAt ?? now;
+        final byStart = startA.compareTo(startB);
+        if (byStart != 0) return byStart;
+        final endA = a.ddl ?? now;
+        final endB = b.ddl ?? now;
+        return endA.compareTo(endB);
       });
   }
 
