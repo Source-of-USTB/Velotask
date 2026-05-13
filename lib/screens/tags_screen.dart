@@ -456,8 +456,6 @@ class _ChannelRowState extends State<_ChannelRow> {
               value: _lastValid.toDouble(),
               min: 0,
               max: 255,
-              divisions: 255,
-              label: _lastValid.toString(),
               onChanged: (v) {
                 final iv = v.round();
                 _ctrl.text = iv.toString();
