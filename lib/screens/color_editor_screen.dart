@@ -45,10 +45,10 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
   void initState() {
     super.initState();
     _mgr.addListener(_onConfigChanged);
+    _initChannelControllers();
 
     final initialId = widget.presetId ?? _activeIdForCurrentBrightness();
     _loadPreset(initialId);
-    _initChannelControllers();
   }
 
   String _activeIdForCurrentBrightness() {
