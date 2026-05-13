@@ -18,21 +18,6 @@ class _TagsScreenState extends State<TagsScreen> {
   List<Tag> _tags = [];
   static final Logger _logger = AppLogger.getLogger('TagsScreen');
 
-  List<Color> get _availableColors {
-    final colors = <Color>[];
-    for (int h = 0; h < 360; h += 24) {
-      for (int v = 0; v < 3; v++) {
-        final s = v == 0 ? 0.5 : v == 1 ? 0.75 : 1.0;
-        colors.add(HSVColor.fromAHSV(1, h.toDouble(), s, 1.0).toColor());
-      }
-    }
-    for (int i = 0; i < 6; i++) {
-      final v = (0xFF - i * 0x28).clamp(0, 255);
-      colors.add(Color.fromARGB(255, v, v, v));
-    }
-    return colors;
-  }
-
   @override
   void initState() {
     super.initState();
@@ -209,44 +194,11 @@ class _TagsScreenState extends State<TagsScreen> {
     required Color color,
     required ValueChanged<Color> onChanged,
   }) {
-    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.selectColor, style: AppTheme.captionStrongStyle(context)),
-        const SizedBox(height: 8),
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxHeight: 160),
-          child: GridView.builder(
-            shrinkWrap: true,
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 10,
-              mainAxisSpacing: 6,
-              crossAxisSpacing: 6,
-              childAspectRatio: 1,
-            ),
-            itemCount: _availableColors.length,
-            itemBuilder: (context, index) {
-              final c = _availableColors[index];
-              final isSelected = c.toARGB32() == color.toARGB32();
-              return GestureDetector(
-                onTap: () => onChanged(c),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: c,
-                    shape: BoxShape.circle,
-                    border: isSelected
-                        ? Border.all(color: theme.primaryColor, width: 2.5)
-                        : Border.all(color: theme.dividerColor, width: 0.5),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 12),
         _ChannelRow(color: color, onChanged: onChanged, channel: 'R'),
         const SizedBox(height: 6),
         _ChannelRow(color: color, onChanged: onChanged, channel: 'G'),
@@ -509,7 +461,7 @@ class _ChannelRowState extends State<_ChannelRow> {
               onChanged: (v) {
                 final iv = v.round();
                 _ctrl.text = iv.toString();
-                _lastValid = iv;
+                setState(() => _lastValid = iv);
               },
               onChangeEnd: (v) {
                 final iv = v.round();

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:velotask/l10n/app_localizations.dart';
@@ -50,7 +52,7 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
   }
 
   String _activeIdForCurrentBrightness() {
-    final brightness = MediaQuery.of(context).platformBrightness;
+    final brightness = PlatformDispatcher.instance.platformBrightness;
     return brightness == Brightness.light
         ? _mgr.activeLightPresetId
         : _mgr.activeDarkPresetId;
