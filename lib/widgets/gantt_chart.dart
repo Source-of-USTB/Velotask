@@ -65,13 +65,32 @@ class GanttChart extends StatelessWidget {
                               .colorScheme
                               .surfaceContainerHighest,
                         ),
-                        child: ListView.builder(
-                          itemCount: tasks.length,
-                          itemExtent: TimelineTaskRow.rowHeight,
-                          itemBuilder: (_, i) => TimelineTaskRow(
-                            todo: tasks[i],
-                            now: now,
-                            onDoubleTap: onTaskDoubleTap,
+                        child: CustomPaint(
+                          painter: _GridLinePainter(
+                            chartStart: chartStart,
+                            totalDays: totalDays,
+                            dayWidth: dayWidth,
+                            monthColor: Theme.of(context)
+                                .colorScheme
+                                .outlineVariant,
+                            weekColor: Theme.of(context)
+                                .colorScheme
+                                .outlineVariant
+                                .withValues(
+                                  alpha: Theme.of(context).brightness ==
+                                          Brightness.dark
+                                      ? 0.25
+                                      : 0.55,
+                                ),
+                          ),
+                          child: ListView.builder(
+                            itemCount: tasks.length,
+                            itemExtent: TimelineTaskRow.rowHeight,
+                            itemBuilder: (_, i) => TimelineTaskRow(
+                              todo: tasks[i],
+                              now: now,
+                              onDoubleTap: onTaskDoubleTap,
+                            ),
                           ),
                         ),
                       ),
@@ -116,6 +135,66 @@ class _WeekendStripePainter extends CustomPainter {
       old.totalDays != totalDays ||
       old.dayWidth != dayWidth ||
       old.weekendColor != weekendColor;
+}
+
+class _GridLinePainter extends CustomPainter {
+  final DateTime chartStart;
+  final int totalDays;
+  final double dayWidth;
+  final Color monthColor;
+  final Color weekColor;
+
+  const _GridLinePainter({
+    required this.chartStart,
+    required this.totalDays,
+    required this.dayWidth,
+    required this.monthColor,
+    required this.weekColor,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final monthPaint = Paint()
+      ..color = monthColor
+      ..strokeWidth = 2.0;
+
+    final weekPaint = Paint()
+      ..color = weekColor
+      ..strokeWidth = 0.5;
+
+    // Month lines: at the 1st of each month
+    var monthCursor = DateTime(chartStart.year, chartStart.month, 1);
+    final endDate = chartStart.add(Duration(days: totalDays));
+    while (!monthCursor.isAfter(endDate)) {
+      if (!monthCursor.isBefore(chartStart)) {
+        final dayOffset = monthCursor.difference(chartStart).inDays;
+        final x = dayOffset * dayWidth;
+        canvas.drawLine(Offset(x, 0), Offset(x, size.height), monthPaint);
+      }
+      if (monthCursor.month == 12) {
+        monthCursor = DateTime(monthCursor.year + 1, 1, 1);
+      } else {
+        monthCursor = DateTime(monthCursor.year, monthCursor.month + 1, 1);
+      }
+    }
+
+    // Week lines: at each Monday
+    for (int i = 0; i < totalDays; i++) {
+      final date = chartStart.add(Duration(days: i));
+      if (date.weekday == DateTime.monday) {
+        final x = i * dayWidth;
+        canvas.drawLine(Offset(x, 0), Offset(x, size.height), weekPaint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GridLinePainter old) =>
+      old.chartStart != chartStart ||
+      old.totalDays != totalDays ||
+      old.dayWidth != dayWidth ||
+      old.monthColor != monthColor ||
+      old.weekColor != weekColor;
 }
 
 class _EmptyState extends StatelessWidget {
