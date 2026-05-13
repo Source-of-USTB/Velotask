@@ -18,7 +18,12 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
   final _mgr = ColorConfigManager.instance;
   late ColorPreset _editing;
   String? _nameError;
-  final _colorErrors = <String, String?>{};
+
+  final _controllers = <String, TextEditingController>{};
+  final _focusNodes = <String, FocusNode>{};
+  final _channelErrors = <String, String?>{};
+
+  static const _channels = ['R', 'G', 'B', 'A'];
 
   static const _colorFields = <String>[
     'primaryColor',
@@ -48,6 +53,77 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
       errorColor: widget.preset.errorColor,
       accentColor: widget.preset.accentColor,
     );
+    _initControllers();
+  }
+
+  void _initControllers() {
+    for (final key in _colorFields) {
+      final c = _getColor(key);
+      for (final ch in _channels) {
+        final id = '$key-$ch';
+        _controllers[id] = TextEditingController(text: _channelText(c, ch));
+        _focusNodes[id] = FocusNode();
+        _focusNodes[id]!.addListener(() => _onFocusChange(id, key));
+      }
+    }
+  }
+
+  String _channelText(Color c, String ch) {
+    switch (ch) {
+      case 'R': return (c.r * 255).round().toString();
+      case 'G': return (c.g * 255).round().toString();
+      case 'B': return (c.b * 255).round().toString();
+      case 'A': return (c.a * 255).round().toString();
+      default: return '0';
+    }
+  }
+
+  int _channelValue(Color c, String ch) {
+    switch (ch) {
+      case 'R': return (c.r * 255).round();
+      case 'G': return (c.g * 255).round();
+      case 'B': return (c.b * 255).round();
+      case 'A': return (c.a * 255).round();
+      default: return 0;
+    }
+  }
+
+  void _onFocusChange(String id, String colorKey) {
+    if (_focusNodes[id]!.hasFocus) return;
+    _commitChannel(id, colorKey);
+  }
+
+  void _commitChannel(String id, String colorKey) {
+    final raw = _controllers[id]!.text;
+    final parsed = int.tryParse(raw);
+    final prevColor = _getColor(colorKey);
+    final ch = id.split('-').last;
+
+    if (parsed == null || parsed < 0 || parsed > 255) {
+      _controllers[id]!.text = _channelText(prevColor, ch);
+      setState(() => _channelErrors[id] = '0-255');
+    } else {
+      setState(() => _channelErrors[id] = null);
+      final current = _channelValue(prevColor, ch);
+      if (parsed != current) {
+        final r = ch == 'R' ? parsed : (prevColor.r * 255).round();
+        final g = ch == 'G' ? parsed : (prevColor.g * 255).round();
+        final b = ch == 'B' ? parsed : (prevColor.b * 255).round();
+        final a = ch == 'A' ? parsed : (prevColor.a * 255).round();
+        _setColor(colorKey, r, g, b, a);
+        _syncControllersFor(colorKey);
+      }
+    }
+  }
+
+  void _syncControllersFor(String key) {
+    final c = _getColor(key);
+    for (final ch in _channels) {
+      final id = '$key-$ch';
+      if (!_focusNodes[id]!.hasFocus) {
+        _controllers[id]!.text = _channelText(c, ch);
+      }
+    }
   }
 
   Color _getColor(String key) {
@@ -106,6 +182,18 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
       _nameError = null;
     }
 
+    // Commit all focused fields before checking
+    for (final key in _colorFields) {
+      for (final ch in _channels) {
+        final id = '$key-$ch';
+        _commitChannel(id, key);
+      }
+    }
+
+    for (final id in _channelErrors.keys) {
+      if (_channelErrors[id] != null) valid = false;
+    }
+
     return valid;
   }
 
@@ -118,6 +206,17 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
       );
       Navigator.pop(context, true);
     }
+  }
+
+  @override
+  void dispose() {
+    for (final id in _controllers.keys) {
+      _controllers[id]?.dispose();
+    }
+    for (final id in _focusNodes.keys) {
+      _focusNodes[id]?.dispose();
+    }
+    super.dispose();
   }
 
   @override
@@ -167,6 +266,8 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
     final label = _fieldLabel(context, key);
     final theme = Theme.of(context);
 
+    final rowHasError = _channels.any((ch) => _channelErrors['$key-$ch'] != null);
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
@@ -176,29 +277,13 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
           const SizedBox(height: 8),
           Row(
             children: [
-              _channelInput(
-                label: 'R',
-                value: (color.r * 255).round(),
-                onChanged: (v) => _setColor(key, v, (color.g * 255).round(), (color.b * 255).round(), (color.a * 255).round()),
-              ),
+              _channelInput(key: key, ch: 'R', color: color),
               const SizedBox(width: 8),
-              _channelInput(
-                label: 'G',
-                value: (color.g * 255).round(),
-                onChanged: (v) => _setColor(key, (color.r * 255).round(), v, (color.b * 255).round(), (color.a * 255).round()),
-              ),
+              _channelInput(key: key, ch: 'G', color: color),
               const SizedBox(width: 8),
-              _channelInput(
-                label: 'B',
-                value: (color.b * 255).round(),
-                onChanged: (v) => _setColor(key, (color.r * 255).round(), (color.g * 255).round(), v, (color.a * 255).round()),
-              ),
+              _channelInput(key: key, ch: 'B', color: color),
               const SizedBox(width: 8),
-              _channelInput(
-                label: 'A',
-                value: (color.a * 255).round(),
-                onChanged: (v) => _setColor(key, (color.r * 255).round(), (color.g * 255).round(), (color.b * 255).round(), v),
-              ),
+              _channelInput(key: key, ch: 'A', color: color),
               const SizedBox(width: 12),
               Container(
                 width: 36,
@@ -211,11 +296,11 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
               ),
             ],
           ),
-          if (_colorErrors[key] != null)
+          if (rowHasError)
             Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                _colorErrors[key]!,
+                AppLocalizations.of(context)!.invalidColorValue,
                 style: TextStyle(color: theme.colorScheme.error, fontSize: 12),
               ),
             ),
@@ -225,28 +310,36 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
   }
 
   Widget _channelInput({
-    required String label,
-    required int value,
-    required ValueChanged<int> onChanged,
+    required String key,
+    required String ch,
+    required Color color,
   }) {
+    final id = '$key-$ch';
+    final hasError = _channelErrors[id] != null;
+
     return SizedBox(
       width: 56,
       child: TextField(
-        controller: TextEditingController(text: value.toString()),
+        controller: _controllers[id],
+        focusNode: _focusNodes[id],
         keyboardType: TextInputType.number,
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         textAlign: TextAlign.center,
         decoration: InputDecoration(
-          labelText: label,
+          labelText: ch,
           isDense: true,
           contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+          border: hasError
+              ? const OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.red),
+                )
+              : null,
+          enabledBorder: hasError
+              ? const OutlineInputBorder(
+                  borderSide: BorderSide(color: Colors.red),
+                )
+              : null,
         ),
-        onChanged: (raw) {
-          final parsed = int.tryParse(raw);
-          if (parsed == null) return;
-          final clamped = parsed.clamp(0, 255);
-          onChanged(clamped);
-        },
       ),
     );
   }
