@@ -270,12 +270,17 @@ class _MainScreenState extends State<MainScreen> {
 
     final newTodos = <Todo>[];
     for (final result in filtered) {
+      final taskType = (result.startDate == null && result.ddl != null)
+          ? TaskType.deadline
+          : TaskType.task;
+
       final todo = Todo(
         title: result.title.trim(),
         description: result.description.trim(),
         startDate: result.startDate,
         ddl: result.ddl,
         importance: result.importance,
+        taskType: taskType,
         estimatedEffortHours: result.estimatedEffortHours,
       );
 

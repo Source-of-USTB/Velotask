@@ -160,7 +160,7 @@ class AIService {
       {
         'role': 'system',
         'content': [
-          'Convert user input into ONE JSON task object. Output raw JSON only — no markdown fences, no backticks, no explanation text.',
+          'Convert user input into ONE JSON task object. Output the JSON directly — NO reasoning, NO markdown fences, NO backticks, NO explanation.',
           '',
           'Keys:',
           '  title: concise task name, 2-15 words',
@@ -210,15 +210,15 @@ class AIService {
         config,
         messages: messages,
         temperature: 0.1,
-        maxTokens: 220,
-        timeout: const Duration(seconds: 25),
+        maxTokens: 2048,
+        timeout: const Duration(seconds: 30),
         retries: 2,
-        preferJsonMode: true,
+        preferJsonMode: false,
       );
 
       final content = _extractAssistantContent(data);
       if (content == null) {
-        throw const FormatException('AI returned empty response');
+        throw const FormatException('AI returned empty response — see severe log for raw API response');
       }
       final taskJson = _decodeJsonObject(_extractJsonPayload(content));
 
@@ -259,7 +259,7 @@ class AIService {
       {
         'role': 'system',
         'content': [
-          'Convert user input into a JSON array of task objects. Output raw JSON only — no markdown fences, no backticks, no explanation text.',
+          'Convert user input into a JSON array of task objects. Output the JSON array directly — NO reasoning, NO markdown fences, NO backticks, NO explanation.',
           'If input contains multiple tasks (separated by semicolons, newlines, or numbered items), split accordingly.',
           '',
           'Each task keys:',
@@ -310,15 +310,15 @@ class AIService {
         config,
         messages: messages,
         temperature: 0.1,
-        maxTokens: 600,
-        timeout: const Duration(seconds: 30),
+        maxTokens: 4096,
+        timeout: const Duration(seconds: 35),
         retries: 2,
         preferJsonMode: false,
       );
 
       final content = _extractAssistantContent(data);
       if (content == null) {
-        throw const FormatException('Missing assistant content');
+        throw const FormatException('Missing assistant content — see severe log for raw API response');
       }
       final payload = _extractJsonPayload(content);
       final decoded = jsonDecode(payload);
@@ -399,6 +399,8 @@ class AIService {
       return body;
     }
 
+    _logRequest(messages, config.model, maxTokens, preferJsonMode);
+
     Future<http.Response> doPost(_JsonMap body) => _postWithRetry(
           uri,
           headers: headers,
@@ -410,6 +412,8 @@ class AIService {
     final preferredBody = buildBody(jsonMode: preferJsonMode);
     final response = await doPost(preferredBody);
 
+    _logResponse(response);
+
     if (response.statusCode == 400 && preferJsonMode) {
       final bodyText = utf8.decode(response.bodyBytes);
       final unsupportedResponseFormat = bodyText.contains('response_format') &&
@@ -417,12 +421,31 @@ class AIService {
               bodyText.contains('Unrecognized') ||
               bodyText.contains('unsupported'));
       if (unsupportedResponseFormat) {
+        _logger.info('json_mode not supported by provider, retrying without');
         final fallbackResponse = await doPost(buildBody(jsonMode: false));
+        _logResponse(fallbackResponse);
         return _decodeTopLevelJson(fallbackResponse);
       }
     }
 
     return _decodeTopLevelJson(response);
+  }
+
+  void _logRequest(List<_JsonMap> messages, String model, int maxTokens, bool jsonMode) {
+    Map<String, dynamic> userMsg = messages.last;
+    for (final m in messages) {
+      if (m['role'] == 'user') userMsg = m;
+    }
+    final content = userMsg['content'] is String
+        ? userMsg['content'] as String
+        : jsonEncode(userMsg['content']);
+    _logger.info('AI request → model=$model, maxTokens=$maxTokens, jsonMode=$jsonMode, userInput: ${content.length > 300 ? '${content.substring(0, 300)}...' : content}');
+  }
+
+  void _logResponse(http.Response response) {
+    final bodyText = utf8.decode(response.bodyBytes);
+    final truncated = bodyText.length > 600 ? '${bodyText.substring(0, 600)}...' : bodyText;
+    _logger.info('AI response ← status=${response.statusCode}, body=$truncated');
   }
 
   Future<http.Response> _postWithRetry(
@@ -496,29 +519,47 @@ class AIService {
   }
 
   _JsonMap _decodeTopLevelJson(http.Response response) {
+    final bodyText = utf8.decode(response.bodyBytes);
     if (response.statusCode != 200) {
-      _logger.severe(
-        'AI API error: ${response.statusCode} - ${utf8.decode(response.bodyBytes)}',
-      );
-      throw Exception('API Error: ${response.statusCode}');
+      throw Exception('API Error: ${response.statusCode} — ${bodyText.length > 500 ? '${bodyText.substring(0, 500)}...' : bodyText}');
     }
 
-    final decoded = jsonDecode(utf8.decode(response.bodyBytes));
+    final decoded = jsonDecode(bodyText);
     if (decoded is! Map<String, dynamic>) {
-      throw const FormatException('Top-level response must be a JSON object');
+      throw FormatException('Top-level response must be a JSON object: ${bodyText.length > 300 ? '${bodyText.substring(0, 300)}...' : bodyText}');
     }
     return decoded;
   }
 
   String? _extractAssistantContent(_JsonMap data) {
     final choices = data['choices'];
-    if (choices is! List || choices.isEmpty) return null;
+    if (choices is! List || choices.isEmpty) {
+      _logger.severe('AI response has no choices array. Keys: ${data.keys.join(', ')}');
+      return null;
+    }
     final choice0 = choices.first;
-    if (choice0 is! Map) return null;
+    if (choice0 is! Map) {
+      _logger.severe('AI choice[0] is not a map: $choice0');
+      return null;
+    }
     final message = choice0['message'];
-    if (message is! Map) return null;
-    final content = message['content'];
-    if (content is! String || content.trim().isEmpty) return null;
+    if (message is! Map) {
+      _logger.severe('AI choice[0] has no "message" key. Keys: ${choice0.keys.join(', ')}');
+      return null;
+    }
+    dynamic content = message['content'];
+    var source = 'content';
+    if ((content == null || (content is String && content.trim().isEmpty)) &&
+        message['reasoning_content'] is String &&
+        (message['reasoning_content'] as String).trim().isNotEmpty) {
+      content = message['reasoning_content'];
+      source = 'reasoning_content';
+    }
+    if (content is! String || content.trim().isEmpty) {
+      _logger.severe('AI message has no usable content. message keys: ${message.keys.join(', ')}. content type: ${content.runtimeType}, content: ${content is String ? (content.length > 100 ? '${content.substring(0, 100)}...' : content) : content}');
+      return null;
+    }
+    _logger.info('AI extract source=$source, contentLen=${content.length}');
     return content.trim();
   }
 
