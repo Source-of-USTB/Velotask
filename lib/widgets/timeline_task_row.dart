@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:velotask/models/todo.dart';
+import 'package:velotask/services/color_config_manager.dart';
 import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/widgets/timeline_layout.dart';
 
 class TimelineTaskRow extends StatelessWidget {
   final Todo todo;
-  final DateTime now;
   final void Function(Todo)? onDoubleTap;
 
   static const double rowHeight = 52.0;
@@ -18,7 +18,6 @@ class TimelineTaskRow extends StatelessWidget {
   const TimelineTaskRow({
     super.key,
     required this.todo,
-    required this.now,
     this.onDoubleTap,
   });
 
@@ -44,23 +43,18 @@ class TimelineTaskRow extends StatelessWidget {
 
   Widget _buildDeadlineRow(BuildContext context) {
     final layout = TimelineLayout.of(context);
-    final theme = Theme.of(context);
+    final p = ColorConfigManager.instance.activePreset!;
+    final b = Theme.of(context).brightness;
     final color = _getTaskColor(context);
     const minutesPerDay = 1440.0;
 
-    // Todo.ddl 对应 endDate
     final ddl = todo.ddl;
     if (ddl == null) {
-      return SizedBox(
-        height: rowHeight,
-        width: layout.totalWidth,
-      );
+      return SizedBox(height: rowHeight, width: layout.totalWidth);
     }
 
     final endMinutes = ddl.difference(layout.chartStart).inMinutes;
     final x = (endMinutes / minutesPerDay * layout.dayWidth).clamp(0.0, layout.totalWidth);
-    final nowMinutes = now.difference(layout.chartStart).inMinutes;
-    final nowX = (nowMinutes / minutesPerDay * layout.dayWidth).clamp(0.0, layout.totalWidth);
 
     return SizedBox(
       height: rowHeight,
@@ -68,17 +62,10 @@ class TimelineTaskRow extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.hardEdge,
         children: [
-          // 行分隔线
           Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Divider(
-              height: 1,
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-            ),
+            bottom: 0, left: 0, right: 0,
+            child: Divider(height: 1, color: p.colorByKey('ganttRowDivider', b)),
           ),
-          // 正三角标记（尖端朝上指向日期刻度）+ 标题
           Positioned(
             left: x - _triangleWidth / 2,
             top: _triangleTop,
@@ -91,16 +78,12 @@ class TimelineTaskRow extends StatelessWidget {
                   children: [
                     CustomPaint(
                       size: const Size(_triangleWidth, _triangleHeight),
-                      painter: _TrianglePainter(color: color),
+                      painter: _TrianglePainter(color: color, shadowAlpha: 0.3),
                     ),
                     const SizedBox(width: 6),
                     Text(
                       todo.title,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: theme.colorScheme.onSurface,
-                      ),
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: p.colorByKey('homeBodyText', b)),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
                     ),
@@ -109,13 +92,6 @@ class TimelineTaskRow extends StatelessWidget {
               ),
             ),
           ),
-          // 当前时间红线（最上层）
-          Positioned(
-            left: nowX - 1,
-            top: 0,
-            bottom: 0,
-            child: Container(width: 2, color: theme.colorScheme.error),
-          ),
         ],
       ),
     );
@@ -123,30 +99,22 @@ class TimelineTaskRow extends StatelessWidget {
 
   Widget _buildRangeRow(BuildContext context) {
     final layout = TimelineLayout.of(context);
-    final theme = Theme.of(context);
+    final p = ColorConfigManager.instance.activePreset!;
+    final b = Theme.of(context).brightness;
     final color = _getTaskColor(context);
     const minutesPerDay = 1440.0;
 
-    // Todo.startDate 对应 startDate, Todo.ddl 对应 endDate
     final start = todo.startDate ?? todo.createdAt;
     final end = todo.ddl;
     if (start == null || end == null) {
-      return SizedBox(
-        height: rowHeight,
-        width: layout.totalWidth,
-      );
+      return SizedBox(height: rowHeight, width: layout.totalWidth);
     }
 
     final startMinutes = start.difference(layout.chartStart).inMinutes;
     final left = (startMinutes / minutesPerDay * layout.dayWidth).clamp(0.0, layout.totalWidth);
     final durationMinutes = end.difference(start).inMinutes;
     final minWidth = layout.dayWidth / minutesPerDay;
-    final barWidth = (durationMinutes / minutesPerDay * layout.dayWidth).clamp(
-      minWidth,
-      layout.totalWidth - left,
-    );
-    final nowMinutes = now.difference(layout.chartStart).inMinutes;
-    final nowX = (nowMinutes / minutesPerDay * layout.dayWidth).clamp(0.0, layout.totalWidth);
+    final barWidth = (durationMinutes / minutesPerDay * layout.dayWidth).clamp(minWidth, layout.totalWidth - left);
 
     return SizedBox(
       height: rowHeight,
@@ -154,31 +122,18 @@ class TimelineTaskRow extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.hardEdge,
         children: [
-          // 行分隔线
           Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Divider(
-              height: 1,
-              color: theme.colorScheme.outlineVariant.withValues(alpha: 0.4),
-            ),
+            bottom: 0, left: 0, right: 0,
+            child: Divider(height: 1, color: p.colorByKey('ganttRowDivider', b)),
           ),
-          // 任务条
           Positioned(
-            left: left,
-            top: _barPadding,
-            width: barWidth,
-            height: _barHeight,
+            left: left, top: _barPadding,
+            width: barWidth, height: _barHeight,
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.25),
-                    blurRadius: 4,
-                    offset: const Offset(0, 2),
-                  ),
+                  BoxShadow(color: color.withValues(alpha: 0.25), blurRadius: 4, offset: const Offset(0, 2)),
                 ],
               ),
               child: Material(
@@ -192,17 +147,10 @@ class TimelineTaskRow extends StatelessWidget {
                   onDoubleTap: () => onDoubleTap?.call(todo),
                   highlightColor: Colors.white.withValues(alpha: 0.1),
                   splashColor: Colors.white.withValues(alpha: 0.2),
-                  child: _TaskBar(todo: todo),
+                  child: _TaskBar(todo: todo, textColor: p.colorByKey('ganttTaskText', b)),
                 ),
               ),
             ),
-          ),
-          // 当前时间红线（最上层）
-          Positioned(
-            left: nowX - 1,
-            top: 0,
-            bottom: 0,
-            child: Container(width: 2, color: theme.colorScheme.error),
           ),
         ],
       ),
@@ -212,8 +160,8 @@ class TimelineTaskRow extends StatelessWidget {
 
 class _TaskBar extends StatelessWidget {
   final Todo todo;
-
-  const _TaskBar({required this.todo});
+  final Color textColor;
+  const _TaskBar({required this.todo, required this.textColor});
 
   @override
   Widget build(BuildContext context) {
@@ -226,17 +174,13 @@ class _TaskBar extends StatelessWidget {
         child: Row(
           children: [
             if (isDone) ...[
-              const Icon(Icons.check, color: Colors.white, size: 14),
+              Icon(Icons.check, color: textColor, size: 14),
               const SizedBox(width: 4),
             ],
             Expanded(
               child: Text(
                 todo.title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
+                style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.w600),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
               ),
@@ -250,7 +194,8 @@ class _TaskBar extends StatelessWidget {
 
 class _TrianglePainter extends CustomPainter {
   final Color color;
-  const _TrianglePainter({required this.color});
+  final double shadowAlpha;
+  const _TrianglePainter({required this.color, this.shadowAlpha = 0.3});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -259,13 +204,11 @@ class _TrianglePainter extends CustomPainter {
       ..lineTo(size.width, size.height)
       ..lineTo(0, size.height)
       ..close();
-
     final shadowPath = path.shift(const Offset(0, 2));
-    canvas.drawPath(shadowPath, Paint()..color = color.withValues(alpha: 0.3));
-
+    canvas.drawPath(shadowPath, Paint()..color = color.withValues(alpha: shadowAlpha));
     canvas.drawPath(path, Paint()..color = color);
   }
 
   @override
-  bool shouldRepaint(covariant _TrianglePainter old) => old.color != color;
+  bool shouldRepaint(covariant _TrianglePainter old) => old.color != color || old.shadowAlpha != shadowAlpha;
 }

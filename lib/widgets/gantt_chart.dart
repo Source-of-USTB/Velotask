@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:velotask/models/todo.dart';
+import 'package:velotask/services/color_config_manager.dart';
 import 'package:velotask/widgets/timeline_header.dart';
 import 'package:velotask/widgets/timeline_layout.dart';
 import 'package:velotask/widgets/timeline_task_row.dart';
@@ -30,6 +31,8 @@ class GanttChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final p = ColorConfigManager.instance.activePreset!;
+    final b = Theme.of(context).brightness;
     return TimelineLayout(
       chartStart: chartStart,
       totalDays: totalDays,
@@ -61,34 +64,27 @@ class GanttChart extends StatelessWidget {
                           chartStart: chartStart,
                           totalDays: totalDays,
                           dayWidth: dayWidth,
-                          weekendColor: Theme.of(context)
-                              .colorScheme
-                              .surfaceContainerHighest,
+                          weekendColor: p.colorByKey('ganttWeekendStripe', b),
                         ),
                         child: CustomPaint(
                           painter: _GridLinePainter(
                             chartStart: chartStart,
                             totalDays: totalDays,
                             dayWidth: dayWidth,
-                            monthColor: Theme.of(context)
-                                .colorScheme
-                                .outlineVariant,
-                            weekColor: Theme.of(context)
-                                .colorScheme
-                                .outlineVariant
-                                .withValues(
-                                  alpha: Theme.of(context).brightness ==
-                                          Brightness.dark
-                                      ? 0.25
-                                      : 0.55,
-                                ),
+                            monthColor: p.colorByKey('ganttMonthGridLine', b),
+                            weekColor: p.colorByKey('ganttWeekGridLine', b),
+                          ),
+                          foregroundPainter: _NowLinePainter(
+                            chartStart: chartStart,
+                            now: now,
+                            dayWidth: dayWidth,
+                            color: p.colorByKey('ganttNowLine', b),
                           ),
                           child: ListView.builder(
                             itemCount: tasks.length,
                             itemExtent: TimelineTaskRow.rowHeight,
                             itemBuilder: (_, i) => TimelineTaskRow(
                               todo: tasks[i],
-                              now: now,
                               onDoubleTap: onTaskDoubleTap,
                             ),
                           ),
@@ -154,15 +150,11 @@ class _GridLinePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    // Month lines first (below), thicker so overlap with week lines is visible
     final monthPaint = Paint()
       ..color = monthColor
-      ..strokeWidth = 2.0;
+      ..strokeWidth = 4.0;
 
-    final weekPaint = Paint()
-      ..color = weekColor
-      ..strokeWidth = 0.5;
-
-    // Month lines: at the 1st of each month
     var monthCursor = DateTime(chartStart.year, chartStart.month, 1);
     final endDate = chartStart.add(Duration(days: totalDays));
     while (!monthCursor.isAfter(endDate)) {
@@ -178,7 +170,11 @@ class _GridLinePainter extends CustomPainter {
       }
     }
 
-    // Week lines: at each Monday
+    // Week lines on top
+    final weekPaint = Paint()
+      ..color = weekColor
+      ..strokeWidth = 4;
+
     for (int i = 0; i < totalDays; i++) {
       final date = chartStart.add(Duration(days: i));
       if (date.weekday == DateTime.monday) {
@@ -195,6 +191,37 @@ class _GridLinePainter extends CustomPainter {
       old.dayWidth != dayWidth ||
       old.monthColor != monthColor ||
       old.weekColor != weekColor;
+}
+
+class _NowLinePainter extends CustomPainter {
+  final DateTime chartStart;
+  final DateTime now;
+  final double dayWidth;
+  final Color color;
+
+  const _NowLinePainter({
+    required this.chartStart,
+    required this.now,
+    required this.dayWidth,
+    required this.color,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final nowMinutes = now.difference(chartStart).inMinutes;
+    final x = (nowMinutes / 1440.0 * dayWidth).clamp(0.0, size.width);
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 2;
+    canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _NowLinePainter old) =>
+      old.chartStart != chartStart ||
+      old.now != now ||
+      old.dayWidth != dayWidth ||
+      old.color != color;
 }
 
 class _EmptyState extends StatelessWidget {

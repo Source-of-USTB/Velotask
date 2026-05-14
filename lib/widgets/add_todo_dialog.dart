@@ -344,8 +344,6 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                 }
               },
               style: FilledButton.styleFrom(
-                backgroundColor: Theme.of(context).primaryColor,
-                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),

@@ -4,20 +4,20 @@ import 'package:velotask/services/color_config_manager.dart';
 
 class AppTheme {
   static Color get primaryColor =>
-      ColorConfigManager.instance.activeLightPreset?.primaryColor ??
+      ColorConfigManager.instance.activePreset?.colorByKey('homeTitleText', Brightness.light) ??
       const Color(0xFF2C3E50);
 
   static Color get highPriority =>
-      ColorConfigManager.instance.activeLightPreset?.highPriority ??
+      ColorConfigManager.instance.activePreset?.colorByKey('ganttRangeTaskHigh', Brightness.light) ??
       const Color(0xFFFF3F34);
   static Color get mediumPriority =>
-      ColorConfigManager.instance.activeLightPreset?.mediumPriority ??
+      ColorConfigManager.instance.activePreset?.colorByKey('ganttRangeTaskMedium', Brightness.light) ??
       const Color(0xFFFFA801);
   static Color get lowPriority =>
-      ColorConfigManager.instance.activeLightPreset?.lowPriority ??
+      ColorConfigManager.instance.activePreset?.colorByKey('ganttRangeTaskLow', Brightness.light) ??
       const Color(0xFF0BE881);
   static Color get errorColor =>
-      ColorConfigManager.instance.activeLightPreset?.errorColor ??
+      ColorConfigManager.instance.activePreset?.colorByKey('commonErrorText', Brightness.light) ??
       const Color(0xFFFF5E57);
 
   static TextStyle headerStyle(BuildContext context) {
@@ -259,32 +259,17 @@ class AppTheme {
   static ColorScheme _darkColorScheme() =>
       ColorConfigManager.instance.toColorScheme(Brightness.dark);
 
-  static Color _lightPrimary() =>
-      ColorConfigManager.instance.activeLightPreset?.primaryColor ??
-      const Color(0xFF2C3E50);
+  static Color _c(String key, Brightness b, Color fallback) =>
+      ColorConfigManager.instance.activePreset?.colorByKey(key, b) ?? fallback;
 
-  static Color _lightBg() =>
-      ColorConfigManager.instance.activeLightPreset?.backgroundColor ??
-      const Color(0xFFF5F6FA);
+  static Color _lightPrimary() => _c('homeTitleText', Brightness.light, const Color(0xFF2C3E50));
+  static Color _lightBg() => _c('homePageBackground', Brightness.light, const Color(0xFFF5F6FA));
+  static Color _lightSurface() => _c('homeCardBackground', Brightness.light, Colors.white);
 
-  static Color _lightSurface() =>
-      ColorConfigManager.instance.activeLightPreset?.surfaceColor ?? Colors.white;
-
-  static Color _darkPrimary() =>
-      ColorConfigManager.instance.activeDarkPreset?.primaryColor ??
-      const Color(0xFFECF0F1);
-
-  static Color _darkBg() =>
-      ColorConfigManager.instance.activeDarkPreset?.backgroundColor ??
-      const Color(0xFF121212);
-
-  static Color _darkSurface() =>
-      ColorConfigManager.instance.activeDarkPreset?.surfaceColor ??
-      const Color(0xFF1E1E1E);
-
-  static Color _darkAccent() =>
-      ColorConfigManager.instance.activeDarkPreset?.accentColor ??
-      const Color(0xFF3498DB);
+  static Color _darkPrimary() => _c('homeTitleText', Brightness.dark, const Color(0xFFECF0F1));
+  static Color _darkBg() => _c('homePageBackground', Brightness.dark, const Color(0xFF121212));
+  static Color _darkSurface() => _c('homeCardBackground', Brightness.dark, const Color(0xFF1E1E1E));
+  static Color _darkAccent() => _c('commonButtonBackground', Brightness.dark, const Color(0xFF3498DB));
 
   static ThemeData get lightTheme {
     final primary = _lightPrimary();
@@ -375,6 +360,18 @@ class AppTheme {
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
+          backgroundColor: primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
           backgroundColor: primary,
           foregroundColor: Colors.white,
           elevation: 0,
@@ -488,6 +485,18 @@ class AppTheme {
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
+          backgroundColor: accent,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
           backgroundColor: accent,
           foregroundColor: Colors.white,
           elevation: 0,

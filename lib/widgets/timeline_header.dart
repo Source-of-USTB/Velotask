@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:velotask/services/color_config_manager.dart';
 
 class TimelineHeader extends StatelessWidget {
   static const double monthRowHeight = 34.0;
@@ -23,10 +24,8 @@ class TimelineHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-
-    final weekendColor = cs.surfaceContainerHighest;
-    final weekdayColor = cs.surfaceContainerLow;
+    final p = ColorConfigManager.instance.activePreset!;
+    final b = Theme.of(context).brightness;
 
     return RepaintBoundary(
       child: SizedBox(
@@ -39,13 +38,14 @@ class TimelineHeader extends StatelessWidget {
             dayWidth: dayWidth,
             today: DateTime.now(),
             now: now,
-            bgColor: weekdayColor,
-            weekendColor: weekendColor,
-            dividerColor: cs.outlineVariant,
-            textColor: cs.onSurface,
-            mutedColor: cs.onSurfaceVariant,
-            todayColor: cs.primary,
-            nowColor: cs.error,
+            bgColor: p.colorByKey('ganttHeaderBackground', b),
+            weekendColor: p.colorByKey('ganttHeaderWeekendBg', b),
+            dividerColor: p.colorByKey('ganttHeaderDivider', b),
+            textColor: p.colorByKey('ganttHeaderText', b),
+            mutedColor: p.colorByKey('ganttHeaderWeekendText', b),
+            todayColor: p.colorByKey('ganttHeaderTodayText', b),
+            todayBg: p.colorByKey('ganttHeaderTodayBg', b),
+            nowColor: p.colorByKey('ganttNowLine', b),
           ),
         ),
       ),
@@ -65,6 +65,7 @@ class _HeaderPainter extends CustomPainter {
   final Color textColor;
   final Color mutedColor;
   final Color todayColor;
+  final Color todayBg;
   final Color nowColor;
 
   static const double _monthRowH = TimelineHeader.monthRowHeight;
@@ -82,6 +83,7 @@ class _HeaderPainter extends CustomPainter {
     required this.textColor,
     required this.mutedColor,
     required this.todayColor,
+    required this.todayBg,
     required this.nowColor,
   });
 
@@ -148,7 +150,7 @@ class _HeaderPainter extends CustomPainter {
       if (isToday) {
         canvas.drawRect(
           Rect.fromLTWH(x, _monthRowH, dayWidth, _dayRowH),
-          Paint()..color = todayColor.withValues(alpha: 0.16),
+          Paint()..color = todayBg,
         );
       }
 
@@ -239,5 +241,6 @@ class _HeaderPainter extends CustomPainter {
       old.textColor != textColor ||
       old.mutedColor != mutedColor ||
       old.todayColor != todayColor ||
+      old.todayBg != todayBg ||
       old.nowColor != nowColor;
 }

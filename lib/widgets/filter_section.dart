@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo_filter.dart';
+import 'package:velotask/services/color_config_manager.dart';
 
 class FilterSection extends StatelessWidget {
   final TodoFilter currentFilter;
@@ -91,15 +92,19 @@ class FilterSection extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
+    final accent = ColorConfigManager.instance.activePreset
+        ?.colorByKey('commonButtonBackground', theme.brightness)
+        ?? theme.colorScheme.primary;
+
     return ChoiceChip(
       showCheckmark: false,
       label: Text(label, softWrap: false, overflow: TextOverflow.visible),
       selected: isSelected,
       onSelected: (_) => onFilterChanged(filter, currentTag),
       backgroundColor: Colors.transparent,
-      selectedColor: theme.primaryColor,
+      selectedColor: accent,
       labelStyle: TextStyle(
-        color: isSelected ? colorScheme.onPrimary : colorScheme.secondary,
+        color: isSelected ? Colors.white : colorScheme.secondary,
         fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
         fontSize: 13,
         height: 1.1,
