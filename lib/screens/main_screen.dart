@@ -73,8 +73,7 @@ class _MainScreenState extends State<MainScreen> {
     try {
       await _notificationService.syncForTodos(todos, l10n);
     } catch (e, stack) {
-      _logger.warning('Notification sync failed: $e');
-      _logger.fine('Notification sync stack: $stack');
+      _logger.warning('Notification sync failed', e, stack);
     }
   }
 
@@ -204,8 +203,7 @@ class _MainScreenState extends State<MainScreen> {
         await _syncNotifications();
       }
     } catch (e, stack) {
-      _logger.warning('Background effort estimation failed: $e');
-      _logger.fine('Background effort estimation stack: $stack');
+      _logger.warning('Background effort estimation failed', e, stack);
     }
   }
 

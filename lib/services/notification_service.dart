@@ -50,7 +50,7 @@ class NotificationService {
       };
       tz.setLocalLocation(tz.getLocation(timeZoneName));
     } catch (e) {
-      _logger.warning('Failed to initialize timezone: $e');
+      _logger.warning('Failed to initialize timezone', e);
       // Fallback to UTC
       try {
         tz.setLocalLocation(tz.getLocation('UTC'));
@@ -233,7 +233,7 @@ class NotificationService {
             '${scheduledDate.millisecondsSinceEpoch}|${todo.title}|$urgencyText|${l10n.localeName}',
       );
     } catch (e) {
-      _logger.warning('Failed to schedule reminder for todo ${todo.id}: $e');
+      _logger.warning('Failed to schedule reminder for todo ${todo.id}', e);
       return null;
     }
   }
@@ -412,7 +412,7 @@ class NotificationService {
       );
       _logger.info('Scheduled daily summary at $scheduledDate');
     } catch (e) {
-      _logger.warning('Failed to schedule daily summary: $e');
+      _logger.warning('Failed to schedule daily summary', e);
     }
   }
 

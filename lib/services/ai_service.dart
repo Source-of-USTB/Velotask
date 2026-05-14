@@ -129,8 +129,7 @@ class AIService {
       }
       return value.clamp(0.25, 100.0);
     } catch (e, stack) {
-      _logger.warning('Effort estimation failed: $e');
-      _logger.fine('Effort estimation stack: $stack');
+      _logger.warning('Effort estimation failed', e, stack);
       return null;
     }
   }
