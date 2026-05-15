@@ -115,13 +115,23 @@ class _WeekendStripePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = weekendColor;
-    for (int i = 0; i < totalDays; i++) {
-      final date = chartStart.add(Duration(days: i));
-      if (date.weekday == DateTime.saturday ||
-          date.weekday == DateTime.sunday) {
-        final x = i * dayWidth;
-        canvas.drawRect(Rect.fromLTWH(x, 0, dayWidth, size.height), paint);
+    final endDate = chartStart.add(Duration(days: totalDays));
+
+    // Jump to the first Saturday, then step by 7 days.
+    final daysUntilSat = (DateTime.saturday - chartStart.weekday + 7) % 7;
+    var sat = chartStart.add(Duration(days: daysUntilSat));
+
+    while (sat.isBefore(endDate)) {
+      final satX = sat.difference(chartStart).inDays * dayWidth;
+      canvas.drawRect(Rect.fromLTWH(satX, 0, dayWidth, size.height), paint);
+
+      final sun = sat.add(const Duration(days: 1));
+      if (sun.isBefore(endDate)) {
+        final sunX = sun.difference(chartStart).inDays * dayWidth;
+        canvas.drawRect(Rect.fromLTWH(sunX, 0, dayWidth, size.height), paint);
       }
+
+      sat = sat.add(const Duration(days: 7));
     }
   }
 
