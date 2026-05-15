@@ -6,17 +6,14 @@ import 'package:flutter/services.dart';
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/theme/app_theme.dart';
+import 'package:velotask/utils/constants.dart';
 import 'package:velotask/widgets/gantt_chart.dart';
 
 class TimelineScreen extends StatefulWidget {
   final List<Todo> todos;
   final void Function(Todo task)? onTaskDoubleTap;
 
-  const TimelineScreen({
-    super.key,
-    required this.todos,
-    this.onTaskDoubleTap,
-  });
+  const TimelineScreen({super.key, required this.todos, this.onTaskDoubleTap});
 
   @override
   State<TimelineScreen> createState() => _TimelineScreenState();
@@ -118,8 +115,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
     if (newIndex < 0 || newIndex >= _zoomLevels.length) return;
 
     final localX = event.localPosition.dx;
-    final oldScrollOffset =
-        _bodyCtrl.hasClients ? _bodyCtrl.offset : 0.0;
+    final oldScrollOffset = _bodyCtrl.hasClients ? _bodyCtrl.offset : 0.0;
     final oldDayWidth = _dayWidth;
 
     // Cancel the scroll movement the outer ScrollView would apply
@@ -135,8 +131,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
       if (!_bodyCtrl.hasClients) return;
       final dayAtCursor = (oldScrollOffset + localX) / oldDayWidth;
       final newOffset = dayAtCursor * _dayWidth - localX;
-      final clamped =
-          newOffset.clamp(0.0, _bodyCtrl.position.maxScrollExtent);
+      final clamped = newOffset.clamp(0.0, _bodyCtrl.position.maxScrollExtent);
       _bodyCtrl.jumpTo(clamped);
     });
   }
@@ -153,7 +148,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
       if (todo.taskType == TaskType.deadline) {
         final deadline = todo.ddl;
         if (deadline == null) return false;
-        final deadlineDay = DateTime(deadline.year, deadline.month, deadline.day);
+        final deadlineDay = DateTime(
+          deadline.year,
+          deadline.month,
+          deadline.day,
+        );
         return !deadlineDay.isBefore(_chartStart) &&
             !deadlineDay.isAfter(chartEnd);
       }
@@ -168,21 +167,21 @@ class _TimelineScreenState extends State<TimelineScreen> {
         (todo.ddl ?? start).day,
       );
       return !end.isBefore(_chartStart) && !start.isAfter(chartEnd);
-    }).toList()
-      ..sort((a, b) {
-        DateTime ka(Todo t) {
-          if (t.taskType == TaskType.deadline) return t.ddl ?? DateTime(9999);
-          return t.startDate ?? t.createdAt ?? DateTime(9999);
-        }
-        final byKey = ka(a).compareTo(ka(b));
-        if (byKey != 0) return byKey;
-        if (a.taskType == b.taskType && a.taskType != TaskType.deadline) {
-          final endA = a.ddl ?? DateTime(9999);
-          final endB = b.ddl ?? DateTime(9999);
-          return endA.compareTo(endB);
-        }
-        return a.id.compareTo(b.id);
-      });
+    }).toList()..sort((a, b) {
+      DateTime ka(Todo t) {
+        if (t.taskType == TaskType.deadline) return t.ddl ?? farFutureDate;
+        return t.startDate ?? t.createdAt ?? farFutureDate;
+      }
+
+      final byKey = ka(a).compareTo(ka(b));
+      if (byKey != 0) return byKey;
+      if (a.taskType == b.taskType && a.taskType != TaskType.deadline) {
+        final endA = a.ddl ?? farFutureDate;
+        final endB = b.ddl ?? farFutureDate;
+        return endA.compareTo(endB);
+      }
+      return a.id.compareTo(b.id);
+    });
   }
 
   @override

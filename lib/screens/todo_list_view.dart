@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/models/todo_filter.dart';
-
+import 'package:velotask/utils/constants.dart';
 
 import 'package:velotask/widgets/empty_state.dart';
 import 'package:velotask/widgets/filter_section.dart';
@@ -128,14 +128,15 @@ class _TodoListViewState extends State<TodoListView>
 
     result.sort((a, b) {
       DateTime ka(Todo t) {
-        if (t.taskType == TaskType.deadline) return t.ddl ?? DateTime(9999);
-        return t.startDate ?? t.createdAt ?? DateTime(9999);
+        if (t.taskType == TaskType.deadline) return t.ddl ?? farFutureDate;
+        return t.startDate ?? t.createdAt ?? farFutureDate;
       }
+
       final byKey = ka(a).compareTo(ka(b));
       if (byKey != 0) return byKey;
       if (a.taskType == b.taskType && a.taskType != TaskType.deadline) {
-        final endA = a.ddl ?? DateTime(9999);
-        final endB = b.ddl ?? DateTime(9999);
+        final endA = a.ddl ?? farFutureDate;
+        final endB = b.ddl ?? farFutureDate;
         return endA.compareTo(endB);
       }
       return a.id.compareTo(b.id);
