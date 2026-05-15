@@ -28,9 +28,9 @@ Plans that require feedback are marked with `?` — see individual issues for de
 
 ## 🎨 UI & Theming
 - [x] **Icon design**: Design an app icon.
+- [x] **Colour schemes**: Editable colour presets (8 groups, 41 keys, light+dark dual-mode editor).
+- [x] **Theming isolation**: `ColorConfigManager` decouples colour data from UI components. Presets support import/export.
 - [ ] *Unified design language*: Design a UI that emphasises a sense of speed, and apply this design consistently across the app.
-- [ ] Theming isolation: Separate theme management from components.
-- [ ] Colour schemes: Selectable colour schemes.
 - [ ] Platform adaptation: Adapt designs for different platforms to ensure an optimal experience.
 
 ## 🗄️ Other

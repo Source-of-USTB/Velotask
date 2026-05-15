@@ -13,26 +13,30 @@ Velotask is a simple, fast task app. Built with Flutter.
 ## ✨ Features
 
 - **📝 Task Management**
-  * Add, edit, delete tasks.
-  * Swipe right to mark done.
+  * Add, edit, delete tasks; swipe to mark complete.
+  * Three task types: todo, deadline, and date range.
 
-- **🏷️ Task Details**
-  * Organize by tags.
-  * Set priority, start, and due dates.
-  * Add descriptions.
+- **🏷️ Tags & Organization**
+  * Custom tags with color, filter by tag.
+  * Set priority, start/due dates, estimated effort hours.
 
-- **🤖 AI Features**
-  * Configure API key to use AI features (OpenAI-compatible).
-  * Let AI parse task text – supports multiple tasks at once!
-  * All data stays local – never uploaded to the cloud.
+- **📊 Timeline View**
+  * Gantt-style timeline showing task spans at a glance.
+  * Ctrl/Cmd + scroll to zoom, jump-to-today shortcut.
+  * Weekend highlights, grid lines, red "now" line.
 
-- **🎨 Custom UI**
-  * Light and dark themes.
-  * See task progress.
-  * Filter active or done tasks.
+- **🤖 AI Parsing**
+  * OpenAI-compatible API — turn natural language into structured tasks.
+  * Parses multiple tasks at once, infers task type and dates.
+  * All data stays local.
 
-- **🚀 Fast and Offline**
-  * Powered by Drift database. Works offline.
+- **🎨 Personalization**
+  * Light / dark theme.
+  * Visual progress bar, completion celebration.
+  * Editable colour preset system (8 groups, 41 keys, light+dark pairs).
+
+- **🚀 Offline-first**
+  * Drift (SQLite) database. Everything is stored locally.
 
 ## 🛠️ Tech Stack
 
