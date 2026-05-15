@@ -6,14 +6,13 @@ import 'package:velotask/widgets/timeline_layout.dart';
 import 'package:velotask/widgets/timeline_task_row.dart';
 
 class GanttChart extends StatelessWidget {
-  static const double dayWidth = 60.0;
-
   final List<Todo> tasks;
   final void Function(Todo task)? onTaskDoubleTap;
   final ScrollController headerCtrl;
   final ScrollController bodyCtrl;
   final DateTime chartStart;
   final int totalDays;
+  final double dayWidth;
   final double totalWidth;
   final DateTime now;
 
@@ -24,6 +23,7 @@ class GanttChart extends StatelessWidget {
     required this.bodyCtrl,
     required this.chartStart,
     required this.totalDays,
+    required this.dayWidth,
     required this.totalWidth,
     required this.now,
     this.onTaskDoubleTap,
@@ -150,36 +150,79 @@ class _GridLinePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Month lines first (below), thicker so overlap with week lines is visible
+    // Month lines
     final monthPaint = Paint()
       ..color = monthColor
       ..strokeWidth = 4.0;
 
-    var monthCursor = DateTime(chartStart.year, chartStart.month, 1);
     final endDate = chartStart.add(Duration(days: totalDays));
+    var monthCursor = DateTime(chartStart.year, chartStart.month, 1);
     while (!monthCursor.isAfter(endDate)) {
       if (!monthCursor.isBefore(chartStart)) {
-        final dayOffset = monthCursor.difference(chartStart).inDays;
-        final x = dayOffset * dayWidth;
+        final x = monthCursor.difference(chartStart).inDays * dayWidth;
         canvas.drawLine(Offset(x, 0), Offset(x, size.height), monthPaint);
       }
-      if (monthCursor.month == 12) {
-        monthCursor = DateTime(monthCursor.year + 1, 1, 1);
-      } else {
-        monthCursor = DateTime(monthCursor.year, monthCursor.month + 1, 1);
-      }
+      monthCursor = monthCursor.month == 12
+          ? DateTime(monthCursor.year + 1, 1, 1)
+          : DateTime(monthCursor.year, monthCursor.month + 1, 1);
     }
 
-    // Week lines on top
+    // Week lines — step by 7 days
     final weekPaint = Paint()
       ..color = weekColor
       ..strokeWidth = 4;
 
-    for (int i = 0; i < totalDays; i++) {
-      final date = chartStart.add(Duration(days: i));
-      if (date.weekday == DateTime.monday) {
-        final x = i * dayWidth;
-        canvas.drawLine(Offset(x, 0), Offset(x, size.height), weekPaint);
+    var weekCursor = chartStart;
+    while (weekCursor.weekday != DateTime.monday) {
+      weekCursor = weekCursor.add(const Duration(days: 1));
+    }
+    while (weekCursor.isBefore(endDate)) {
+      final x = weekCursor.difference(chartStart).inDays * dayWidth;
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), weekPaint);
+      weekCursor = weekCursor.add(const Duration(days: 7));
+    }
+
+    // Day boundary lines (2x+)
+    if (dayWidth >= 120) {
+      final dayPaint = Paint()
+        ..color = weekColor.withValues(alpha: 0.55)
+        ..strokeWidth = 2;
+      for (double x = 0; x <= size.width + 0.5; x += dayWidth) {
+        canvas.drawLine(Offset(x, 0), Offset(x, size.height), dayPaint);
+      }
+    }
+
+    // Noon lines (2x–4x)
+    if (dayWidth >= 120 && dayWidth < 480) {
+      final noonPaint = Paint()
+        ..color = weekColor.withValues(alpha: 0.25)
+        ..strokeWidth = 1;
+      for (double x = dayWidth / 2; x < size.width; x += dayWidth) {
+        canvas.drawLine(Offset(x, 0), Offset(x, size.height), noonPaint);
+      }
+    }
+
+    // Hour lines (8x+)
+    if (dayWidth >= 480) {
+      final hourPx = dayWidth / 24;
+      final int hourStep;
+      if (hourPx >= 70) {
+        hourStep = 2;
+      } else if (hourPx >= 35) {
+        hourStep = 3;
+      } else {
+        hourStep = 6;
+      }
+      final stepPx = hourStep * hourPx;
+      final hourPaint = Paint()
+        ..color = weekColor.withValues(alpha: 0.2)
+        ..strokeWidth = 1;
+
+      for (double x = stepPx; x < size.width; x += stepPx) {
+        final dayX = (x / dayWidth).round() * dayWidth;
+        if ((x - dayX).abs() > 0.5) {
+          canvas.drawLine(Offset(x, 0), Offset(x, size.height), hourPaint);
+        }
       }
     }
   }

@@ -5,9 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:velotask/services/color_config_manager.dart';
 
 class TimelineHeader extends StatelessWidget {
-  static const double monthRowHeight = 34.0;
-  static const double dayRowHeight = 34.0;
-  static const double height = monthRowHeight + dayRowHeight;
+  static const double rowHeight = 34.0;
+  static const double height = rowHeight * 2;
 
   final DateTime chartStart;
   final int daysToShow;
@@ -68,9 +67,6 @@ class _HeaderPainter extends CustomPainter {
   final Color todayBg;
   final Color nowColor;
 
-  static const double _monthRowH = TimelineHeader.monthRowHeight;
-  static const double _dayRowH = TimelineHeader.dayRowHeight;
-
   const _HeaderPainter({
     required this.chartStart,
     required this.daysToShow,
@@ -87,125 +83,237 @@ class _HeaderPainter extends CustomPainter {
     required this.nowColor,
   });
 
+  static const double _rowH = TimelineHeader.rowHeight;
+  static const double _totalH = TimelineHeader.height;
+
   @override
   void paint(Canvas canvas, Size size) {
-    // 背景
     canvas.drawRect(
       Rect.fromLTWH(0, 0, size.width, size.height),
       Paint()..color = bgColor,
     );
 
-    // 样式
-    final thinLine = Paint()
-      ..color = dividerColor
-      ..strokeWidth = 3.0;
-    final normalStyle = TextStyle(color: mutedColor, fontSize: 14);
-    final boldStyle = TextStyle(
-      color: textColor,
-      fontSize: 14,
-      fontWeight: FontWeight.w600,
+    if (dayWidth < 30) {
+      _paintWeekMode(canvas, size);
+    } else if (dayWidth < 480) {
+      _paintDayMode(canvas, size);
+    } else {
+      _paintHourMode(canvas, size);
+    }
+
+    // Bottom border
+    canvas.drawLine(
+      Offset(0, size.height),
+      Offset(size.width, size.height),
+      Paint()..color = dividerColor..strokeWidth = 1,
     );
-    final todayStyle = TextStyle(
-      color: todayColor,
-      fontSize: 14,
-      fontWeight: FontWeight.bold,
-    );
+
+    // Now line
+    final nowX = now.difference(chartStart).inMinutes / 1440.0 * dayWidth;
+    if (nowX >= 0 && nowX <= size.width) {
+      canvas.drawLine(
+        Offset(nowX, 0),
+        Offset(nowX, size.height),
+        Paint()..color = nowColor..strokeWidth = 2,
+      );
+    }
+  }
+
+  // ─── Week mode (dayWidth < 30, i.e. 0.25x) ──────────────────────────
+
+  void _paintWeekMode(Canvas canvas, Size size) {
     final monthStyle = TextStyle(
-      color: textColor,
-      fontSize: 11,
-      fontWeight: FontWeight.w600,
+      color: textColor, fontSize: 11, fontWeight: FontWeight.w600,
     );
+    final weekStyle = TextStyle(
+      color: textColor, fontSize: 10, fontWeight: FontWeight.w500,
+    );
+    final thinLine = Paint()..color = dividerColor..strokeWidth = 2;
+    final monthFmt = DateFormat('yyyy.MM');
+    final weekFmt = DateFormat('M/d');
 
     String? curMonth;
     double monthStartX = 0;
-    final fmt = DateFormat('yyyy.MM');
 
     for (int i = 0; i < daysToShow; i++) {
       final date = chartStart.add(Duration(days: i));
       final x = i * dayWidth;
-      final isToday = _isSameDay(date, today);
-      final isWeekend =
-          date.weekday == DateTime.saturday || date.weekday == DateTime.sunday;
 
-      // 月份行
-      final monthLabel = fmt.format(date);
+      // Month label
+      final monthLabel = monthFmt.format(date);
       if (monthLabel != curMonth) {
         if (curMonth != null) {
           _drawText(canvas, curMonth, monthStartX + 4, 3, monthStyle);
         }
         curMonth = monthLabel;
         monthStartX = x;
-        canvas.drawLine(Offset(x, 0), Offset(x, _monthRowH), thinLine);
+        canvas.drawLine(Offset(x, 0), Offset(x, _rowH), thinLine);
       }
 
-      // 周末背景
-      if (isWeekend) {
+      // Weekend bg
+      if (_isWeekend(date)) {
         canvas.drawRect(
-          Rect.fromLTWH(x, 0, dayWidth, size.height),
+          Rect.fromLTWH(x, 0, dayWidth, _totalH),
           Paint()..color = weekendColor,
         );
       }
 
-      // 日期行
-      if (isToday) {
-        canvas.drawRect(
-          Rect.fromLTWH(x, _monthRowH, dayWidth, _dayRowH),
-          Paint()..color = todayBg,
-        );
+      // Week marker on Mondays
+      if (date.weekday == DateTime.monday) {
+        canvas.drawLine(Offset(x, _rowH), Offset(x, _totalH), thinLine);
+        _drawCenteredText(canvas, weekFmt.format(date), x, x + dayWidth * 7,
+          _rowH + 6, weekStyle);
       }
-
-      final style = isToday
-          ? todayStyle
-          : isWeekend
-          ? normalStyle
-          : boldStyle;
-      _drawCenteredText(
-        canvas,
-        date.day.toString(),
-        x,
-        x + dayWidth,
-        _monthRowH + 6,
-        style,
-      );
-
-      canvas.drawLine(Offset(x, _monthRowH), Offset(x, size.height), thinLine);
     }
 
     if (curMonth != null) {
       _drawText(canvas, curMonth, monthStartX + 4, 3, monthStyle);
     }
+  }
 
-    canvas.drawLine(
-      Offset(0, size.height),
-      Offset(size.width, size.height),
-      Paint()
-        ..color = dividerColor
-        ..strokeWidth = 1,
+  // ─── Day mode (30 ≤ dayWidth < 480, i.e. 0.5x–4x) ──────────────────
+
+  void _paintDayMode(Canvas canvas, Size size) {
+    final thinLine = Paint()..color = dividerColor..strokeWidth = 3;
+    final monthStyle = TextStyle(
+      color: textColor, fontSize: 11, fontWeight: FontWeight.w600,
     );
+    final dayStyle = TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w600);
+    final mutedDayStyle = TextStyle(color: mutedColor, fontSize: 14);
+    final todayStyle = TextStyle(color: todayColor, fontSize: 14, fontWeight: FontWeight.bold);
+    final monthFmt = DateFormat('yyyy.MM');
 
-    // 当前时间红线
-    final nowX = now.difference(chartStart).inMinutes / 1440.0 * dayWidth;
-    if (nowX >= 0 && nowX <= size.width) {
-      canvas.drawLine(
-        Offset(nowX, 0),
-        Offset(nowX, size.height),
-        Paint()
-          ..color = nowColor
-          ..strokeWidth = 2,
-      );
+    final showWeekday = dayWidth >= 120; // 2x+
+    final weekdayFmt = DateFormat('E');
+
+    String? curMonth;
+    double monthStartX = 0;
+
+    for (int i = 0; i < daysToShow; i++) {
+      final date = chartStart.add(Duration(days: i));
+      final x = i * dayWidth;
+      final isToday = _isSameDay(date, today);
+      final isWeekend = _isWeekend(date);
+
+      // Month label
+      final monthLabel = monthFmt.format(date);
+      if (monthLabel != curMonth) {
+        if (curMonth != null) {
+          _drawText(canvas, curMonth, monthStartX + 4, 3, monthStyle);
+        }
+        curMonth = monthLabel;
+        monthStartX = x;
+        canvas.drawLine(Offset(x, 0), Offset(x, _rowH), thinLine);
+      }
+
+      // Weekend bg
+      if (isWeekend) {
+        canvas.drawRect(
+          Rect.fromLTWH(x, 0, dayWidth, _totalH),
+          Paint()..color = weekendColor,
+        );
+      }
+
+      // Today bg
+      if (isToday) {
+        canvas.drawRect(
+          Rect.fromLTWH(x, _rowH, dayWidth, _rowH),
+          Paint()..color = todayBg,
+        );
+      }
+
+      final style = isToday ? todayStyle : (isWeekend ? mutedDayStyle : dayStyle);
+      final label = showWeekday
+          ? '${date.day} ${weekdayFmt.format(date)}'
+          : date.day.toString();
+      _drawCenteredText(canvas, label, x, x + dayWidth, _rowH + 6, style);
+
+      canvas.drawLine(Offset(x, _rowH), Offset(x, _totalH), thinLine);
+
+      // Noon divider (2x+)
+      if (dayWidth >= 120) {
+        final noonX = x + dayWidth / 2;
+        canvas.drawLine(
+          Offset(noonX, _rowH),
+          Offset(noonX, _totalH),
+          Paint()..color = dividerColor.withValues(alpha: 0.2)..strokeWidth = 1,
+        );
+      }
+    }
+
+    if (curMonth != null) {
+      _drawText(canvas, curMonth, monthStartX + 4, 3, monthStyle);
     }
   }
+
+  // ─── Hour mode (dayWidth ≥ 480, i.e. 8x–32x) ────────────────────────
+
+  void _paintHourMode(Canvas canvas, Size size) {
+    final thinLine = Paint()..color = dividerColor..strokeWidth = 3;
+    final hourLine = Paint()..color = dividerColor.withValues(alpha: 0.35)..strokeWidth = 2;
+    final dateStyle = TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600);
+    final hourStyle = TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.w500);
+    final todayDateStyle = TextStyle(color: todayColor, fontSize: 13, fontWeight: FontWeight.bold);
+    final dateFmt = DateFormat('M/d E');
+
+    // Hour step based on available width
+    final hourPx = dayWidth / 24;
+    final int hourStep;
+    if (hourPx >= 70) {
+      hourStep = 2; // 32x: label every 2 hours
+    } else if (hourPx >= 35) {
+      hourStep = 3; // 16x: label every 3 hours
+    } else {
+      hourStep = 6; // 8x: label every 6 hours
+    }
+
+    for (int i = 0; i < daysToShow; i++) {
+      final date = chartStart.add(Duration(days: i));
+      final dayX = i * dayWidth;
+      final isToday = _isSameDay(date, today);
+      final isWeekend = _isWeekend(date);
+
+      // Weekend bg
+      if (isWeekend) {
+        canvas.drawRect(
+          Rect.fromLTWH(dayX, 0, dayWidth, _totalH),
+          Paint()..color = weekendColor,
+        );
+      }
+
+      // Row 1: Date label at day boundary
+      canvas.drawLine(Offset(dayX, 0), Offset(dayX, _totalH), thinLine);
+      if (isToday) {
+        canvas.drawRect(
+          Rect.fromLTWH(dayX, 0, dayWidth, _rowH),
+          Paint()..color = todayBg,
+        );
+      }
+      _drawText(canvas, dateFmt.format(date), dayX + 6, 6,
+        isToday ? todayDateStyle : dateStyle);
+
+      // Row 2: Hour labels
+      for (int h = 0; h < 24; h += hourStep) {
+        final hx = dayX + h * hourPx;
+        if (h > 0) {
+          canvas.drawLine(Offset(hx, _rowH), Offset(hx, _totalH), hourLine);
+        }
+        _drawCenteredText(
+          canvas, '$h:00', hx, hx + hourStep * hourPx, _rowH + 8, hourStyle,
+        );
+      }
+    }
+  }
+
+  // ─── Helpers ─────────────────────────────────────────────────────────
 
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 
-  void _drawText(
-    Canvas canvas,
-    String text,
-    double x,
-    double y,
-    TextStyle style,
-  ) {
+  bool _isWeekend(DateTime d) =>
+      d.weekday == DateTime.saturday || d.weekday == DateTime.sunday;
+
+  void _drawText(Canvas canvas, String text, double x, double y, TextStyle style) {
     final tp = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: ui.TextDirection.ltr,
@@ -214,12 +322,7 @@ class _HeaderPainter extends CustomPainter {
   }
 
   void _drawCenteredText(
-    Canvas canvas,
-    String text,
-    double startX,
-    double endX,
-    double y,
-    TextStyle style,
+    Canvas canvas, String text, double startX, double endX, double y, TextStyle style,
   ) {
     final tp = TextPainter(
       text: TextSpan(text: text, style: style),

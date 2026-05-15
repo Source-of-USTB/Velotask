@@ -1,6 +1,8 @@
 import 'dart:async';
 
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/theme/app_theme.dart';
@@ -21,14 +23,20 @@ class TimelineScreen extends StatefulWidget {
 }
 
 class _TimelineScreenState extends State<TimelineScreen> {
-  static const double _dayWidth = GanttChart.dayWidth;
+  static const double _baseDayWidth = 60.0;
+  static const List<double> _zoomLevels = [0.25, 0.5, 1, 2, 4, 8, 16, 32];
+  static const int _defaultZoomIndex = 2; // 1x = 60px/day
   static const int _yearsAroundToday = 2;
 
   late final ScrollController _headerCtrl;
   late final ScrollController _bodyCtrl;
   late final DateTime _chartStart;
   late final int _totalDays;
-  late final double _totalWidth;
+
+  int _zoomIndex = _defaultZoomIndex;
+  double get _dayWidth => _baseDayWidth * _zoomLevels[_zoomIndex];
+  double get _totalWidth => _totalDays * _dayWidth;
+
   bool _syncing = false;
   bool _didAutoScroll = false;
   late Timer _nowTimer;
@@ -41,7 +49,6 @@ class _TimelineScreenState extends State<TimelineScreen> {
     _chartStart = DateTime(now.year - _yearsAroundToday, 1, 1);
     final chartEnd = DateTime(now.year + _yearsAroundToday, 12, 31);
     _totalDays = chartEnd.difference(_chartStart).inDays;
-    _totalWidth = _totalDays * _dayWidth;
 
     _headerCtrl = ScrollController();
     _bodyCtrl = ScrollController();
@@ -86,12 +93,54 @@ class _TimelineScreenState extends State<TimelineScreen> {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final todayX = today.difference(_chartStart).inDays * _dayWidth;
-    final target = (todayX - _dayWidth / 2).clamp(
+    final viewportW = _bodyCtrl.position.viewportDimension;
+    final target = (todayX - viewportW * 0.15).clamp(
       0.0,
       _bodyCtrl.position.maxScrollExtent,
     );
     _bodyCtrl.jumpTo(target);
   }
+
+  // -- Zoom via Ctrl/Cmd + scroll wheel -----------------------------------
+
+  void _onPointerSignal(PointerSignalEvent event) {
+    if (event is! PointerScrollEvent) return;
+
+    final keys = HardwareKeyboard.instance;
+    final isZoomKey = keys.isControlPressed || keys.isMetaPressed;
+    if (!isZoomKey) return;
+
+    final dy = event.scrollDelta.dy;
+    if (dy == 0) return;
+
+    final newIndex = dy > 0 ? _zoomIndex - 1 : _zoomIndex + 1;
+    if (newIndex < 0 || newIndex >= _zoomLevels.length) return;
+
+    final localX = event.localPosition.dx;
+    final oldScrollOffset =
+        _bodyCtrl.hasClients ? _bodyCtrl.offset : 0.0;
+    final oldDayWidth = _dayWidth;
+
+    // Cancel the scroll movement the outer ScrollView would apply
+    if (_bodyCtrl.hasClients) {
+      _bodyCtrl.jumpTo(oldScrollOffset);
+    }
+
+    setState(() {
+      _zoomIndex = newIndex;
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_bodyCtrl.hasClients) return;
+      final dayAtCursor = (oldScrollOffset + localX) / oldDayWidth;
+      final newOffset = dayAtCursor * _dayWidth - localX;
+      final clamped =
+          newOffset.clamp(0.0, _bodyCtrl.position.maxScrollExtent);
+      _bodyCtrl.jumpTo(clamped);
+    });
+  }
+
+  // ------------------------------------------------------------------------
 
   List<Todo> _filteredTodos() {
     if (widget.todos.isEmpty) return [];
@@ -168,15 +217,19 @@ class _TimelineScreenState extends State<TimelineScreen> {
           ),
         ],
       ),
-      body: GanttChart(
-        tasks: timelineTasks,
-        headerCtrl: _headerCtrl,
-        bodyCtrl: _bodyCtrl,
-        chartStart: _chartStart,
-        totalDays: _totalDays,
-        totalWidth: _totalWidth,
-        now: _now,
-        onTaskDoubleTap: widget.onTaskDoubleTap,
+      body: Listener(
+        onPointerSignal: _onPointerSignal,
+        child: GanttChart(
+          tasks: timelineTasks,
+          headerCtrl: _headerCtrl,
+          bodyCtrl: _bodyCtrl,
+          chartStart: _chartStart,
+          totalDays: _totalDays,
+          dayWidth: _dayWidth,
+          totalWidth: _totalWidth,
+          now: _now,
+          onTaskDoubleTap: widget.onTaskDoubleTap,
+        ),
       ),
     );
   }
