@@ -24,40 +24,44 @@ const _allKeys = [
 
 Color _def(String key, Brightness b) {
   final dark = b == Brightness.dark;
-  // Primary: #3570E5(L) / #5B96F7(D) — same blue family
-  const primaryL = Color(0xFF3570E5);
-  const primaryD = Color(0xFF5B96F7);
+  const primaryL = Color(0xFF3B73E6);
+  const primaryD = Color(0xFF6EA2FF);
   // Surface hierarchy
-  const surfPageL = Color(0xFFF4F6FA);
+  const surfPageL = Color(0xFFF6F8FC);
   const surfCardL = Color(0xFFFFFFFF);
-  const surfFillL = Color(0xFFF0F2F6);
-  const surfHeaderL = Color(0xFFECEEF4);
-  const surfPageD = Color(0xFF0F121A);
+  const surfFillL = Color(0xFFEEF2F7);
+  const surfHeaderL = Color(0xFFEDF1F7);
+  const surfPageD = Color(0xFF0F1218);
   const surfCardD = Color(0xFF171B24);
-  const surfFillD = Color(0xFF1D2230);
-  const surfHeaderD = Color(0xFF141822);
+  const surfFillD = Color(0xFF202635);
+  const surfHeaderD = Color(0xFF151A24);
   // Grid / divider
-  const gridMajorL = Color(0xFFD0D5E0);
-  const gridMajorD = Color(0xFF383E4B);
+  const gridMajorL = Color(0xFFCBD4E2);
+  const gridMajorD = Color(0xFF3A4252);
   const gridMinorAlphaL = 0x60;
   const gridMinorAlphaD = 0x40;
   const gridRowAlphaL = 0x44;
   const gridRowAlphaD = 0x33;
   // Weekend
-  const weekendL = Color(0xFFEEF1F7);
-  const weekendD = Color(0xFF11161E);
+  const weekendL = Color(0xFFF1F4F9);
+  const weekendD = Color(0xFF111722);
   // Text
-  const textPriL = Color(0xFF1A1D25);
-  const textSecL = Color(0xFF6B7182);
-  const textPriD = Color(0xFFE3E8F2);
-  const textSecD = Color(0xFF9098AB);
-  // Semantic task fills (same both themes, white text on top)
-  const taskHigh = Color(0xFFE53935);
-  const taskMid = Color(0xFFF59300);
-  const taskLow = Color(0xFF3FA34B);
-  const taskDefault = Color(0xFF5C7A8A);
+  const textPriL = Color(0xFF1B1F29);
+  const textSecL = Color(0xFF687284);
+  const textPriD = Color(0xFFE4EAF3);
+  const textSecD = Color(0xFF98A2B3);
+  // Semantic task fills
+  const taskHighL = Color(0xFFC94A44);
+  const taskHighD = Color(0xFFD85A54);
+  const taskMidL = Color(0xFFC9781C);
+  const taskMidD = Color(0xFFD98A2B);
+  const taskLowL = Color(0xFF2F8A58);
+  const taskLowD = Color(0xFF3FA46B);
+  const taskDefaultL = Color(0xFF557386);
+  const taskDefaultD = Color(0xFF6F8B9E);
   // Now / deadline
-  const nowRed = Color(0xFFFF453A);
+  const nowRedL = Color(0xFFD85650);
+  const nowRedD = Color(0xFFEF6B64);
 
   switch (key) {
     // ── Gantt Grid ──
@@ -66,8 +70,8 @@ Color _def(String key, Brightness b) {
     case 'ganttRowDivider': return dark ? gridMajorD.withAlpha(gridRowAlphaD) : gridMajorL.withAlpha(gridRowAlphaL);
     case 'ganttWeekendStripe': return dark ? weekendD : weekendL;
     // ── Gantt Markers ──
-    case 'ganttNowLine': return nowRed;
-    case 'ganttDeadlineTaskFill': return nowRed;
+    case 'ganttNowLine': return dark ? nowRedD : nowRedL;
+    case 'ganttDeadlineTaskFill': return dark ? nowRedD : nowRedL;
     // ── Gantt Header ──
     case 'ganttHeaderBackground': return dark ? surfHeaderD : surfHeaderL;
     case 'ganttHeaderWeekendBg': return dark ? weekendD : weekendL;
@@ -77,15 +81,15 @@ Color _def(String key, Brightness b) {
     case 'ganttHeaderTodayText': return dark ? primaryD : primaryL;
     case 'ganttHeaderTodayBg': return dark ? primaryD.withAlpha(0x1A) : primaryL.withAlpha(0x1A);
     // ── Gantt Tasks ──
-    case 'ganttRangeTaskHigh': return taskHigh;
-    case 'ganttRangeTaskMedium': return taskMid;
-    case 'ganttRangeTaskLow': return taskLow;
-    case 'ganttRangeTaskDefault': return taskDefault;
+    case 'ganttRangeTaskHigh': return dark ? taskHighD : taskHighL;
+    case 'ganttRangeTaskMedium': return dark ? taskMidD : taskMidL;
+    case 'ganttRangeTaskLow': return dark ? taskLowD : taskLowL;
+    case 'ganttRangeTaskDefault': return dark ? taskDefaultD : taskDefaultL;
     case 'ganttTaskText': return Colors.white;
     // ── Page ──
     case 'homePageBackground': return dark ? surfPageD : surfPageL;
     case 'homeCardBackground': return dark ? surfCardD : surfCardL;
-    case 'homeCardBorder': return dark ? const Color(0x0FFFFFFF) : const Color(0x12000000);
+    case 'homeCardBorder': return dark ? const Color(0x10FFFFFF) : const Color(0x10000000);
     case 'homeTitleText': return dark ? textPriD : textPriL;
     case 'homeBodyText': return dark ? textSecD : textSecL;
     // ── Progress ──
@@ -94,9 +98,9 @@ Color _def(String key, Brightness b) {
     case 'homeProgressCaption': return dark ? primaryD : primaryL;
     // ── Buttons ──
     case 'commonFabBackground': return dark ? primaryD : primaryL;
-    case 'commonFabIcon': return Colors.white;
+    case 'commonFabIcon': return dark ? surfPageD : Colors.white;
     case 'commonButtonBackground': return dark ? primaryD : primaryL;
-    case 'commonButtonText': return Colors.white;
+    case 'commonButtonText': return dark ? surfPageD : Colors.white;
     // ── Input ──
     case 'commonInputFill': return dark ? surfFillD : surfFillL;
     case 'commonInputLabel': return dark ? textSecD : textSecL;
@@ -105,7 +109,7 @@ Color _def(String key, Brightness b) {
     // ── AppBar & Misc ──
     case 'commonAppBarBackground': return dark ? surfPageD : surfPageL;
     case 'commonAppBarTitle': return dark ? textPriD : textPriL;
-    case 'commonErrorText': return taskHigh;
+    case 'commonErrorText': return dark ? taskHighD : taskHighL;
     case 'commonDivider': return dark ? gridMajorD : gridMajorL;
     default: return Colors.grey;
   }
