@@ -3,6 +3,7 @@ import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo_filter.dart';
 import 'package:velotask/services/color_config_manager.dart';
+import 'package:velotask/utils/tag_color.dart';
 
 class FilterSection extends StatelessWidget {
   final TodoFilter currentFilter;
@@ -92,9 +93,12 @@ class FilterSection extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
-    final accent = ColorConfigManager.instance.activePreset
-        ?.colorByKey('commonButtonBackground', theme.brightness)
-        ?? theme.colorScheme.primary;
+    final accent =
+        ColorConfigManager.instance.activePreset?.colorByKey(
+          'commonButtonBackground',
+          theme.brightness,
+        ) ??
+        theme.colorScheme.primary;
 
     return ChoiceChip(
       showCheckmark: false,
@@ -124,12 +128,7 @@ class FilterSection extends StatelessWidget {
 
   Widget _buildTagChip(BuildContext context, Tag tag) {
     final isSelected = currentTag?.id == tag.id;
-    Color tagColor = Colors.blue;
-    if (tag.color != null) {
-      try {
-        tagColor = Color(int.parse(tag.color!.replaceAll('#', '0xFF')));
-      } catch (_) {}
-    }
+    Color tagColor = tag.displayColor;
 
     return FilterChip(
       label: Text(tag.name, softWrap: false, overflow: TextOverflow.visible),

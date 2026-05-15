@@ -4,6 +4,7 @@ import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/services/todo_storage.dart';
 import 'package:velotask/theme/app_theme.dart';
+import 'package:velotask/utils/tag_color.dart';
 import 'package:velotask/widgets/dialog_components.dart';
 
 class AddTodoDialog extends StatefulWidget {
@@ -227,9 +228,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
               const SizedBox(height: 16),
 
               // Task Type Selector
-              DialogInputRow(
-                child: _buildTaskTypeSelector(context),
-              ),
+              DialogInputRow(child: _buildTaskTypeSelector(context)),
 
               const SizedBox(height: 16),
 
@@ -252,14 +251,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                       final isSelected = _selectedTags.any(
                         (t) => t.id == tag.id,
                       );
-                      Color tagColor = Colors.blue;
-                      if (tag.color != null) {
-                        try {
-                          tagColor = Color(
-                            int.parse(tag.color!.replaceAll('#', '0xFF')),
-                          );
-                        } catch (_) {}
-                      }
+                      final tagColor = tag.displayColor;
                       return FilterChip(
                         label: Text(tag.name),
                         selected: isSelected,
@@ -323,7 +315,10 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                 foregroundColor: Theme.of(
                   context,
                 ).colorScheme.onSurface.withValues(alpha: 0.6),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
               ),
               child: Text(l10n.cancel),
             ),
@@ -347,7 +342,10 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
               ),
               child: Text(
                 widget.todo == null ? l10n.create : l10n.save,
@@ -402,10 +400,14 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? theme.primaryColor.withValues(alpha: 0.1) : Colors.transparent,
+          color: isSelected
+              ? theme.primaryColor.withValues(alpha: 0.1)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: isSelected ? theme.primaryColor : secondaryColor.withValues(alpha: 0.2),
+            color: isSelected
+                ? theme.primaryColor
+                : secondaryColor.withValues(alpha: 0.2),
           ),
         ),
         child: Row(

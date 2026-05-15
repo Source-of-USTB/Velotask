@@ -5,6 +5,7 @@ import 'package:velotask/models/tag.dart';
 import 'package:velotask/services/todo_storage.dart';
 import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/utils/logger.dart';
+import 'package:velotask/utils/tag_color.dart';
 
 class TagsScreen extends StatefulWidget {
   const TagsScreen({super.key});
@@ -38,14 +39,7 @@ class _TagsScreenState extends State<TagsScreen> {
     }
   }
 
-  Color _parseTagColor(Tag tag) {
-    if (tag.color == null) return Colors.blue;
-    try {
-      return Color(int.parse(tag.color!.replaceAll('#', '0xFF')));
-    } catch (_) {
-      return Colors.blue;
-    }
-  }
+  Color _parseTagColor(Tag tag) => tag.displayColor;
 
   BoxDecoration _surfaceDecoration(BuildContext context) {
     return BoxDecoration(
@@ -247,17 +241,19 @@ class _TagsScreenState extends State<TagsScreen> {
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 28,
+                  ),
                   decoration: _surfaceDecoration(context),
                   child: Column(
                     children: [
                       Icon(
                         Icons.label_outline,
                         size: 54,
-                        color: Theme.of(context)
-                            .colorScheme
-                            .secondary
-                            .withValues(alpha: 0.7),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.secondary.withValues(alpha: 0.7),
                       ),
                       const SizedBox(height: 12),
                       Text(
@@ -282,7 +278,9 @@ class _TagsScreenState extends State<TagsScreen> {
                   decoration: _surfaceDecoration(context),
                   child: ListTile(
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12, vertical: 4),
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     leading: GestureDetector(
                       onTap: () => _showEditTagDialog(tag),
                       child: Container(
@@ -296,9 +294,9 @@ class _TagsScreenState extends State<TagsScreen> {
                       ),
                     ),
                     title: Text(tag.name),
-                    titleTextStyle: AppTheme.bodyMediumStrongStyle(context)
-                        .copyWith(
-                            color: Theme.of(context).colorScheme.onSurface),
+                    titleTextStyle: AppTheme.bodyMediumStrongStyle(
+                      context,
+                    ).copyWith(color: Theme.of(context).colorScheme.onSurface),
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
@@ -321,7 +319,9 @@ class _TagsScreenState extends State<TagsScreen> {
                             _loadTags();
                           },
                           constraints: const BoxConstraints(
-                              minWidth: 44, minHeight: 44),
+                            minWidth: 44,
+                            minHeight: 44,
+                          ),
                         ),
                       ],
                     ),
@@ -381,11 +381,16 @@ class _ChannelRowState extends State<_ChannelRow> {
 
   int _channelVal(Color c, String ch) {
     switch (ch) {
-      case 'R': return (c.r * 255).round();
-      case 'G': return (c.g * 255).round();
-      case 'B': return (c.b * 255).round();
-      case 'A': return (c.a * 255).round();
-      default: return 0;
+      case 'R':
+        return (c.r * 255).round();
+      case 'G':
+        return (c.g * 255).round();
+      case 'B':
+        return (c.b * 255).round();
+      case 'A':
+        return (c.a * 255).round();
+      default:
+        return 0;
     }
   }
 
@@ -422,10 +427,10 @@ class _ChannelRowState extends State<_ChannelRow> {
     final chLabel = widget.channel == 'R'
         ? l10n.redLabel
         : widget.channel == 'G'
-            ? l10n.greenLabel
-            : widget.channel == 'B'
-                ? l10n.blueLabel
-                : l10n.alphaLabel;
+        ? l10n.greenLabel
+        : widget.channel == 'B'
+        ? l10n.blueLabel
+        : l10n.alphaLabel;
 
     return Row(
       children: [
@@ -441,7 +446,10 @@ class _ChannelRowState extends State<_ChannelRow> {
             textAlign: TextAlign.center,
             decoration: InputDecoration(
               isDense: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 4,
+                vertical: 6,
+              ),
             ),
           ),
         ),
