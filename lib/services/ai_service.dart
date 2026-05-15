@@ -7,7 +7,6 @@ import 'package:velotask/utils/logger.dart';
 
 typedef _JsonMap = Map<String, dynamic>;
 
-
 // TODO: 升级后解析速度明显变慢了，考虑对解析速度进行量化并尽可能地优化。
 // TODO: 尽可能让AI充分的利用已有信息，减少它的“想象力”，比如提供当前时间、星期、已有标签等上下文，让它更倾向于复用已有标签而不是创造新标签。
 class AIParseResult {
@@ -49,10 +48,10 @@ class AIParseResult {
       ddl: parseDate(json['deadline']),
       tags: json['tags'] is List
           ? (json['tags'] as List)
-              .map((e) => '$e'.trim())
-              .where((e) => e.isNotEmpty)
-              .take(4)
-              .toList(growable: false)
+                .map((e) => '$e'.trim())
+                .where((e) => e.isNotEmpty)
+                .take(4)
+                .toList(growable: false)
           : const [],
       estimatedEffortHours: (json['estimatedHours'] is num)
           ? (json['estimatedHours'] as num).toDouble().clamp(0.25, 100.0)
@@ -217,7 +216,9 @@ class AIService {
 
       final content = _extractAssistantContent(data);
       if (content == null) {
-        throw const FormatException('AI returned empty response — see severe log for raw API response');
+        throw const FormatException(
+          'AI returned empty response — see severe log for raw API response',
+        );
       }
       final taskJson = _decodeJsonObject(_extractJsonPayload(content));
 
@@ -250,9 +251,10 @@ class AIService {
     final tomorrowStr =
         '${tomorrow.toIso8601String().split('T').first}T15:00:00';
     final daysUntilFri = (DateTime.friday - now.weekday + 7) % 7;
-    final friday = now.add(Duration(days: daysUntilFri == 0 ? 7 : daysUntilFri));
-    final fridayStr =
-        '${friday.toIso8601String().split('T').first}T23:59:00';
+    final friday = now.add(
+      Duration(days: daysUntilFri == 0 ? 7 : daysUntilFri),
+    );
+    final fridayStr = '${friday.toIso8601String().split('T').first}T23:59:00';
 
     final messages = [
       {
@@ -317,7 +319,9 @@ class AIService {
 
       final content = _extractAssistantContent(data);
       if (content == null) {
-        throw const FormatException('Missing assistant content — see severe log for raw API response');
+        throw const FormatException(
+          'Missing assistant content — see severe log for raw API response',
+        );
       }
       final payload = _extractJsonPayload(content);
       final decoded = jsonDecode(payload);
@@ -401,12 +405,12 @@ class AIService {
     _logRequest(messages, config.model, maxTokens, preferJsonMode);
 
     Future<http.Response> doPost(_JsonMap body) => _postWithRetry(
-          uri,
-          headers: headers,
-          body: jsonEncode(body),
-          timeout: timeout,
-          retries: retries,
-        );
+      uri,
+      headers: headers,
+      body: jsonEncode(body),
+      timeout: timeout,
+      retries: retries,
+    );
 
     final preferredBody = buildBody(jsonMode: preferJsonMode);
     final response = await doPost(preferredBody);
@@ -415,7 +419,8 @@ class AIService {
 
     if (response.statusCode == 400 && preferJsonMode) {
       final bodyText = utf8.decode(response.bodyBytes);
-      final unsupportedResponseFormat = bodyText.contains('response_format') &&
+      final unsupportedResponseFormat =
+          bodyText.contains('response_format') &&
           (bodyText.contains('unknown') ||
               bodyText.contains('Unrecognized') ||
               bodyText.contains('unsupported'));
@@ -430,21 +435,32 @@ class AIService {
     return _decodeTopLevelJson(response);
   }
 
-  void _logRequest(List<_JsonMap> messages, String model, int maxTokens, bool jsonMode) {
-    Map<String, dynamic> userMsg = messages.last;
-    for (final m in messages) {
-      if (m['role'] == 'user') userMsg = m;
-    }
+  void _logRequest(
+    List<_JsonMap> messages,
+    String model,
+    int maxTokens,
+    bool jsonMode,
+  ) {
+    final userMsg = messages.reversed.firstWhere(
+      (m) => m['role'] == 'user',
+      orElse: () => messages.last,
+    );
     final content = userMsg['content'] is String
         ? userMsg['content'] as String
         : jsonEncode(userMsg['content']);
-    _logger.info('AI request → model=$model, maxTokens=$maxTokens, jsonMode=$jsonMode, userInput: ${content.length > 300 ? '${content.substring(0, 300)}...' : content}');
+    _logger.info(
+      'AI request → model=$model, maxTokens=$maxTokens, jsonMode=$jsonMode, userInput: ${content.length > 300 ? '${content.substring(0, 300)}...' : content}',
+    );
   }
 
   void _logResponse(http.Response response) {
     final bodyText = utf8.decode(response.bodyBytes);
-    final truncated = bodyText.length > 600 ? '${bodyText.substring(0, 600)}...' : bodyText;
-    _logger.info('AI response ← status=${response.statusCode}, body=$truncated');
+    final truncated = bodyText.length > 600
+        ? '${bodyText.substring(0, 600)}...'
+        : bodyText;
+    _logger.info(
+      'AI response ← status=${response.statusCode}, body=$truncated',
+    );
   }
 
   Future<http.Response> _postWithRetry(
@@ -464,7 +480,9 @@ class AIService {
         final backoffMs = retryAfter != null
             ? (retryAfter * 1000)
             : (300 * (1 << (attempt - 1)));
-        await Future.delayed(Duration(milliseconds: backoffMs.clamp(200, 2500)));
+        await Future.delayed(
+          Duration(milliseconds: backoffMs.clamp(200, 2500)),
+        );
       }
 
       try {
@@ -520,12 +538,16 @@ class AIService {
   _JsonMap _decodeTopLevelJson(http.Response response) {
     final bodyText = utf8.decode(response.bodyBytes);
     if (response.statusCode != 200) {
-      throw Exception('API Error: ${response.statusCode} — ${bodyText.length > 500 ? '${bodyText.substring(0, 500)}...' : bodyText}');
+      throw Exception(
+        'API Error: ${response.statusCode} — ${bodyText.length > 500 ? '${bodyText.substring(0, 500)}...' : bodyText}',
+      );
     }
 
     final decoded = jsonDecode(bodyText);
     if (decoded is! Map<String, dynamic>) {
-      throw FormatException('Top-level response must be a JSON object: ${bodyText.length > 300 ? '${bodyText.substring(0, 300)}...' : bodyText}');
+      throw FormatException(
+        'Top-level response must be a JSON object: ${bodyText.length > 300 ? '${bodyText.substring(0, 300)}...' : bodyText}',
+      );
     }
     return decoded;
   }
@@ -533,7 +555,9 @@ class AIService {
   String? _extractAssistantContent(_JsonMap data) {
     final choices = data['choices'];
     if (choices is! List || choices.isEmpty) {
-      _logger.severe('AI response has no choices array. Keys: ${data.keys.join(', ')}');
+      _logger.severe(
+        'AI response has no choices array. Keys: ${data.keys.join(', ')}',
+      );
       return null;
     }
     final choice0 = choices.first;
@@ -543,7 +567,9 @@ class AIService {
     }
     final message = choice0['message'];
     if (message is! Map) {
-      _logger.severe('AI choice[0] has no "message" key. Keys: ${choice0.keys.join(', ')}');
+      _logger.severe(
+        'AI choice[0] has no "message" key. Keys: ${choice0.keys.join(', ')}',
+      );
       return null;
     }
     dynamic content = message['content'];
@@ -555,7 +581,9 @@ class AIService {
       source = 'reasoning_content';
     }
     if (content is! String || content.trim().isEmpty) {
-      _logger.severe('AI message has no usable content. message keys: ${message.keys.join(', ')}. content type: ${content.runtimeType}, content: ${content is String ? (content.length > 100 ? '${content.substring(0, 100)}...' : content) : content}');
+      _logger.severe(
+        'AI message has no usable content. message keys: ${message.keys.join(', ')}. content type: ${content.runtimeType}, content: ${content is String ? (content.length > 100 ? '${content.substring(0, 100)}...' : content) : content}',
+      );
       return null;
     }
     _logger.info('AI extract source=$source, contentLen=${content.length}');
@@ -593,7 +621,9 @@ class AIService {
       return extracted;
     }
 
-    throw FormatException('AI response is not valid JSON: ${trimmed.length > 200 ? '${trimmed.substring(0, 200)}...' : trimmed}');
+    throw FormatException(
+      'AI response is not valid JSON: ${trimmed.length > 200 ? '${trimmed.substring(0, 200)}...' : trimmed}',
+    );
   }
 
   String? _scanFirstJsonValue(String input) {
