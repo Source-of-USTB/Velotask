@@ -117,6 +117,12 @@ class _WeekendStripePainter extends CustomPainter {
     final paint = Paint()..color = weekendColor;
     final endDate = chartStart.add(Duration(days: totalDays));
 
+    // If chartStart is a Sunday, draw it first — it won't be caught by the
+    // Saturday-anchored weekly loop below.
+    if (chartStart.weekday == DateTime.sunday) {
+      canvas.drawRect(Rect.fromLTWH(0, 0, dayWidth, size.height), paint);
+    }
+
     // Jump to the first Saturday, then step by 7 days.
     final daysUntilSat = (DateTime.saturday - chartStart.weekday + 7) % 7;
     var sat = chartStart.add(Duration(days: daysUntilSat));
