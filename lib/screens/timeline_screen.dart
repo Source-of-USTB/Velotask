@@ -91,10 +91,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
   void _scrollToToday() {
     if (!_bodyCtrl.hasClients) return;
     final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final todayX = today.difference(_chartStart).inDays * _dayWidth;
+    // Use minute-precision so the now-line lands at the same pixel
+    // offset regardless of time-of-day. Matches _NowLinePainter's formula.
+    final nowX = now.difference(_chartStart).inMinutes / 1440.0 * _dayWidth;
     final viewportW = _bodyCtrl.position.viewportDimension;
-    final target = (todayX - viewportW * 0.15).clamp(
+    final target = (nowX - viewportW * 0.15).clamp(
       0.0,
       _bodyCtrl.position.maxScrollExtent,
     );
