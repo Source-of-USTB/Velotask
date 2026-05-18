@@ -20,6 +20,127 @@ class AppTheme {
       ColorConfigManager.instance.activePreset?.colorByKey('commonErrorText', Brightness.light) ??
       const Color(0xFFFF5E57);
 
+  // ── Theme builder (shared by light & dark) ────────────────────
+
+  static ThemeData _buildTheme({
+    required Brightness brightness,
+    required Color primary,
+    required Color accent,
+    required Color bg,
+    required Color surface,
+    required Color cardBorderColor,
+    required Color inputFillColor,
+    required Color inputFocusedBorderColor,
+    required Color inputLabelColor,
+  }) {
+    final textThemeBase = brightness == Brightness.dark
+        ? ThemeData.dark().textTheme
+        : null;
+
+    return ThemeData(
+      useMaterial3: true,
+      scaffoldBackgroundColor: bg,
+      textTheme: GoogleFonts.notoSansScTextTheme(textThemeBase).copyWith(
+        bodyLarge: GoogleFonts.notoSansSc(fontSize: 16),
+        bodyMedium: GoogleFonts.notoSansSc(fontSize: 14),
+        bodySmall: GoogleFonts.notoSansSc(fontSize: 12),
+        titleLarge: GoogleFonts.notoSansSc(fontSize: 22, fontWeight: FontWeight.w600),
+        titleMedium: GoogleFonts.notoSansSc(fontSize: 16, fontWeight: FontWeight.w600),
+        titleSmall: GoogleFonts.notoSansSc(fontSize: 14, fontWeight: FontWeight.w600),
+      ),
+      primaryColor: primary,
+      colorScheme: brightness == Brightness.light
+          ? _lightColorScheme()
+          : _darkColorScheme(),
+
+      appBarTheme: AppBarTheme(
+        backgroundColor: bg,
+        elevation: 0,
+        centerTitle: false,
+        titleTextStyle: TextStyle(
+          color: primary,
+          fontSize: 28,
+          fontWeight: FontWeight.w800,
+        ),
+        iconTheme: IconThemeData(color: primary),
+      ),
+
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: accent,
+        foregroundColor: Colors.white,
+        elevation: 4,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+        ),
+      ),
+
+      cardTheme: CardThemeData(
+        color: surface,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: cardBorderColor, width: 1),
+        ),
+        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 20),
+      ),
+
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: inputFillColor,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: inputFocusedBorderColor, width: 1),
+        ),
+        contentPadding: const EdgeInsets.all(16),
+        labelStyle: TextStyle(color: inputLabelColor),
+      ),
+
+      dialogTheme: DialogThemeData(
+        backgroundColor: surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        elevation: 0,
+      ),
+
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: accent,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: accent,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: accent,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
+  }
+
+  // ── Text styles ────────────────────────────────────────────────
+
   static TextStyle headerStyle(BuildContext context) {
     final locale = Localizations.localeOf(context);
 
@@ -271,251 +392,27 @@ class AppTheme {
   static Color _darkSurface() => _c('homeCardBackground', Brightness.dark, const Color(0xFF1E1E1E));
   static Color _darkAccent() => _c('commonButtonBackground', Brightness.dark, const Color(0xFF3498DB));
 
-  static ThemeData get lightTheme {
-    final primary = _lightPrimary();
-    final surface = _lightSurface();
-    final bg = _lightBg();
+  static ThemeData get lightTheme => _buildTheme(
+        brightness: Brightness.light,
+        primary: _lightPrimary(),
+        accent: _lightPrimary(),
+        bg: _lightBg(),
+        surface: _lightSurface(),
+        cardBorderColor: Colors.grey.withValues(alpha: 0.08),
+        inputFillColor: const Color(0xFFF5F5F5),
+        inputFocusedBorderColor: _lightPrimary(),
+        inputLabelColor: const Color(0xFF95A5A6),
+      );
 
-    return ThemeData(
-      useMaterial3: true,
-      scaffoldBackgroundColor: bg,
-      textTheme: GoogleFonts.notoSansScTextTheme().copyWith(
-        bodyLarge: GoogleFonts.notoSansSc(fontSize: 16),
-        bodyMedium: GoogleFonts.notoSansSc(fontSize: 14),
-        bodySmall: GoogleFonts.notoSansSc(fontSize: 12),
-        titleLarge: GoogleFonts.notoSansSc(
-          fontSize: 22,
-          fontWeight: FontWeight.w600,
-        ),
-        titleMedium: GoogleFonts.notoSansSc(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
-        titleSmall: GoogleFonts.notoSansSc(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-      primaryColor: primary,
-      colorScheme: _lightColorScheme(),
-
-      appBarTheme: AppBarTheme(
-        backgroundColor: bg,
-        elevation: 0,
-        centerTitle: false,
-        titleTextStyle: TextStyle(
-          color: primary,
-          fontSize: 28,
-          fontWeight: FontWeight.w800,
-        ),
-        iconTheme: IconThemeData(color: primary),
-      ),
-
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: primary,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-        ),
-      ),
-
-      cardTheme: CardThemeData(
-        color: surface,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: Colors.grey.withValues(alpha: 0.08),
-            width: 1,
-          ),
-        ),
-        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 20),
-      ),
-
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: const Color(0xFFF5F5F5),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: primary, width: 1),
-        ),
-        contentPadding: const EdgeInsets.all(16),
-        labelStyle: const TextStyle(color: Color(0xFF95A5A6)),
-      ),
-
-      dialogTheme: DialogThemeData(
-        backgroundColor: surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 0,
-      ),
-
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: primary,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: primary,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      ),
-    );
-  }
-
-  static ThemeData get darkTheme {
-    final primary = _darkPrimary();
-    final surface = _darkSurface();
-    final bg = _darkBg();
-    final accent = _darkAccent();
-
-    return ThemeData(
-      useMaterial3: true,
-      scaffoldBackgroundColor: bg,
-      textTheme: GoogleFonts.notoSansScTextTheme(ThemeData.dark().textTheme)
-          .copyWith(
-            bodyLarge: GoogleFonts.notoSansSc(fontSize: 16),
-            bodyMedium: GoogleFonts.notoSansSc(fontSize: 14),
-            bodySmall: GoogleFonts.notoSansSc(fontSize: 12),
-            titleLarge: GoogleFonts.notoSansSc(
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
-            ),
-            titleMedium: GoogleFonts.notoSansSc(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-            ),
-            titleSmall: GoogleFonts.notoSansSc(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-      primaryColor: primary,
-      colorScheme: _darkColorScheme(),
-
-      appBarTheme: AppBarTheme(
-        backgroundColor: bg,
-        elevation: 0,
-        centerTitle: false,
-        titleTextStyle: TextStyle(
-          color: primary,
-          fontSize: 28,
-          fontWeight: FontWeight.w800,
-        ),
-        iconTheme: IconThemeData(color: primary),
-      ),
-
-      floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: accent,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(12)),
-        ),
-      ),
-
-      cardTheme: CardThemeData(
-        color: surface,
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-          side: BorderSide(
-            color: Colors.white.withValues(alpha: 0.05),
-            width: 1,
-          ),
-        ),
-        margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 20),
-      ),
-
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        fillColor: const Color(0xFF2C2C2C),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(color: accent, width: 1),
-        ),
-        contentPadding: const EdgeInsets.all(16),
-        labelStyle: const TextStyle(color: Color(0xFFB0BEC5)),
-      ),
-
-      dialogTheme: DialogThemeData(
-        backgroundColor: surface,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: 0,
-      ),
-
-      elevatedButtonTheme: ElevatedButtonThemeData(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: accent,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-      ),
-      filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          backgroundColor: accent,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-        ),
-      ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(
-          foregroundColor: accent,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-      ),
-    );
-  }
+  static ThemeData get darkTheme => _buildTheme(
+        brightness: Brightness.dark,
+        primary: _darkPrimary(),
+        accent: _darkAccent(),
+        bg: _darkBg(),
+        surface: _darkSurface(),
+        cardBorderColor: Colors.white.withValues(alpha: 0.05),
+        inputFillColor: const Color(0xFF2C2C2C),
+        inputFocusedBorderColor: _darkAccent(),
+        inputLabelColor: const Color(0xFFB0BEC5),
+      );
 }
