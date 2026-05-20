@@ -28,6 +28,7 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+  bool _available = false;
   DateTime? _lastResyncAt;
   String? _lastResyncFingerprint;
   Map<int, String> _scheduledTaskFingerprints = <int, String>{};
@@ -39,6 +40,7 @@ class NotificationService {
     if (_initialized) {
       return;
     }
+    _initialized = true;
 
     try {
       tz.initializeTimeZones();
@@ -51,47 +53,55 @@ class NotificationService {
       tz.setLocalLocation(tz.getLocation(timeZoneName));
     } catch (e) {
       _logger.warning('Failed to initialize timezone', e);
-      // Fallback to UTC
       try {
         tz.setLocalLocation(tz.getLocation('UTC'));
       } catch (_) {}
     }
 
-    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosInit = DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
-    );
+    try {
+      const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const iosInit = DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      );
 
-    const settings = InitializationSettings(android: androidInit, iOS: iosInit);
-    await _plugin.initialize(
-      settings,
-      onDidReceiveNotificationResponse: (details) {
-        _logger.info('Notification clicked: ${details.payload}');
-      },
-    );
+      const settings = InitializationSettings(android: androidInit, iOS: iosInit);
+      await _plugin.initialize(
+        settings,
+        onDidReceiveNotificationResponse: (details) {
+          _logger.info('Notification clicked: ${details.payload}');
+        },
+      );
 
-    final android = _plugin
-        .resolvePlatformSpecificImplementation<
-          AndroidFlutterLocalNotificationsPlugin
-        >();
-    await android?.requestNotificationsPermission();
+      final android = _plugin
+          .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin
+          >();
+      await android?.requestNotificationsPermission();
 
-    final ios = _plugin
-        .resolvePlatformSpecificImplementation<
-          IOSFlutterLocalNotificationsPlugin
-        >();
-    await ios?.requestPermissions(alert: true, badge: true, sound: true);
+      final ios = _plugin
+          .resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin
+          >();
+      await ios?.requestPermissions(alert: true, badge: true, sound: true);
 
-    _initialized = true;
-    _logger.info('NotificationService initialized');
+      // Verify the plugin is actually functional (Windows lacks native binding).
+      await _plugin.pendingNotificationRequests();
+
+      _available = true;
+      _logger.info('NotificationService initialized');
+    } catch (e, stack) {
+      _available = false;
+      _logger.warning('NotificationService not available on this platform', e, stack);
+    }
   }
 
   Future<void> syncForTodos(List<Todo> todos, AppLocalizations l10n) async {
     if (!_initialized) {
       await initialize();
     }
+    if (!_available) return;
 
     final now = DateTime.now();
     final fingerprint = _buildResyncFingerprint(todos, l10n.localeName);

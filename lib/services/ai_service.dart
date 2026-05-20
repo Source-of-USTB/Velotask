@@ -441,10 +441,13 @@ class AIService {
     int maxTokens,
     bool jsonMode,
   ) {
-    final userMsg = messages.reversed.firstWhere(
-      (m) => m['role'] == 'user',
-      orElse: () => messages.last,
-    );
+    _JsonMap userMsg = messages.last;
+    for (var i = messages.length - 1; i >= 0; i--) {
+      if (messages[i]['role'] == 'user') {
+        userMsg = messages[i];
+        break;
+      }
+    }
     final content = userMsg['content'] is String
         ? userMsg['content'] as String
         : jsonEncode(userMsg['content']);

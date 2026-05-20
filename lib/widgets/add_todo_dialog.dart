@@ -33,6 +33,8 @@ class AddTodoDialog extends StatefulWidget {
 }
 
 class _AddTodoDialogState extends State<AddTodoDialog> {
+  static final RegExp _tagPattern = RegExp(r'#([^\\]+)\\#');
+
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
   DateTime _startDate = DateTime.now();
@@ -41,6 +43,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
   TaskType _taskType = TaskType.deadline;
   List<Tag> _availableTags = [];
   List<Tag> _selectedTags = [];
+  bool _isSubmitting = false;
   final TodoStorage _storage = TodoStorage();
 
   @override
@@ -78,6 +81,68 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
     _titleController.dispose();
     _descController.dispose();
     super.dispose();
+  }
+
+  /// Returns (list of tag names found, cleaned description text).
+  (List<String>, String) _extractInlineTags(String text) {
+    final tagNames = <String>[];
+    final cleaned = text.replaceAllMapped(_tagPattern, (match) {
+      final name = match.group(1)!.trim();
+      if (name.isNotEmpty) {
+        tagNames.add(name);
+      }
+      return '';
+    });
+    return (tagNames, cleaned.trim());
+  }
+
+  Future<void> _submit() async {
+    setState(() => _isSubmitting = true);
+
+    final (titleTagNames, cleanTitle) =
+        _extractInlineTags(_titleController.text);
+    final (descTagNames, cleanDesc) =
+        _extractInlineTags(_descController.text);
+
+    final inlineTags = <Tag>[];
+    final seenNormalized = <String>{};
+    for (final name in [...titleTagNames, ...descTagNames]) {
+      final normalized = name.trim().toLowerCase();
+      if (seenNormalized.contains(normalized)) continue;
+      seenNormalized.add(normalized);
+
+      final existing = _availableTags.cast<Tag?>().firstWhere(
+        (t) => t!.name.trim().toLowerCase() == normalized,
+        orElse: () => null,
+      );
+      if (existing != null) {
+        inlineTags.add(existing);
+      } else {
+        final newTag = await _storage.addTag(Tag.unsaved(name: name.trim()));
+        inlineTags.add(newTag);
+        _availableTags.add(newTag);
+      }
+    }
+
+    final allTags = [..._selectedTags];
+    for (final tag in inlineTags) {
+      if (!allTags.any((t) => t.id == tag.id)) {
+        allTags.add(tag);
+      }
+    }
+
+    if (!mounted) return;
+
+    widget.onAdd(
+      cleanTitle,
+      cleanDesc,
+      _startDate,
+      _ddl,
+      _importance,
+      allTags,
+      _taskType,
+    );
+    Navigator.pop(context);
   }
 
   @override
@@ -324,20 +389,14 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
             ),
             const SizedBox(width: 8),
             FilledButton(
-              onPressed: () {
-                if (_titleController.text.isNotEmpty) {
-                  widget.onAdd(
-                    _titleController.text,
-                    _descController.text,
-                    _startDate,
-                    _ddl,
-                    _importance,
-                    _selectedTags,
-                    _taskType,
-                  );
-                  Navigator.pop(context);
-                }
-              },
+              onPressed:
+                  _isSubmitting
+                      ? null
+                      : () {
+                        if (_titleController.text.isNotEmpty) {
+                          _submit();
+                        }
+                      },
               style: FilledButton.styleFrom(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
