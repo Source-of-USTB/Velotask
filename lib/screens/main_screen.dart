@@ -152,6 +152,7 @@ class _MainScreenState extends State<MainScreen> {
       setState(() {
         todos.add(savedTodo);
       });
+      await _loadTags();
       await _syncNotifications();
       _showSubmitFeedback(isEdit: false, estimating: presetEffortHours == null);
     }
@@ -327,6 +328,7 @@ class _MainScreenState extends State<MainScreen> {
               }
             });
           }
+          await _loadTags();
           await _syncNotifications();
           _showSubmitFeedback(isEdit: true, estimating: true);
 
