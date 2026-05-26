@@ -11,7 +11,17 @@
         "**/.idea": true,
         "**/build": true,
         "**/web": true,
-        "**/.flutter-plugins-dependencies": true
+        "**/.flutter-plugins-dependencies": true,
+        ".claude": true,
+        ".github": true,
+        ".vscode": true,
+        ".gitattributes": true,
+        ".metadata": true,
+        "LICENSE": true,
+        "*.md": true,
+        "velo.png": true,
+        "devtools_options.yaml": true,
+        "pubspec.lock": true,
     },
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
