@@ -219,7 +219,16 @@ class _MainScreenState extends State<MainScreen> {
   }
 
   Future<void> _toggleTodo(Todo todo) async {
-    final updatedTodo = todo.copyWith(isCompleted: !todo.isCompleted);
+    final Todo updatedTodo;
+    if (todo.taskType == TaskType.daily) {
+      todo.lastCompletedDate = todo.isDone ? null : DateTime.now();
+      await _storage.updateTodo(todo, saveLinks: false);
+      if (mounted) setState(() {});
+      await _syncNotifications();
+      return;
+    } else {
+      updatedTodo = todo.copyWith(isCompleted: !todo.isCompleted);
+    }
 
     if (mounted) {
       setState(() {
@@ -379,13 +388,13 @@ class _MainScreenState extends State<MainScreen> {
           return FadeTransition(
             opacity: animation,
             child: SlideTransition(
-              position: Tween<Offset>(
-                begin: slideBegin,
-                end: Offset.zero,
-              ).animate(CurvedAnimation(
-                parent: animation,
-                curve: Curves.easeOutCubic,
-              )),
+              position: Tween<Offset>(begin: slideBegin, end: Offset.zero)
+                  .animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOutCubic,
+                    ),
+                  ),
               child: child,
             ),
           );

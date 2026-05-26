@@ -23,6 +23,7 @@ class Todos extends Table {
   DateTimeColumn get createdAt => dateTime().nullable()();
   DateTimeColumn get startDate => dateTime().nullable()();
   DateTimeColumn get ddl => dateTime().nullable()();
+  DateTimeColumn get lastCompletedDate => dateTime().nullable()();
   IntColumn get importance => integer().withDefault(const Constant(1))();
   // 0 = task, 1 = deadline  (enum index)
   IntColumn get taskType => integer().withDefault(const Constant(0))();
@@ -47,7 +48,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -57,6 +58,9 @@ class AppDatabase extends _$AppDatabase {
     onUpgrade: (Migrator m, int from, int to) async {
       if (from < 2) {
         await m.addColumn(todos, todos.estimatedEffortHours);
+      }
+      if (from < 3) {
+        await m.addColumn(todos, todos.lastCompletedDate);
       }
     },
   );

@@ -145,6 +145,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
     final chartEnd = DateTime(now.year + _yearsAroundToday, 12, 31);
 
     return widget.todos.where((todo) {
+      if (todo.taskType == TaskType.daily) return false;
       if (todo.taskType == TaskType.deadline) {
         final deadline = todo.ddl;
         if (deadline == null) return false;

@@ -1,7 +1,7 @@
 import 'package:velotask/models/tag.dart';
 
 /// Logical task type.
-enum TaskType { task, deadline }
+enum TaskType { task, deadline, daily }
 
 /// Plain data class used throughout the UI.
 /// The actual Drift table definition lives in database.dart (Todos table).
@@ -14,6 +14,7 @@ class Todo {
   DateTime? createdAt;
   DateTime? startDate;
   DateTime? ddl;
+  DateTime? lastCompletedDate;
   int importance; // 0: Low, 1: Normal, 2: High
   TaskType taskType;
   double? estimatedEffortHours;
@@ -29,6 +30,7 @@ class Todo {
     this.createdAt,
     this.startDate,
     this.ddl,
+    this.lastCompletedDate,
     this.importance = 1,
     this.taskType = TaskType.task,
     List<Tag> tags = const [],
@@ -43,6 +45,7 @@ class Todo {
     DateTime? createdAt,
     DateTime? startDate,
     DateTime? ddl,
+    DateTime? lastCompletedDate,
     int? importance,
     TaskType? taskType,
     List<Tag>? tags,
@@ -56,10 +59,20 @@ class Todo {
       createdAt: createdAt ?? this.createdAt,
       startDate: startDate ?? this.startDate,
       ddl: ddl ?? this.ddl,
+      lastCompletedDate: lastCompletedDate ?? this.lastCompletedDate,
       importance: importance ?? this.importance,
       taskType: taskType ?? this.taskType,
       tags: tags ?? this.tags,
       estimatedEffortHours: estimatedEffortHours ?? this.estimatedEffortHours,
     );
+  }
+
+  bool get isDone {
+    if (taskType != TaskType.daily) return isCompleted;
+    if (lastCompletedDate == null) return false;
+    final today = DateTime.now();
+    return lastCompletedDate!.year == today.year &&
+        lastCompletedDate!.month == today.month &&
+        lastCompletedDate!.day == today.day;
   }
 }

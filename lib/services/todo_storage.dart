@@ -31,6 +31,7 @@ class TodoStorage {
     createdAt: row.createdAt,
     startDate: row.startDate,
     ddl: row.ddl,
+    lastCompletedDate: row.lastCompletedDate,
     importance: row.importance,
     taskType: TaskType.values[row.taskType],
     estimatedEffortHours: row.estimatedEffortHours,
@@ -111,10 +112,7 @@ class TodoStorage {
 
   Future<void> updateTag(Tag tag) async {
     await (_db.update(_db.tags)..where((t) => t.id.equals(tag.id))).write(
-      TagsCompanion(
-        name: Value(tag.name),
-        color: Value(tag.color),
-      ),
+      TagsCompanion(name: Value(tag.name), color: Value(tag.color)),
     );
   }
 
@@ -134,6 +132,7 @@ class TodoStorage {
             createdAt: Value(todo.createdAt),
             startDate: Value(todo.startDate),
             ddl: Value(todo.ddl),
+            lastCompletedDate: Value(todo.lastCompletedDate),
             importance: Value(todo.importance),
             taskType: Value(todo.taskType.index),
             estimatedEffortHours: Value(todo.estimatedEffortHours),
@@ -151,6 +150,7 @@ class TodoStorage {
         isCompleted: Value(todo.isCompleted),
         startDate: Value(todo.startDate),
         ddl: Value(todo.ddl),
+        lastCompletedDate: Value(todo.lastCompletedDate),
         importance: Value(todo.importance),
         taskType: Value(todo.taskType.index),
         estimatedEffortHours: Value(todo.estimatedEffortHours),

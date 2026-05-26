@@ -99,10 +99,10 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
   Future<void> _submit() async {
     setState(() => _isSubmitting = true);
 
-    final (titleTagNames, cleanTitle) =
-        _extractInlineTags(_titleController.text);
-    final (descTagNames, cleanDesc) =
-        _extractInlineTags(_descController.text);
+    final (titleTagNames, cleanTitle) = _extractInlineTags(
+      _titleController.text,
+    );
+    final (descTagNames, cleanDesc) = _extractInlineTags(_descController.text);
 
     final inlineTags = <Tag>[];
     final seenNormalized = <String>{};
@@ -389,14 +389,13 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
             ),
             const SizedBox(width: 8),
             FilledButton(
-              onPressed:
-                  _isSubmitting
-                      ? null
-                      : () {
-                        if (_titleController.text.isNotEmpty) {
-                          _submit();
-                        }
-                      },
+              onPressed: _isSubmitting
+                  ? null
+                  : () {
+                      if (_titleController.text.isNotEmpty) {
+                        _submit();
+                      }
+                    },
               style: FilledButton.styleFrom(
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -436,6 +435,13 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
           TaskType.deadline,
           l10n.taskTypeDeadline,
           Icons.flag_outlined,
+        ),
+        const SizedBox(width: 8),
+        _buildTaskTypeChip(
+          context,
+          TaskType.daily,
+          l10n.taskTypeDaily,
+          Icons.repeat_outlined,
         ),
       ],
     );

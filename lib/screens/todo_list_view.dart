@@ -5,7 +5,7 @@ import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/models/todo_filter.dart';
 import 'package:velotask/utils/constants.dart';
-
+import 'package:velotask/widgets/daily_progress_header.dart';
 import 'package:velotask/widgets/empty_state.dart';
 import 'package:velotask/widgets/filter_section.dart';
 import 'package:velotask/widgets/home_app_bar.dart';
@@ -47,7 +47,7 @@ class _TodoListViewState extends State<TodoListView>
   bool _hadAllCompleted = false;
 
   bool _isAllCompleted(List<Todo> list) {
-    return list.isNotEmpty && list.every((todo) => todo.isCompleted);
+    return list.isNotEmpty && list.every((todo) => todo.isDone);
   }
 
   @override
@@ -104,14 +104,14 @@ class _TodoListViewState extends State<TodoListView>
     // 1. Apply Status/Priority Filter
     switch (_filter) {
       case TodoFilter.active:
-        result = widget.todos.where((t) => !t.isCompleted).toList();
+        result = widget.todos.where((t) => !t.isDone).toList();
         break;
       case TodoFilter.completed:
-        result = widget.todos.where((t) => t.isCompleted).toList();
+        result = widget.todos.where((t) => t.isDone).toList();
         break;
       case TodoFilter.highPriority:
         result = widget.todos
-            .where((t) => !t.isCompleted && t.importance == 2)
+            .where((t) => !t.isDone && t.importance == 2)
             .toList();
         break;
       case TodoFilter.all:
@@ -160,7 +160,19 @@ class _TodoListViewState extends State<TodoListView>
               onSettingsClosed: widget.onRefreshTags,
               onAIAction: widget.onAIAction,
             ),
-            ProgressHeader(todos: widget.todos),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 40.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    DailyProgressHeader(todos: widget.todos),
+                    const SizedBox(width: 80),
+                    ProgressHeader(todos: widget.todos),
+                  ],
+                ),
+              ),
+            ),
             FilterSection(
               currentFilter: _filter,
               currentTag: _filterTag,

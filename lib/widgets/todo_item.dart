@@ -68,7 +68,7 @@ class _TodoItemState extends State<TodoItem> {
 
   @override
   Widget build(BuildContext context) {
-    final isDone = widget.todo.isCompleted;
+    final isDone = widget.todo.isDone;
     final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
