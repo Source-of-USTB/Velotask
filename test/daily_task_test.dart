@@ -58,11 +58,14 @@ void main() {
       expect(t.isDone, false);
     });
 
-    test('not completed today → toggling should set lastCompletedDate to now', () {
-      final t = Todo(title: 'daily', taskType: TaskType.daily);
-      t.lastCompletedDate = t.isDone ? null : DateTime.now();
-      expect(t.lastCompletedDate, isNotNull);
-      expect(t.isDone, true);
-    });
+    test(
+      'not completed today → toggling should set lastCompletedDate to now',
+      () {
+        final t = Todo(title: 'daily', taskType: TaskType.daily);
+        t.lastCompletedDate = t.isDone ? null : DateTime.now();
+        expect(t.lastCompletedDate, isNotNull);
+        expect(t.isDone, true);
+      },
+    );
   });
 }

@@ -11,8 +11,8 @@ class Tag {
   const Tag.unsaved({required this.name, this.color}) : id = 0;
 
   Tag copyWith({int? id, String? name, String? color}) => Tag(
-        id: id ?? this.id,
-        name: name ?? this.name,
-        color: color ?? this.color,
-      );
+    id: id ?? this.id,
+    name: name ?? this.name,
+    color: color ?? this.color,
+  );
 }

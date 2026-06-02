@@ -76,7 +76,8 @@ class AppLogger {
           ? _shortLocation(detail.substring(parenIdx + 2, detail.length - 1))
           : '';
 
-      final formatted = '    $num $method\n'
+      final formatted =
+          '    $num $method\n'
           '       $loc';
 
       final isApp = detail.contains('package:velotask/');

@@ -155,13 +155,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ).showSnackBar(SnackBar(content: Text(l10n.aiTestSuccess)));
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${l10n.aiParseError}: $e',
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('${l10n.aiParseError}: $e')));
     } finally {
       if (mounted) {
         setState(() {
@@ -279,7 +275,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                    builder: (context) => const ColorEditorScreen()),
+                  builder: (context) => const ColorEditorScreen(),
+                ),
               );
             },
           ),

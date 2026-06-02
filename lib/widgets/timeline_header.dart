@@ -105,7 +105,9 @@ class _HeaderPainter extends CustomPainter {
     canvas.drawLine(
       Offset(0, size.height),
       Offset(size.width, size.height),
-      Paint()..color = dividerColor..strokeWidth = 1,
+      Paint()
+        ..color = dividerColor
+        ..strokeWidth = 1,
     );
 
     // Now line
@@ -114,7 +116,9 @@ class _HeaderPainter extends CustomPainter {
       canvas.drawLine(
         Offset(nowX, 0),
         Offset(nowX, size.height),
-        Paint()..color = nowColor..strokeWidth = 2,
+        Paint()
+          ..color = nowColor
+          ..strokeWidth = 2,
       );
     }
   }
@@ -123,12 +127,18 @@ class _HeaderPainter extends CustomPainter {
 
   void _paintWeekMode(Canvas canvas, Size size) {
     final monthStyle = TextStyle(
-      color: textColor, fontSize: 11, fontWeight: FontWeight.w600,
+      color: textColor,
+      fontSize: 11,
+      fontWeight: FontWeight.w600,
     );
     final weekStyle = TextStyle(
-      color: textColor, fontSize: 10, fontWeight: FontWeight.w500,
+      color: textColor,
+      fontSize: 10,
+      fontWeight: FontWeight.w500,
     );
-    final thinLine = Paint()..color = dividerColor..strokeWidth = 2;
+    final thinLine = Paint()
+      ..color = dividerColor
+      ..strokeWidth = 2;
     final monthFmt = DateFormat('yyyy.MM');
     final weekFmt = DateFormat('M/d');
 
@@ -161,8 +171,14 @@ class _HeaderPainter extends CustomPainter {
       // Week marker on Mondays
       if (date.weekday == DateTime.monday) {
         canvas.drawLine(Offset(x, _rowH), Offset(x, _totalH), thinLine);
-        _drawCenteredText(canvas, weekFmt.format(date), x, x + dayWidth * 7,
-          _rowH + 6, weekStyle);
+        _drawCenteredText(
+          canvas,
+          weekFmt.format(date),
+          x,
+          x + dayWidth * 7,
+          _rowH + 6,
+          weekStyle,
+        );
       }
     }
 
@@ -174,13 +190,25 @@ class _HeaderPainter extends CustomPainter {
   // ─── Day mode (30 ≤ dayWidth < 480, i.e. 0.5x–4x) ──────────────────
 
   void _paintDayMode(Canvas canvas, Size size) {
-    final thinLine = Paint()..color = dividerColor..strokeWidth = 3;
+    final thinLine = Paint()
+      ..color = dividerColor
+      ..strokeWidth = 3;
     final monthStyle = TextStyle(
-      color: textColor, fontSize: 11, fontWeight: FontWeight.w600,
+      color: textColor,
+      fontSize: 11,
+      fontWeight: FontWeight.w600,
     );
-    final dayStyle = TextStyle(color: textColor, fontSize: 14, fontWeight: FontWeight.w600);
+    final dayStyle = TextStyle(
+      color: textColor,
+      fontSize: 14,
+      fontWeight: FontWeight.w600,
+    );
     final mutedDayStyle = TextStyle(color: mutedColor, fontSize: 14);
-    final todayStyle = TextStyle(color: todayColor, fontSize: 14, fontWeight: FontWeight.bold);
+    final todayStyle = TextStyle(
+      color: todayColor,
+      fontSize: 14,
+      fontWeight: FontWeight.bold,
+    );
     final monthFmt = DateFormat('yyyy.MM');
 
     final showWeekday = dayWidth >= 120; // 2x+
@@ -222,7 +250,9 @@ class _HeaderPainter extends CustomPainter {
         );
       }
 
-      final style = isToday ? todayStyle : (isWeekend ? mutedDayStyle : dayStyle);
+      final style = isToday
+          ? todayStyle
+          : (isWeekend ? mutedDayStyle : dayStyle);
       final label = showWeekday
           ? '${date.day} ${weekdayFmt.format(date)}'
           : date.day.toString();
@@ -236,7 +266,9 @@ class _HeaderPainter extends CustomPainter {
         canvas.drawLine(
           Offset(noonX, _rowH),
           Offset(noonX, _totalH),
-          Paint()..color = dividerColor.withValues(alpha: 0.2)..strokeWidth = 1,
+          Paint()
+            ..color = dividerColor.withValues(alpha: 0.2)
+            ..strokeWidth = 1,
         );
       }
     }
@@ -249,11 +281,27 @@ class _HeaderPainter extends CustomPainter {
   // ─── Hour mode (dayWidth ≥ 480, i.e. 8x–32x) ────────────────────────
 
   void _paintHourMode(Canvas canvas, Size size) {
-    final thinLine = Paint()..color = dividerColor..strokeWidth = 3;
-    final hourLine = Paint()..color = dividerColor.withValues(alpha: 0.35)..strokeWidth = 2;
-    final dateStyle = TextStyle(color: textColor, fontSize: 13, fontWeight: FontWeight.w600);
-    final hourStyle = TextStyle(color: textColor, fontSize: 11, fontWeight: FontWeight.w500);
-    final todayDateStyle = TextStyle(color: todayColor, fontSize: 13, fontWeight: FontWeight.bold);
+    final thinLine = Paint()
+      ..color = dividerColor
+      ..strokeWidth = 3;
+    final hourLine = Paint()
+      ..color = dividerColor.withValues(alpha: 0.35)
+      ..strokeWidth = 2;
+    final dateStyle = TextStyle(
+      color: textColor,
+      fontSize: 13,
+      fontWeight: FontWeight.w600,
+    );
+    final hourStyle = TextStyle(
+      color: textColor,
+      fontSize: 11,
+      fontWeight: FontWeight.w500,
+    );
+    final todayDateStyle = TextStyle(
+      color: todayColor,
+      fontSize: 13,
+      fontWeight: FontWeight.bold,
+    );
     final dateFmt = DateFormat('M/d E');
 
     // Hour step based on available width
@@ -289,8 +337,13 @@ class _HeaderPainter extends CustomPainter {
           Paint()..color = todayBg,
         );
       }
-      _drawText(canvas, dateFmt.format(date), dayX + 6, 6,
-        isToday ? todayDateStyle : dateStyle);
+      _drawText(
+        canvas,
+        dateFmt.format(date),
+        dayX + 6,
+        6,
+        isToday ? todayDateStyle : dateStyle,
+      );
 
       // Row 2: Hour labels
       for (int h = 0; h < 24; h += hourStep) {
@@ -299,7 +352,12 @@ class _HeaderPainter extends CustomPainter {
           canvas.drawLine(Offset(hx, _rowH), Offset(hx, _totalH), hourLine);
         }
         _drawCenteredText(
-          canvas, '$h:00', hx, hx + hourStep * hourPx, _rowH + 8, hourStyle,
+          canvas,
+          '$h:00',
+          hx,
+          hx + hourStep * hourPx,
+          _rowH + 8,
+          hourStyle,
         );
       }
     }
@@ -313,7 +371,13 @@ class _HeaderPainter extends CustomPainter {
   bool _isWeekend(DateTime d) =>
       d.weekday == DateTime.saturday || d.weekday == DateTime.sunday;
 
-  void _drawText(Canvas canvas, String text, double x, double y, TextStyle style) {
+  void _drawText(
+    Canvas canvas,
+    String text,
+    double x,
+    double y,
+    TextStyle style,
+  ) {
     final tp = TextPainter(
       text: TextSpan(text: text, style: style),
       textDirection: ui.TextDirection.ltr,
@@ -322,7 +386,12 @@ class _HeaderPainter extends CustomPainter {
   }
 
   void _drawCenteredText(
-    Canvas canvas, String text, double startX, double endX, double y, TextStyle style,
+    Canvas canvas,
+    String text,
+    double startX,
+    double endX,
+    double y,
+    TextStyle style,
   ) {
     final tp = TextPainter(
       text: TextSpan(text: text, style: style),

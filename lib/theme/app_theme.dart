@@ -4,20 +4,35 @@ import 'package:velotask/services/color_config_manager.dart';
 
 class AppTheme {
   static Color get primaryColor =>
-      ColorConfigManager.instance.activePreset?.colorByKey('homeTitleText', Brightness.light) ??
+      ColorConfigManager.instance.activePreset?.colorByKey(
+        'homeTitleText',
+        Brightness.light,
+      ) ??
       const Color(0xFF2C3E50);
 
   static Color get highPriority =>
-      ColorConfigManager.instance.activePreset?.colorByKey('ganttRangeTaskHigh', Brightness.light) ??
+      ColorConfigManager.instance.activePreset?.colorByKey(
+        'ganttRangeTaskHigh',
+        Brightness.light,
+      ) ??
       const Color(0xFFFF3F34);
   static Color get mediumPriority =>
-      ColorConfigManager.instance.activePreset?.colorByKey('ganttRangeTaskMedium', Brightness.light) ??
+      ColorConfigManager.instance.activePreset?.colorByKey(
+        'ganttRangeTaskMedium',
+        Brightness.light,
+      ) ??
       const Color(0xFFFFA801);
   static Color get lowPriority =>
-      ColorConfigManager.instance.activePreset?.colorByKey('ganttRangeTaskLow', Brightness.light) ??
+      ColorConfigManager.instance.activePreset?.colorByKey(
+        'ganttRangeTaskLow',
+        Brightness.light,
+      ) ??
       const Color(0xFF0BE881);
   static Color get errorColor =>
-      ColorConfigManager.instance.activePreset?.colorByKey('commonErrorText', Brightness.light) ??
+      ColorConfigManager.instance.activePreset?.colorByKey(
+        'commonErrorText',
+        Brightness.light,
+      ) ??
       const Color(0xFFFF5E57);
 
   // ── Theme builder (shared by light & dark) ────────────────────
@@ -44,9 +59,18 @@ class AppTheme {
         bodyLarge: GoogleFonts.notoSansSc(fontSize: 16),
         bodyMedium: GoogleFonts.notoSansSc(fontSize: 14),
         bodySmall: GoogleFonts.notoSansSc(fontSize: 12),
-        titleLarge: GoogleFonts.notoSansSc(fontSize: 22, fontWeight: FontWeight.w600),
-        titleMedium: GoogleFonts.notoSansSc(fontSize: 16, fontWeight: FontWeight.w600),
-        titleSmall: GoogleFonts.notoSansSc(fontSize: 14, fontWeight: FontWeight.w600),
+        titleLarge: GoogleFonts.notoSansSc(
+          fontSize: 22,
+          fontWeight: FontWeight.w600,
+        ),
+        titleMedium: GoogleFonts.notoSansSc(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+        ),
+        titleSmall: GoogleFonts.notoSansSc(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
       ),
       primaryColor: primary,
       colorScheme: brightness == Brightness.light
@@ -115,7 +139,9 @@ class AppTheme {
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
       ),
@@ -125,7 +151,9 @@ class AppTheme {
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
           textStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
       ),
@@ -133,7 +161,9 @@ class AppTheme {
         style: TextButton.styleFrom(
           foregroundColor: accent,
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
     );
@@ -383,36 +413,43 @@ class AppTheme {
   static Color _c(String key, Brightness b, Color fallback) =>
       ColorConfigManager.instance.activePreset?.colorByKey(key, b) ?? fallback;
 
-  static Color _lightPrimary() => _c('homeTitleText', Brightness.light, const Color(0xFF2C3E50));
-  static Color _lightBg() => _c('homePageBackground', Brightness.light, const Color(0xFFF5F6FA));
-  static Color _lightSurface() => _c('homeCardBackground', Brightness.light, Colors.white);
+  static Color _lightPrimary() =>
+      _c('homeTitleText', Brightness.light, const Color(0xFF2C3E50));
+  static Color _lightBg() =>
+      _c('homePageBackground', Brightness.light, const Color(0xFFF5F6FA));
+  static Color _lightSurface() =>
+      _c('homeCardBackground', Brightness.light, Colors.white);
 
-  static Color _darkPrimary() => _c('homeTitleText', Brightness.dark, const Color(0xFFECF0F1));
-  static Color _darkBg() => _c('homePageBackground', Brightness.dark, const Color(0xFF121212));
-  static Color _darkSurface() => _c('homeCardBackground', Brightness.dark, const Color(0xFF1E1E1E));
-  static Color _darkAccent() => _c('commonButtonBackground', Brightness.dark, const Color(0xFF3498DB));
+  static Color _darkPrimary() =>
+      _c('homeTitleText', Brightness.dark, const Color(0xFFECF0F1));
+  static Color _darkBg() =>
+      _c('homePageBackground', Brightness.dark, const Color(0xFF121212));
+  static Color _darkSurface() =>
+      _c('homeCardBackground', Brightness.dark, const Color(0xFF1E1E1E));
+  static Color _darkAccent() =>
+      _c('commonButtonBackground', Brightness.dark, const Color(0xFF3498DB));
 
   static ThemeData get lightTheme => _buildTheme(
-        brightness: Brightness.light,
-        primary: _lightPrimary(),
-        accent: _lightPrimary(),
-        bg: _lightBg(),
-        surface: _lightSurface(),
-        cardBorderColor: Colors.grey.withValues(alpha: 0.08),
-        inputFillColor: const Color(0xFFF5F5F5),
-        inputFocusedBorderColor: _lightPrimary(),
-        inputLabelColor: const Color(0xFF95A5A6),
-      );
+    brightness: Brightness.light,
+    primary: _lightPrimary(),
+    accent: _lightPrimary(),
+    bg: _lightBg(),
+    surface: _lightSurface(),
+    cardBorderColor: Colors.grey.withValues(alpha: 0.08),
+    inputFillColor: const Color(0xFFF5F5F5),
+    inputFocusedBorderColor: _lightPrimary(),
+    inputLabelColor: const Color(0xFF95A5A6),
+  );
 
   static ThemeData get darkTheme => _buildTheme(
-        brightness: Brightness.dark,
-        primary: _darkPrimary(),
-        accent: _darkAccent(),
-        bg: _darkBg(),
-        surface: _darkSurface(),
-        cardBorderColor: Colors.white.withValues(alpha: 0.05),
-        inputFillColor: const Color(0xFF2C2C2C),
-        inputFocusedBorderColor: _darkAccent(),
-        inputLabelColor: const Color(0xFFB0BEC5),
-      );
+    brightness: Brightness.dark,
+    primary: _darkPrimary(),
+    accent: _darkAccent(),
+    bg: _darkBg(),
+    surface: _darkSurface(),
+    cardBorderColor: Colors.white.withValues(alpha: 0.05),
+    inputFillColor: const Color(0xFF2C2C2C),
+    inputFocusedBorderColor: _darkAccent(),
+    inputLabelColor: const Color(0xFFB0BEC5),
+  );
 }

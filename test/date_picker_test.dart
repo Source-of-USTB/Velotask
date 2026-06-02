@@ -26,10 +26,19 @@ void main() {
                   showDialog(
                     context: context,
                     builder: (context) => AddTodoDialog(
-                      onAdd: (title, desc, startDate, ddl, importance, tags, taskType) {
-                        selectedStartDate = startDate;
-                        selectedDdl = ddl;
-                      },
+                      onAdd:
+                          (
+                            title,
+                            desc,
+                            startDate,
+                            ddl,
+                            importance,
+                            tags,
+                            taskType,
+                          ) {
+                            selectedStartDate = startDate;
+                            selectedDdl = ddl;
+                          },
                     ),
                   );
                 },
@@ -47,7 +56,8 @@ void main() {
 
     // Verify initial state: Start Date is now with includeTime, so it shows M/d HH:mm
     final now = DateTime.now();
-    final expectedDateStr = '${now.month}/${now.day} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+    final expectedDateStr =
+        '${now.month}/${now.day} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
     expect(find.text(expectedDateStr), findsOneWidget);
 
     // Find the "To" date picker (DDL)

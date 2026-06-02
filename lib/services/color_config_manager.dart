@@ -62,7 +62,8 @@ class ColorConfigManager extends ChangeNotifier {
         await _save();
         return;
       }
-      final json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
+      final json =
+          jsonDecode(await file.readAsString()) as Map<String, dynamic>;
       _activePresetId = json['activePresetId'] as String? ?? '_builtin';
 
       final list = json['presets'] as List<dynamic>?;

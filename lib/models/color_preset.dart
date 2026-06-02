@@ -9,17 +9,44 @@ String _generateId() {
 }
 
 const _allKeys = [
-  'ganttMonthGridLine','ganttWeekGridLine','ganttRowDivider','ganttWeekendStripe',
-  'ganttNowLine','ganttHeaderBackground','ganttHeaderWeekendBg','ganttHeaderDivider',
-  'ganttHeaderText','ganttHeaderWeekendText','ganttHeaderTodayText','ganttHeaderTodayBg',
-  'ganttDeadlineTaskFill','ganttRangeTaskHigh','ganttRangeTaskMedium','ganttRangeTaskLow',
-  'ganttRangeTaskDefault','ganttTaskText',
-  'homePageBackground','homeCardBackground','homeCardBorder',
-  'homeProgressValue','homeProgressSymbol','homeProgressCaption',
-  'homeTitleText','homeBodyText',
-  'commonFabBackground','commonFabIcon','commonButtonBackground','commonButtonText',
-  'commonInputFill','commonInputLabel','commonInputText','commonInputBorder',
-  'commonAppBarBackground','commonAppBarTitle','commonErrorText','commonDivider',
+  'ganttMonthGridLine',
+  'ganttWeekGridLine',
+  'ganttRowDivider',
+  'ganttWeekendStripe',
+  'ganttNowLine',
+  'ganttHeaderBackground',
+  'ganttHeaderWeekendBg',
+  'ganttHeaderDivider',
+  'ganttHeaderText',
+  'ganttHeaderWeekendText',
+  'ganttHeaderTodayText',
+  'ganttHeaderTodayBg',
+  'ganttDeadlineTaskFill',
+  'ganttRangeTaskHigh',
+  'ganttRangeTaskMedium',
+  'ganttRangeTaskLow',
+  'ganttRangeTaskDefault',
+  'ganttTaskText',
+  'homePageBackground',
+  'homeCardBackground',
+  'homeCardBorder',
+  'homeProgressValue',
+  'homeProgressSymbol',
+  'homeProgressCaption',
+  'homeTitleText',
+  'homeBodyText',
+  'commonFabBackground',
+  'commonFabIcon',
+  'commonButtonBackground',
+  'commonButtonText',
+  'commonInputFill',
+  'commonInputLabel',
+  'commonInputText',
+  'commonInputBorder',
+  'commonAppBarBackground',
+  'commonAppBarTitle',
+  'commonErrorText',
+  'commonDivider',
 ];
 
 Color _def(String key, Brightness b) {
@@ -65,53 +92,96 @@ Color _def(String key, Brightness b) {
 
   switch (key) {
     // ── Gantt Grid ──
-    case 'ganttMonthGridLine': return dark ? gridMajorD : gridMajorL;
-    case 'ganttWeekGridLine': return dark ? gridMajorD.withAlpha(gridMinorAlphaD) : gridMajorL.withAlpha(gridMinorAlphaL);
-    case 'ganttRowDivider': return dark ? gridMajorD.withAlpha(gridRowAlphaD) : gridMajorL.withAlpha(gridRowAlphaL);
-    case 'ganttWeekendStripe': return dark ? weekendD : weekendL;
+    case 'ganttMonthGridLine':
+      return dark ? gridMajorD : gridMajorL;
+    case 'ganttWeekGridLine':
+      return dark
+          ? gridMajorD.withAlpha(gridMinorAlphaD)
+          : gridMajorL.withAlpha(gridMinorAlphaL);
+    case 'ganttRowDivider':
+      return dark
+          ? gridMajorD.withAlpha(gridRowAlphaD)
+          : gridMajorL.withAlpha(gridRowAlphaL);
+    case 'ganttWeekendStripe':
+      return dark ? weekendD : weekendL;
     // ── Gantt Markers ──
-    case 'ganttNowLine': return dark ? nowRedD : nowRedL;
-    case 'ganttDeadlineTaskFill': return dark ? nowRedD : nowRedL;
+    case 'ganttNowLine':
+      return dark ? nowRedD : nowRedL;
+    case 'ganttDeadlineTaskFill':
+      return dark ? nowRedD : nowRedL;
     // ── Gantt Header ──
-    case 'ganttHeaderBackground': return dark ? surfHeaderD : surfHeaderL;
-    case 'ganttHeaderWeekendBg': return dark ? weekendD : weekendL;
-    case 'ganttHeaderDivider': return dark ? gridMajorD : gridMajorL;
-    case 'ganttHeaderText': return dark ? textPriD : textPriL;
-    case 'ganttHeaderWeekendText': return dark ? textSecD : textSecL;
-    case 'ganttHeaderTodayText': return dark ? primaryD : primaryL;
-    case 'ganttHeaderTodayBg': return dark ? primaryD.withAlpha(0x1A) : primaryL.withAlpha(0x1A);
+    case 'ganttHeaderBackground':
+      return dark ? surfHeaderD : surfHeaderL;
+    case 'ganttHeaderWeekendBg':
+      return dark ? weekendD : weekendL;
+    case 'ganttHeaderDivider':
+      return dark ? gridMajorD : gridMajorL;
+    case 'ganttHeaderText':
+      return dark ? textPriD : textPriL;
+    case 'ganttHeaderWeekendText':
+      return dark ? textSecD : textSecL;
+    case 'ganttHeaderTodayText':
+      return dark ? primaryD : primaryL;
+    case 'ganttHeaderTodayBg':
+      return dark ? primaryD.withAlpha(0x1A) : primaryL.withAlpha(0x1A);
     // ── Gantt Tasks ──
-    case 'ganttRangeTaskHigh': return dark ? taskHighD : taskHighL;
-    case 'ganttRangeTaskMedium': return dark ? taskMidD : taskMidL;
-    case 'ganttRangeTaskLow': return dark ? taskLowD : taskLowL;
-    case 'ganttRangeTaskDefault': return dark ? taskDefaultD : taskDefaultL;
-    case 'ganttTaskText': return Colors.white;
+    case 'ganttRangeTaskHigh':
+      return dark ? taskHighD : taskHighL;
+    case 'ganttRangeTaskMedium':
+      return dark ? taskMidD : taskMidL;
+    case 'ganttRangeTaskLow':
+      return dark ? taskLowD : taskLowL;
+    case 'ganttRangeTaskDefault':
+      return dark ? taskDefaultD : taskDefaultL;
+    case 'ganttTaskText':
+      return Colors.white;
     // ── Page ──
-    case 'homePageBackground': return dark ? surfPageD : surfPageL;
-    case 'homeCardBackground': return dark ? surfCardD : surfCardL;
-    case 'homeCardBorder': return dark ? const Color(0x10FFFFFF) : const Color(0x10000000);
-    case 'homeTitleText': return dark ? textPriD : textPriL;
-    case 'homeBodyText': return dark ? textSecD : textSecL;
+    case 'homePageBackground':
+      return dark ? surfPageD : surfPageL;
+    case 'homeCardBackground':
+      return dark ? surfCardD : surfCardL;
+    case 'homeCardBorder':
+      return dark ? const Color(0x10FFFFFF) : const Color(0x10000000);
+    case 'homeTitleText':
+      return dark ? textPriD : textPriL;
+    case 'homeBodyText':
+      return dark ? textSecD : textSecL;
     // ── Progress ──
-    case 'homeProgressValue': return dark ? textPriD : textPriL;
-    case 'homeProgressSymbol': return dark ? primaryD : primaryL;
-    case 'homeProgressCaption': return dark ? primaryD : primaryL;
+    case 'homeProgressValue':
+      return dark ? textPriD : textPriL;
+    case 'homeProgressSymbol':
+      return dark ? primaryD : primaryL;
+    case 'homeProgressCaption':
+      return dark ? primaryD : primaryL;
     // ── Buttons ──
-    case 'commonFabBackground': return dark ? primaryD : primaryL;
-    case 'commonFabIcon': return dark ? surfPageD : Colors.white;
-    case 'commonButtonBackground': return dark ? primaryD : primaryL;
-    case 'commonButtonText': return dark ? surfPageD : Colors.white;
+    case 'commonFabBackground':
+      return dark ? primaryD : primaryL;
+    case 'commonFabIcon':
+      return dark ? surfPageD : Colors.white;
+    case 'commonButtonBackground':
+      return dark ? primaryD : primaryL;
+    case 'commonButtonText':
+      return dark ? surfPageD : Colors.white;
     // ── Input ──
-    case 'commonInputFill': return dark ? surfFillD : surfFillL;
-    case 'commonInputLabel': return dark ? textSecD : textSecL;
-    case 'commonInputText': return dark ? textPriD : textPriL;
-    case 'commonInputBorder': return dark ? gridMajorD : gridMajorL;
+    case 'commonInputFill':
+      return dark ? surfFillD : surfFillL;
+    case 'commonInputLabel':
+      return dark ? textSecD : textSecL;
+    case 'commonInputText':
+      return dark ? textPriD : textPriL;
+    case 'commonInputBorder':
+      return dark ? gridMajorD : gridMajorL;
     // ── AppBar & Misc ──
-    case 'commonAppBarBackground': return dark ? surfPageD : surfPageL;
-    case 'commonAppBarTitle': return dark ? textPriD : textPriL;
-    case 'commonErrorText': return dark ? taskHighD : taskHighL;
-    case 'commonDivider': return dark ? gridMajorD : gridMajorL;
-    default: return Colors.grey;
+    case 'commonAppBarBackground':
+      return dark ? surfPageD : surfPageL;
+    case 'commonAppBarTitle':
+      return dark ? textPriD : textPriL;
+    case 'commonErrorText':
+      return dark ? taskHighD : taskHighL;
+    case 'commonDivider':
+      return dark ? gridMajorD : gridMajorL;
+    default:
+      return Colors.grey;
   }
 }
 
@@ -129,9 +199,9 @@ class ColorPreset {
     this.isBuiltin = false,
     Map<String, Color>? lightColors,
     Map<String, Color>? darkColors,
-  })  : id = id ?? _generateId(),
-        _lightColors = {},
-        _darkColors = {} {
+  }) : id = id ?? _generateId(),
+       _lightColors = {},
+       _darkColors = {} {
     for (final k in _allKeys) {
       _lightColors[k] = _def(k, Brightness.light);
       _darkColors[k] = _def(k, Brightness.dark);
@@ -140,8 +210,8 @@ class ColorPreset {
     if (darkColors != null) _darkColors.addAll(darkColors);
   }
 
-  static ColorPreset defaultPreset() => ColorPreset(
-        id: '_builtin', name: '默认配置', isBuiltin: true);
+  static ColorPreset defaultPreset() =>
+      ColorPreset(id: '_builtin', name: '默认配置', isBuiltin: true);
 
   Color colorByKey(String key, Brightness brightness) {
     final map = brightness == Brightness.light ? _lightColors : _darkColors;
@@ -208,8 +278,7 @@ class ColorPreset {
   }
 
   @override
-  bool operator ==(Object other) =>
-      other is ColorPreset && other.id == id;
+  bool operator ==(Object other) => other is ColorPreset && other.id == id;
 
   @override
   int get hashCode => id.hashCode;

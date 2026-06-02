@@ -29,7 +29,9 @@ void main() {
     });
 
     test('tag with surrounding text', () {
-      final (names, _) = extractInlineTags(r'Buy groceries #shopping\# tomorrow');
+      final (names, _) = extractInlineTags(
+        r'Buy groceries #shopping\# tomorrow',
+      );
       expect(names, ['shopping']);
     });
 

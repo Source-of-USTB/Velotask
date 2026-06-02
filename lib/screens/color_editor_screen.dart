@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/color_preset.dart';
 import 'package:velotask/services/color_config_manager.dart';
@@ -211,11 +210,13 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
     for (final g in _groups) {
       for (final k in g.keys) {
         if (_data.colorByKey(k, Brightness.light) !=
-            original.colorByKey(k, Brightness.light))
+            original.colorByKey(k, Brightness.light)) {
           return true;
+        }
         if (_data.colorByKey(k, Brightness.dark) !=
-            original.colorByKey(k, Brightness.dark))
+            original.colorByKey(k, Brightness.dark)) {
           return true;
+        }
       }
     }
     return false;
@@ -262,10 +263,11 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
     _pendingNewId = p.id;
     if (await _mgr.addPreset(p)) return;
     _pendingNewId = null;
-    if (mounted)
+    if (mounted) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(l.presetNameHint)));
+    }
   }
 
   Future<void> _apply() async {

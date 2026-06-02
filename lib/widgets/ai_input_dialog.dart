@@ -135,8 +135,10 @@ class _AIInputDialogState extends State<AIInputDialog> {
                 child: SingleChildScrollView(
                   child: Text(
                     _error!,
-                    style:
-                        AppTheme.smallRegularStyle(context, color: Colors.red),
+                    style: AppTheme.smallRegularStyle(
+                      context,
+                      color: Colors.red,
+                    ),
                   ),
                 ),
               ),

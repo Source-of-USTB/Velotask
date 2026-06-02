@@ -66,7 +66,10 @@ class NotificationService {
         requestSoundPermission: false,
       );
 
-      const settings = InitializationSettings(android: androidInit, iOS: iosInit);
+      const settings = InitializationSettings(
+        android: androidInit,
+        iOS: iosInit,
+      );
       await _plugin.initialize(
         settings,
         onDidReceiveNotificationResponse: (details) {
@@ -93,7 +96,11 @@ class NotificationService {
       _logger.info('NotificationService initialized');
     } catch (e, stack) {
       _available = false;
-      _logger.warning('NotificationService not available on this platform', e, stack);
+      _logger.warning(
+        'NotificationService not available on this platform',
+        e,
+        stack,
+      );
     }
   }
 
