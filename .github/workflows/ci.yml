@@ -38,25 +38,27 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Check formatting
+      - name: Apply formatting
         shell: bash
         run: |
           set +e
-          output=$(dart format --output=none --set-exit-if-changed . 2>&1)
+          output=$(dart format . 2>&1)
           status=$?
           set -e
-
+              
           echo "$output"
-
-          if [ "$status" -eq 1 ]; then
-            echo "::warning title=Dart format::Some Dart files are not formatted. Run 'dart format .' locally and commit the changes."
-            exit 0
-          fi
-
+              
           if [ "$status" -ne 0 ]; then
             echo "::error title=Dart format failed::dart format failed with exit code $status"
             exit "$status"
           fi
+              
+          if ! git diff --quiet; then
+            echo "::warning title=Dart format::Some Dart files were formatted in CI. Run 'dart format .' locally and commit the changes."
+            git diff --name-only
+          fi
+              
+          exit 0
 
       - name: Generate code
         run: dart run build_runner build --delete-conflicting-outputs
