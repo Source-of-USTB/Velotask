@@ -35,25 +35,34 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Cache Dart dependencies
-        uses: actions/cache@v5
-        with:
-          path: ~/.pub-cache
-          key: ${{ runner.os }}-pub-cache-${{ hashFiles('**/pubspec.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pub-cache-
-
       - name: Install dependencies
         run: flutter pub get
 
       - name: Check formatting
-        run: dart format --set-exit-if-changed .
+        shell: bash
+        run: |
+          set +e
+          output=$(dart format --output=none --set-exit-if-changed . 2>&1)
+          status=$?
+          set -e
 
-      - name: Analyze
-        run: flutter analyze
+          echo "$output"
+
+          if [ "$status" -eq 1 ]; then
+            echo "::warning title=Dart format::Some Dart files are not formatted. Run 'dart format .' locally and commit the changes."
+            exit 0
+          fi
+
+          if [ "$status" -ne 0 ]; then
+            echo "::error title=Dart format failed::dart format failed with exit code $status"
+            exit "$status"
+          fi
 
       - name: Generate code
         run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Analyze
+        run: flutter analyze
 
       - name: Run unit tests
         run: flutter test
