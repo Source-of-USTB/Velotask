@@ -15,13 +15,13 @@ permissions:
   contents: read
 
 jobs:
-
   validate:
     name: Validate release tag
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.version.outputs.tag }}
       version: ${{ steps.version.outputs.version }}
+      tag_exists: ${{ steps.version.outputs.tag_exists }}
     steps:
       - name: Set version
         id: version
@@ -35,20 +35,56 @@ jobs:
 
           if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error::Invalid version tag: $TAG"
-            echo "::error::Expected format: v1.2.3"
             exit 1
+          fi
+
+          REPO_URL="https://github.com/${{ github.repository }}.git"
+
+          if git ls-remote --exit-code --tags "$REPO_URL" "refs/tags/$TAG" >/dev/null 2>&1; then
+            TAG_EXISTS="true"
+          else
+            TAG_EXISTS="false"
           fi
 
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "version=${TAG#v}" >> "$GITHUB_OUTPUT"
+          echo "tag_exists=$TAG_EXISTS" >> "$GITHUB_OUTPUT"
 
+  ensure_tag:
+    name: Ensure release tag exists
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout current workflow ref
+        if: needs.validate.outputs.tag_exists == 'false'
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+        
+      - name: Create missing tag
+        if: needs.validate.outputs.tag_exists == 'false'
+        shell: bash
+        run: |
+          TAG="${{ needs.validate.outputs.tag }}"
+        
+          git tag "$TAG"
+          git push origin "refs/tags/$TAG"
+          
+      - name: Tag already exists
+        if: needs.validate.outputs.tag_exists == 'true'
+        run: echo "Tag ${{ needs.validate.outputs.tag }} already exists."
+          
   build_android:
     name: Build Android APK
-    needs: validate
+    needs: [validate, ensure_tag]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
 
       - name: Set up Java
         uses: actions/setup-java@v5
@@ -81,11 +117,13 @@ jobs:
 
   build_linux:
     name: Build Linux Bundle
-    needs: validate
+    needs: [validate, ensure_tag]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -154,11 +192,13 @@ jobs:
 
   build_windows:
     name: Build Windows
-    needs: validate
+    needs: [validate, ensure_tag]
     runs-on: windows-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -193,11 +233,13 @@ jobs:
 
   build_macos:
     name: Build macOS
-    needs: validate
+    needs: [validate, ensure_tag]
     runs-on: macos-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          ref: ${{ needs.validate.outputs.tag }}
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
@@ -230,31 +272,19 @@ jobs:
 
   github_release:
     name: Create GitHub Release
-    needs: [build_android, build_linux, build_windows, build_macos]
+    needs: [validate, build_android, build_linux, build_windows, build_macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
+    env:
+      VERSION: ${{ needs.validate.outputs.version }}
     steps:
-      - name: Set version
-        id: version
-        run: |
-          if [ "${{ github.event_name }}" = "push" ]; then
-            TAG="${{ github.ref_name }}"
-          else
-            TAG="${{ inputs.version }}"
-          fi
-          VERSION="${TAG#v}"
-          echo "tag=$TAG" >> $GITHUB_OUTPUT
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
       - name: Download all artifacts
         uses: actions/download-artifact@v7
         with:
           path: artifacts
 
       - name: Prepare release assets
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
         run: |
           cd artifacts
 
@@ -288,6 +318,6 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ steps.version.outputs.tag }}
+          tag_name: ${{ needs.validate.outputs.tag }}
           files: artifacts/velotask-*
           generate_release_notes: true
