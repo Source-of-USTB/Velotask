@@ -105,3 +105,6 @@ lib/l10n/app_*.dart
 
 # Claude Code
 .claude/
+
+# Scripts
+scripts/**
