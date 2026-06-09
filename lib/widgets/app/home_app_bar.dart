@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:velotask/l10n/app_localizations.dart';
-import 'package:velotask/main.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/screens/settings_screen.dart';
+import 'package:velotask/services/app_settings_controller.dart';
 import 'package:velotask/theme/app_theme.dart';
 
 class HomeAppBar extends StatelessWidget {
@@ -64,7 +63,7 @@ class HomeAppBar extends StatelessWidget {
           },
         ),
         ValueListenableBuilder<ThemeMode>(
-          valueListenable: themeNotifier,
+          valueListenable: AppSettingsController.themeNotifier,
           builder: (context, mode, child) {
             return IconButton(
               icon: Icon(
@@ -78,9 +77,7 @@ class HomeAppBar extends StatelessWidget {
                 final newMode = mode == ThemeMode.dark
                     ? ThemeMode.light
                     : ThemeMode.dark;
-                themeNotifier.value = newMode;
-                final prefs = await SharedPreferences.getInstance();
-                await prefs.setString('theme_mode', newMode.toString());
+                await AppSettingsController.setTheme(newMode);
               },
             );
           },

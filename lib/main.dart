@@ -1,38 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/screens/main_screen.dart';
+import 'package:velotask/services/app_settings_controller.dart';
 import 'package:velotask/services/color_config_manager.dart';
 import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/utils/logger.dart';
-
-final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.system);
-// 自动跟随系统颜色
-final ValueNotifier<Locale?> localeNotifier = ValueNotifier(null);
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   AppLogger.setup();
 
   await ColorConfigManager.instance.init();
-
-  final prefs = await SharedPreferences.getInstance();
-
-  // Load Theme
-  final savedTheme = prefs.getString('theme_mode');
-  if (savedTheme != null) {
-    themeNotifier.value = ThemeMode.values.firstWhere(
-      (e) => e.toString() == savedTheme,
-      orElse: () => ThemeMode.system,
-    );
-  }
-
-  // Load Locale
-  final savedLocale = prefs.getString('locale');
-  if (savedLocale != null) {
-    localeNotifier.value = Locale(savedLocale);
-  }
+  await AppSettingsController.load();
 
   runApp(const MyApp());
 }
@@ -45,8 +25,8 @@ class MyApp extends StatelessWidget {
     return ListenableBuilder(
       // 监听
       listenable: Listenable.merge([
-        themeNotifier,
-        localeNotifier,
+        AppSettingsController.themeNotifier,
+        AppSettingsController.localeNotifier,
         ColorConfigManager.instance,
       ]),
       builder: (context, child) {
@@ -54,8 +34,8 @@ class MyApp extends StatelessWidget {
           title: 'Velotask',
           theme: AppTheme.lightTheme,
           darkTheme: AppTheme.darkTheme,
-          themeMode: themeNotifier.value,
-          locale: localeNotifier.value,
+          themeMode: AppSettingsController.themeNotifier.value,
+          locale: AppSettingsController.localeNotifier.value,
           localizationsDelegates: const [
             AppLocalizations.delegate,
             GlobalMaterialLocalizations.delegate,

@@ -7,9 +7,9 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:velotask/l10n/app_localizations.dart';
-import 'package:velotask/main.dart';
 import 'package:velotask/screens/color_editor_screen.dart';
 import 'package:velotask/screens/tags_screen.dart';
+import 'package:velotask/services/app_settings_controller.dart';
 import 'package:velotask/theme/app_theme.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -187,22 +187,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Future<void> _setTheme(ThemeMode mode) async {
-    themeNotifier.value = mode;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('theme_mode', mode.toString());
-  }
-
-  Future<void> _setLocale(Locale? locale) async {
-    localeNotifier.value = locale;
-    final prefs = await SharedPreferences.getInstance();
-    if (locale != null) {
-      await prefs.setString('locale', locale.languageCode);
-    } else {
-      await prefs.remove('locale');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -221,7 +205,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         children: [
           _buildSectionHeader(context, l10n.general),
           ValueListenableBuilder<ThemeMode>(
-            valueListenable: themeNotifier,
+            valueListenable: AppSettingsController.themeNotifier,
             builder: (context, currentMode, child) {
               return ListTile(
                 leading: const Icon(Icons.brightness_6_outlined),
@@ -238,7 +222,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             },
           ),
           ValueListenableBuilder<Locale?>(
-            valueListenable: localeNotifier,
+            valueListenable: AppSettingsController.localeNotifier,
             builder: (context, currentLocale, child) {
               return ListTile(
                 leading: const Icon(Icons.language),
@@ -345,7 +329,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ? const Icon(Icons.check)
                 : null,
             onTap: () {
-              _setTheme(ThemeMode.system);
+              AppSettingsController.setTheme(ThemeMode.system);
               Navigator.pop(context);
             },
           ),
@@ -355,7 +339,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ? const Icon(Icons.check)
                 : null,
             onTap: () {
-              _setTheme(ThemeMode.light);
+              AppSettingsController.setTheme(ThemeMode.light);
               Navigator.pop(context);
             },
           ),
@@ -365,7 +349,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ? const Icon(Icons.check)
                 : null,
             onTap: () {
-              _setTheme(ThemeMode.dark);
+              AppSettingsController.setTheme(ThemeMode.dark);
               Navigator.pop(context);
             },
           ),
@@ -389,7 +373,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ? const Icon(Icons.check)
                 : null,
             onTap: () {
-              _setLocale(const Locale('en'));
+              AppSettingsController.setLocale(const Locale('en'));
               Navigator.pop(context);
             },
           ),
@@ -399,7 +383,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ? const Icon(Icons.check)
                 : null,
             onTap: () {
-              _setLocale(const Locale('zh'));
+              AppSettingsController.setLocale(const Locale('zh'));
               Navigator.pop(context);
             },
           ),
