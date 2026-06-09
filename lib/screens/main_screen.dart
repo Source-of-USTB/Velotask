@@ -5,6 +5,7 @@ import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/screens/dashboard_screen.dart';
+import 'package:velotask/screens/settings_screen.dart';
 import 'package:velotask/screens/tasks_screen.dart';
 import 'package:velotask/screens/timeline_screen.dart';
 import 'package:velotask/services/ai_service.dart';
@@ -375,6 +376,15 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  Future<void> _openSettings() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const SettingsScreen()),
+    );
+
+    await _loadTags();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -408,8 +418,8 @@ class _MainScreenState extends State<MainScreen> {
                 onToggle: _toggleTodo,
                 onDelete: _deleteTodo,
                 onEdit: _editTodo,
-                onRefreshTags: _loadTags,
                 onAIAction: _showAIInputDialog,
+                onSettingsPressed: _openSettings,
               )
             : _selectedIndex == 1
             ? TimelineScreen(

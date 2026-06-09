@@ -19,8 +19,8 @@ class TasksScreen extends StatefulWidget {
   final Function(Todo) onToggle;
   final Function(Todo) onDelete;
   final Function(Todo) onEdit;
-  final VoidCallback onRefreshTags;
-  final VoidCallback? onAIAction;
+  final VoidCallback onAIAction;
+  final VoidCallback onSettingsPressed;
 
   const TasksScreen({
     super.key,
@@ -30,8 +30,8 @@ class TasksScreen extends StatefulWidget {
     required this.onToggle,
     required this.onDelete,
     required this.onEdit,
-    required this.onRefreshTags,
-    this.onAIAction,
+    required this.onAIAction,
+    required this.onSettingsPressed,
   });
 
   @override
@@ -157,8 +157,8 @@ class _TasksScreenState extends State<TasksScreen>
           slivers: [
             HomeAppBar(
               todos: widget.todos,
-              onSettingsClosed: widget.onRefreshTags,
               onAIAction: widget.onAIAction,
+              onSettingsPressed: widget.onSettingsPressed,
             ),
             SliverToBoxAdapter(
               child: Padding(

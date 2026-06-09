@@ -46,7 +46,8 @@ void main() {
             onToggle: (_) {},
             onDelete: (_) {},
             onEdit: (_) {},
-            onRefreshTags: () {},
+            onAIAction: () {},
+            onSettingsPressed: () {},
           ),
         ),
       );

@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/todo.dart';
-import 'package:velotask/screens/settings_screen.dart';
 import 'package:velotask/services/app_settings_controller.dart';
 import 'package:velotask/theme/app_theme.dart';
 
 class HomeAppBar extends StatelessWidget {
   final List<Todo> todos;
-  final VoidCallback? onSettingsClosed;
-  final VoidCallback? onAIAction;
+  final VoidCallback onAIAction;
+  final VoidCallback onSettingsPressed;
 
   const HomeAppBar({
     super.key,
     required this.todos,
-    this.onSettingsClosed,
-    this.onAIAction,
+    required this.onAIAction,
+    required this.onSettingsPressed,
   });
 
   @override
@@ -54,13 +53,7 @@ class HomeAppBar extends StatelessWidget {
             color: Theme.of(context).primaryColor,
           ),
           constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-          onPressed: () async {
-            await Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const SettingsScreen()),
-            );
-            onSettingsClosed?.call();
-          },
+          onPressed: onSettingsPressed,
         ),
         ValueListenableBuilder<ThemeMode>(
           valueListenable: AppSettingsController.themeNotifier,
