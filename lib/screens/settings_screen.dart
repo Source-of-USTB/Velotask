@@ -276,9 +276,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ..showSnackBar(
         SnackBar(
           content: Text(
-            sent
-                ? l10n.testNotificationSent
-                : l10n.testNotificationUnavailable,
+            sent ? l10n.testNotificationSent : l10n.testNotificationUnavailable,
           ),
         ),
       );

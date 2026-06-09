@@ -219,9 +219,7 @@ class _AISettingsDialogState extends State<AISettingsDialog> {
           child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
         ),
         TextButton.icon(
-          onPressed: _isTestingModel
-              ? null
-              : () => _testAIModelConfig(context),
+          onPressed: _isTestingModel ? null : () => _testAIModelConfig(context),
           style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
           icon: _isTestingModel
               ? const SizedBox(
