@@ -5,6 +5,7 @@ import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/screens/color_editor_screen.dart';
 import 'package:velotask/screens/tags_screen.dart';
 import 'package:velotask/services/app_settings_controller.dart';
+import 'package:velotask/services/notification_service.dart';
 import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/widgets/dialogs/ai_settings_dialog.dart';
 
@@ -125,6 +126,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: Text(l10n.aiSettings),
             subtitle: Text(l10n.aiSettingsSubtitle),
             onTap: () => _showAISettingsDialog(context),
+          ),
+          const Divider(),
+          _buildSectionHeader(context, l10n.notifications),
+          ListTile(
+            leading: const Icon(Icons.notifications_active_outlined),
+            title: Text(l10n.testNotification),
+            subtitle: Text(l10n.testNotificationSubtitle),
+            onTap: () => _showTestNotification(context),
           ),
           const Divider(),
           _buildSectionHeader(context, l10n.about),
@@ -251,5 +260,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
       context: context,
       builder: (context) => const AISettingsDialog(),
     );
+  }
+
+  Future<void> _showTestNotification(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final sent = await NotificationService().showTestNotification(
+      title: l10n.testNotificationTitle,
+      body: l10n.testNotificationBody,
+    );
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            sent
+                ? l10n.testNotificationSent
+                : l10n.testNotificationUnavailable,
+          ),
+        ),
+      );
   }
 }

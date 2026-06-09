@@ -1,7 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/data/latest_all.dart' as tzdata;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/todo.dart';
@@ -37,70 +38,116 @@ class NotificationService {
   static final Logger _logger = AppLogger.getLogger('NotificationService');
 
   Future<void> initialize() async {
-    if (_initialized) {
-      return;
-    }
+    if (_initialized) return;
     _initialized = true;
 
+    if (kIsWeb) {
+      _logger.info('NotificationService disabled on web');
+      return;
+    }
+
+    await _initializeTimezone();
+
     try {
-      tz.initializeTimeZones();
+      const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+
+      const darwinInit = DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      );
+
+      const linuxInit = LinuxInitializationSettings(
+        defaultActionName: 'Open Velotask',
+      );
+
+      const windowsInit = WindowsInitializationSettings(
+        appName: 'Velotask',
+        appUserModelId: 'SourceOfUSTB.Velotask',
+        guid: 'b3f8f8e4-2b91-4a8e-a2c5-2f0c7ad1a1a1',
+      );
+
+      const settings = InitializationSettings(
+        android: androidInit,
+        iOS: darwinInit,
+        macOS: darwinInit,
+        linux: linuxInit,
+        windows: windowsInit,
+      );
+
+      await _plugin.initialize(
+        settings: settings,
+        onDidReceiveNotificationResponse: (details) {}, // TODO: 用户点击通知之后什么都不干?
+      );
+      _available = true;
+    } catch (e, stack) {
+      _available = false;
+      _logger.warning('NotificationService not available', e, stack);
+    }
+  }
+
+  Future<void> _initializeTimezone() async {
+    try {
+      tzdata.initializeTimeZones();
+
       final dynamic timeZoneResult = await FlutterTimezone.getLocalTimezone();
       final String timeZoneName = switch (timeZoneResult) {
         String value => value,
         TimezoneInfo value => value.identifier,
         _ => 'UTC',
       };
+
       tz.setLocalLocation(tz.getLocation(timeZoneName));
     } catch (e) {
       _logger.warning('Failed to initialize timezone', e);
+
       try {
         tz.setLocalLocation(tz.getLocation('UTC'));
       } catch (_) {}
     }
+  }
+
+  static const _notificationDetails = NotificationDetails(
+    android: AndroidNotificationDetails(
+      _channelId,
+      _channelName,
+      channelDescription: _channelDescription,
+      importance: Importance.high,
+      priority: Priority.high,
+    ),
+    iOS: DarwinNotificationDetails(),
+    macOS: DarwinNotificationDetails(),
+    linux: LinuxNotificationDetails(),
+    windows: WindowsNotificationDetails(),
+  );
+
+  Future<bool> showTestNotification({
+    required String title,
+    required String body,
+  }) async {
+    if (!_initialized) {
+      await initialize();
+    }
+
+    if (!_available) {
+      _logger.warning('Test notification skipped: service unavailable');
+      return false;
+    }
 
     try {
-      const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
-      const iosInit = DarwinInitializationSettings(
-        requestAlertPermission: false,
-        requestBadgePermission: false,
-        requestSoundPermission: false,
+      await _plugin.show(
+        id: 999999,
+        title: title,
+        body: body,
+        notificationDetails: _notificationDetails,
+        payload: 'test_notification',
       );
 
-      const settings = InitializationSettings(
-        android: androidInit,
-        iOS: iosInit,
-      );
-      await _plugin.initialize(
-        settings,
-        onDidReceiveNotificationResponse: (details) {
-          _logger.info('Notification clicked: ${details.payload}');
-        },
-      );
-
-      final android = _plugin
-          .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin
-          >();
-      await android?.requestNotificationsPermission();
-
-      final ios = _plugin
-          .resolvePlatformSpecificImplementation<
-            IOSFlutterLocalNotificationsPlugin
-          >();
-      await ios?.requestPermissions(alert: true, badge: true, sound: true);
-
-      // Verify the plugin is actually functional (Windows lacks native binding).
-      await _plugin.pendingNotificationRequests();
-
-      _available = true;
-      _logger.info('NotificationService initialized');
+      _logger.info('Showed test notification');
+      return true;
     } catch (e, stack) {
-      _available = false;
-      _logger.warning(
-        'NotificationService not available on this platform',
-        e,
-        stack,
-      );
+      _logger.warning('Failed to show test notification', e, stack);
+      return false;
     }
   }
 
@@ -138,21 +185,25 @@ class NotificationService {
         desiredTaskFingerprints[todo.id] = reminderPlan.fingerprint;
         final previousFingerprint = _scheduledTaskFingerprints[todo.id];
         if (previousFingerprint != reminderPlan.fingerprint) {
-          await _plugin.cancel(todo.id);
+          await _plugin.cancel(id: todo.id);
           await _scheduleTaskReminder(todo.id, reminderPlan);
         }
       }
     }
 
     if (!_hasHydratedPendingNotifications) {
-      final pending = await _plugin.pendingNotificationRequests();
-      for (final item in pending) {
-        if (item.id == _dailySummaryId) {
-          continue;
+      try {
+        final pending = await _plugin.pendingNotificationRequests();
+        for (final item in pending) {
+          if (item.id == _dailySummaryId) {
+            continue;
+          }
+          if (!desiredTaskFingerprints.containsKey(item.id)) {
+            await _plugin.cancel(id: item.id);
+          }
         }
-        if (!desiredTaskFingerprints.containsKey(item.id)) {
-          await _plugin.cancel(item.id);
-        }
+      } catch (e, stack) {
+        _logger.warning('Pending notification hydration skipped', e, stack);
       }
       _hasHydratedPendingNotifications = true;
     }
@@ -161,14 +212,14 @@ class NotificationService {
         .where((id) => !desiredTaskFingerprints.containsKey(id))
         .toList();
     for (final staleId in staleIds) {
-      await _plugin.cancel(staleId);
+      await _plugin.cancel(id: staleId);
     }
 
     _scheduledTaskFingerprints = desiredTaskFingerprints;
 
     final dailyFingerprint = '${l10n.localeName}|$activeCount';
     if (_dailySummaryFingerprint != dailyFingerprint) {
-      await _plugin.cancel(_dailySummaryId);
+      await _plugin.cancel(id: _dailySummaryId);
       await _scheduleDailySummary(activeCount, l10n);
       _dailySummaryFingerprint = dailyFingerprint;
     }
@@ -255,61 +306,43 @@ class NotificationService {
     }
   }
 
-  Future<void> _scheduleTaskReminder(int todoId, _TaskReminderPlan plan) async {
+  Future<void> _scheduleTaskReminder(int id, _TaskReminderPlan plan) async {
     try {
       await _plugin.zonedSchedule(
-        todoId,
-        plan.title,
-        plan.body,
-        plan.scheduledDate,
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            _channelId,
-            _channelName,
-            channelDescription: _channelDescription,
-            importance: Importance.high,
-            priority: Priority.high,
-          ),
-          iOS: const DarwinNotificationDetails(),
-        ),
+        id: id,
+        title: plan.title,
+        body: plan.body,
+        scheduledDate: plan.scheduledDate,
+        notificationDetails: _notificationDetails,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        payload: 'todo_$todoId',
+        payload: 'todo_$id',
       );
       _logger.fine(
-        'Scheduled exact reminder for todo $todoId at ${plan.scheduledDate} (Urgency based)',
+        'Scheduled exact reminder for todo $id at ${plan.scheduledDate} (Urgency based)',
       );
-    } catch (e) {
+    } catch (e, stack) {
       if (!_isExactAlarmsNotPermittedError(e)) {
+        _logger.warning(
+          'Failed to schedule exact reminder for todo $id',
+          e,
+          stack,
+        );
         rethrow;
       }
-
       _logger.warning(
-        'Exact alarms are not permitted; falling back to inexact reminder for todo $todoId',
+        'Exact alarms are not permitted; falling back to inexact reminder for todo $id',
       );
       await _plugin.zonedSchedule(
-        todoId,
-        plan.title,
-        plan.body,
-        plan.scheduledDate,
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            _channelId,
-            _channelName,
-            channelDescription: _channelDescription,
-            importance: Importance.high,
-            priority: Priority.high,
-          ),
-          iOS: const DarwinNotificationDetails(),
-        ),
+        id: id,
+        title: plan.title,
+        body: plan.body,
+        scheduledDate: plan.scheduledDate,
+        notificationDetails: _notificationDetails,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        payload: 'todo_$todoId',
+        payload: 'todo_$id',
       );
       _logger.fine(
-        'Scheduled inexact reminder for todo $todoId at ${plan.scheduledDate}',
+        'Scheduled inexact reminder for todo $id at ${plan.scheduledDate}',
       );
     }
   }
@@ -407,23 +440,12 @@ class NotificationService {
       }
 
       await _plugin.zonedSchedule(
-        _dailySummaryId,
-        l10n.dailyReminderTitle,
-        l10n.dailyReminderBody(count),
-        scheduledDate,
-        NotificationDetails(
-          android: AndroidNotificationDetails(
-            _channelId,
-            _channelName,
-            channelDescription: _channelDescription,
-            importance: Importance.defaultImportance,
-            priority: Priority.defaultPriority,
-          ),
-          iOS: const DarwinNotificationDetails(),
-        ),
+        id: _dailySummaryId,
+        title: l10n.dailyReminderTitle,
+        body: l10n.dailyReminderBody(count),
+        scheduledDate: scheduledDate,
+        notificationDetails: _notificationDetails,
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
         payload: 'daily_summary',
       );
@@ -434,6 +456,7 @@ class NotificationService {
   }
 
   Future<void> cancelAll() async {
+    if (!_available) return;
     await _plugin.cancelAll();
   }
 }
