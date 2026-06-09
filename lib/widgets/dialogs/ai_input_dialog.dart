@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:velotask/l10n/app_localizations.dart';
-import 'package:velotask/screens/settings_screen.dart';
 import 'package:velotask/services/ai_service.dart';
 import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/utils/logger.dart';
 
 class AIInputDialog extends StatefulWidget {
   final List<String> existingTags;
+  final Future<void> Function() onOpenAISettings;
 
-  const AIInputDialog({super.key, this.existingTags = const []});
+  const AIInputDialog({
+    super.key,
+    this.existingTags = const [],
+    required this.onOpenAISettings,
+  });
 
   @override
   State<AIInputDialog> createState() => _AIInputDialogState();
@@ -75,12 +79,12 @@ class _AIInputDialogState extends State<AIInputDialog> {
             child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
           ),
           ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
+            onPressed: () async {
+              await widget.onOpenAISettings();
+              if (!mounted) return;
+              setState(() {
+                _error = null;
+              });
             },
             child: Text(l10n.settings),
           ),

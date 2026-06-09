@@ -14,6 +14,7 @@ import 'package:velotask/services/todo_storage.dart';
 import 'package:velotask/utils/logger.dart';
 import 'package:velotask/widgets/dialogs/add_todo_dialog.dart';
 import 'package:velotask/widgets/dialogs/ai_input_dialog.dart';
+import 'package:velotask/widgets/dialogs/ai_settings_dialog.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -364,11 +365,20 @@ class _MainScreenState extends State<MainScreen> {
     );
   }
 
+  Future<void> _showAISettingsDialog() {
+    return showDialog<void>(
+      context: context,
+      builder: (context) => const AISettingsDialog(),
+    );
+  }
+
   Future<void> _showAIInputDialog() async {
     final results = await showDialog<List<AIParseResult>>(
       context: context,
-      builder: (context) =>
-          AIInputDialog(existingTags: tags.map((t) => t.name).toList()),
+      builder: (context) => AIInputDialog(
+        existingTags: tags.map((t) => t.name).toList(),
+        onOpenAISettings: _showAISettingsDialog,
+      ),
     );
 
     if (results != null && mounted) {
