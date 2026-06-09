@@ -6,7 +6,7 @@ import 'package:velotask/services/todo_storage.dart';
 import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/utils/logger.dart';
 import 'package:velotask/utils/tag_color.dart';
-import 'package:velotask/widgets/channel_row.dart';
+import 'package:velotask/widgets/color/channel_row.dart';
 
 class TagsScreen extends StatefulWidget {
   const TagsScreen({super.key});

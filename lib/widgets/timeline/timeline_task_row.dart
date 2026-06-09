@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/services/color_config_manager.dart';
 import 'package:velotask/theme/app_theme.dart';
-import 'package:velotask/widgets/timeline_layout.dart';
+import 'package:velotask/widgets/timeline/timeline_layout.dart';
 
 class TimelineTaskRow extends StatelessWidget {
   final Todo todo;

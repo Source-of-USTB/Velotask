@@ -11,8 +11,8 @@ import 'package:velotask/services/ai_service.dart';
 import 'package:velotask/services/notification_service.dart';
 import 'package:velotask/services/todo_storage.dart';
 import 'package:velotask/utils/logger.dart';
-import 'package:velotask/widgets/add_todo_dialog.dart';
-import 'package:velotask/widgets/ai_input_dialog.dart';
+import 'package:velotask/widgets/dialogs/add_todo_dialog.dart';
+import 'package:velotask/widgets/dialogs/ai_input_dialog.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});

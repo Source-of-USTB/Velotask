@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:velotask/l10n/app_localizations.dart';
-import 'package:velotask/widgets/add_todo_dialog.dart';
+import 'package:velotask/widgets/dialogs/add_todo_dialog.dart';
 
 void main() {
   testWidgets('AddTodoDialog date picker test', (WidgetTester tester) async {

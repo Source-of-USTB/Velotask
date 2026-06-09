@@ -3,7 +3,7 @@ import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/color_preset.dart';
 import 'package:velotask/services/color_config_manager.dart';
 import 'package:velotask/theme/app_theme.dart';
-import 'package:velotask/widgets/channel_row.dart';
+import 'package:velotask/widgets/color/channel_row.dart';
 
 class ColorEditorScreen extends StatefulWidget {
   final String? presetId;

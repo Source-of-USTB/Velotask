@@ -7,7 +7,7 @@ import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/utils/constants.dart';
-import 'package:velotask/widgets/gantt_chart.dart';
+import 'package:velotask/widgets/timeline/gantt_chart.dart';
 
 class TimelineScreen extends StatefulWidget {
   final List<Todo> todos;

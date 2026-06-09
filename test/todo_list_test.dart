@@ -6,8 +6,8 @@ import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/models/todo_filter.dart';
 import 'package:velotask/screens/todo_list_view.dart';
-import 'package:velotask/widgets/filter_section.dart';
-import 'package:velotask/widgets/todo_item.dart';
+import 'package:velotask/widgets/todo/filter_section.dart';
+import 'package:velotask/widgets/todo/todo_item.dart';
 
 Widget createLocalizedWidgetForTesting({required Widget child}) {
   return MaterialApp(

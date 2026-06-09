@@ -5,12 +5,12 @@ import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/models/todo_filter.dart';
 import 'package:velotask/utils/constants.dart';
-import 'package:velotask/widgets/daily_progress_header.dart';
-import 'package:velotask/widgets/empty_state.dart';
-import 'package:velotask/widgets/filter_section.dart';
-import 'package:velotask/widgets/home_app_bar.dart';
-import 'package:velotask/widgets/progress_header.dart';
-import 'package:velotask/widgets/todo_item.dart';
+import 'package:velotask/widgets/app/home_app_bar.dart';
+import 'package:velotask/widgets/common/empty_state.dart';
+import 'package:velotask/widgets/progress/daily_progress_header.dart';
+import 'package:velotask/widgets/progress/progress_header.dart';
+import 'package:velotask/widgets/todo/filter_section.dart';
+import 'package:velotask/widgets/todo/todo_item.dart';
 
 class TodoListView extends StatefulWidget {
   final List<Todo> todos;

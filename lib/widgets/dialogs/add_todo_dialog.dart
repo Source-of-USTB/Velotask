@@ -5,7 +5,7 @@ import 'package:velotask/models/todo.dart';
 import 'package:velotask/services/todo_storage.dart';
 import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/utils/tag_color.dart';
-import 'package:velotask/widgets/dialog_components.dart';
+import 'package:velotask/widgets/dialogs/dialog_components.dart';
 
 class AddTodoDialog extends StatefulWidget {
   final Todo? todo;
