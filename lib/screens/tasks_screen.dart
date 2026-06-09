@@ -12,7 +12,7 @@ import 'package:velotask/widgets/progress/progress_header.dart';
 import 'package:velotask/widgets/todo/filter_section.dart';
 import 'package:velotask/widgets/todo/todo_item.dart';
 
-class TodoListView extends StatefulWidget {
+class TasksScreen extends StatefulWidget {
   final List<Todo> todos;
   final List<Tag> tags;
   final bool isLoading;
@@ -22,7 +22,7 @@ class TodoListView extends StatefulWidget {
   final VoidCallback onRefreshTags;
   final VoidCallback? onAIAction;
 
-  const TodoListView({
+  const TasksScreen({
     super.key,
     required this.todos,
     required this.tags,
@@ -35,10 +35,10 @@ class TodoListView extends StatefulWidget {
   });
 
   @override
-  State<TodoListView> createState() => _TodoListViewState();
+  State<TasksScreen> createState() => _TasksScreenState();
 }
 
-class _TodoListViewState extends State<TodoListView>
+class _TasksScreenState extends State<TasksScreen>
     with SingleTickerProviderStateMixin {
   TodoFilter _filter = TodoFilter.active;
   Tag? _filterTag;
@@ -68,7 +68,7 @@ class _TodoListViewState extends State<TodoListView>
   }
 
   @override
-  void didUpdateWidget(covariant TodoListView oldWidget) {
+  void didUpdateWidget(covariant TasksScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (_filterTag != null) {
       final stillExists = widget.tags.any((t) => t.id == _filterTag!.id);

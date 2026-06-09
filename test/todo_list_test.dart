@@ -5,7 +5,7 @@ import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/models/todo_filter.dart';
-import 'package:velotask/screens/todo_list_view.dart';
+import 'package:velotask/screens/tasks_screen.dart';
 import 'package:velotask/widgets/todo/filter_section.dart';
 import 'package:velotask/widgets/todo/todo_item.dart';
 
@@ -39,7 +39,7 @@ void main() {
 
       await tester.pumpWidget(
         createLocalizedWidgetForTesting(
-          child: TodoListView(
+          child: TasksScreen(
             todos: todos,
             tags: [],
             isLoading: false,

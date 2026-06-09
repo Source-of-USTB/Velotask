@@ -5,8 +5,8 @@ import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/screens/dashboard_screen.dart';
+import 'package:velotask/screens/tasks_screen.dart';
 import 'package:velotask/screens/timeline_screen.dart';
-import 'package:velotask/screens/todo_list_view.dart';
 import 'package:velotask/services/ai_service.dart';
 import 'package:velotask/services/notification_service.dart';
 import 'package:velotask/services/todo_storage.dart';
@@ -400,7 +400,7 @@ class _MainScreenState extends State<MainScreen> {
           );
         },
         child: _selectedIndex == 0
-            ? TodoListView(
+            ? TasksScreen(
                 key: const ValueKey('todo_list'),
                 todos: todos,
                 tags: tags,
