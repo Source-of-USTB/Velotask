@@ -32,6 +32,11 @@ set(CMAKE_CXX_FLAGS_PROFILE "${CMAKE_CXX_FLAGS_RELEASE}")
 # Use Unicode for all projects.
 add_definitions(-DUNICODE -D_UNICODE)
 
+if(MSVC)
+  set(CMAKE_CXX_FLAGS
+    "${CMAKE_CXX_FLAGS} /D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS")
+endif()
+
 # Compilation settings that should be applied to most targets.
 #
 # Be cautious about adding new options here, as plugins use this function by
@@ -56,12 +61,6 @@ add_subdirectory("runner")
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
 include(flutter/generated_plugins.cmake)
-
-if(TARGET flutter_local_notifications_windows)
-  target_compile_definitions(flutter_local_notifications_windows PRIVATE
-    _SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
-  )
-endif()
 
 # === Installation ===
 # Support files are copied into place next to the executable, so that it can
