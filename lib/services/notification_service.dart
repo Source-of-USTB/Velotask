@@ -52,9 +52,9 @@ class NotificationService {
       const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
 
       const darwinInit = DarwinInitializationSettings(
-        requestAlertPermission: false,
-        requestBadgePermission: false,
-        requestSoundPermission: false,
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
       );
 
       const linuxInit = LinuxInitializationSettings(
@@ -172,9 +172,13 @@ class NotificationService {
     final desiredTaskFingerprints = <int, String>{};
 
     for (final todo in todos) {
-      if (todo.isCompleted) continue;
+      if (todo.isDone) continue;
 
       activeCount++;
+
+      if (todo.taskType == TaskType.daily) {
+        continue;
+      }
 
       // Schedule DDL reminder if DDL is in the future
       if (todo.ddl != null && todo.ddl!.isAfter(now)) {
@@ -234,7 +238,10 @@ class NotificationService {
             .map(
               (todo) => [
                 todo.id,
+                todo.taskType.index,
                 todo.isCompleted,
+                todo.isDone,
+                todo.lastCompletedDate?.millisecondsSinceEpoch ?? -1,
                 todo.ddl?.millisecondsSinceEpoch ?? -1,
                 todo.title,
                 todo.importance,
