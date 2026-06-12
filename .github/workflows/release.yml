@@ -131,31 +131,6 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Inspect default Linux build environment
-        shell: bash
-        run: |
-          set +e
-
-          echo "=== OS ==="
-          lsb_release -a || true
-          uname -a
-
-          echo "=== Tool commands ==="
-          for cmd in clang cmake ninja pkg-config; do
-            echo "--- $cmd ---"
-            command -v "$cmd" || true
-            "$cmd" --version || true
-          done
-
-          echo "=== Debian packages ==="
-          for pkg in clang cmake ninja-build pkg-config libgtk-3-dev libstdc++-12-dev liblzma-dev; do
-            echo "--- $pkg ---"
-            dpkg-query -W -f='${Package} ${Version}\n' "$pkg" 2>/dev/null || echo "not installed"
-          done
-
-          echo "=== Flutter doctor ==="
-          flutter doctor -v || true
-
       - name: Install Linux build dependencies
         run: |
           sudo apt-get update
