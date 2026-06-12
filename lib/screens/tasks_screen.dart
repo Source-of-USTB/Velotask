@@ -5,6 +5,7 @@ import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/models/todo_filter.dart';
 import 'package:velotask/utils/constants.dart';
+import 'package:velotask/utils/priority_engine.dart';
 import 'package:velotask/widgets/app/home_app_bar.dart';
 import 'package:velotask/widgets/common/empty_state.dart';
 import 'package:velotask/widgets/progress/daily_progress_header.dart';
@@ -100,22 +101,34 @@ class _TasksScreenState extends State<TasksScreen>
 
   List<Todo> get _filteredTodos {
     List<Todo> result;
+    final nonDailyTodos = widget.todos
+        .where((t) => t.taskType != TaskType.daily)
+        .toList();
 
     // 1. Apply Status/Priority Filter
     switch (_filter) {
       case TodoFilter.active:
-        result = widget.todos.where((t) => !t.isDone).toList();
+        result = nonDailyTodos.where((t) => !t.isDone).toList();
         break;
       case TodoFilter.completed:
-        result = widget.todos.where((t) => t.isDone).toList();
+        result = nonDailyTodos.where((t) => t.isDone).toList();
         break;
       case TodoFilter.highPriority:
+        result = nonDailyTodos
+            .where(
+              (t) =>
+                  !t.isDone &&
+                  PriorityEngine.isHighUrgency(t, allTodos: nonDailyTodos),
+            )
+            .toList();
+        break;
+      case TodoFilter.daily:
         result = widget.todos
-            .where((t) => !t.isDone && t.importance == 2)
+            .where((t) => t.taskType == TaskType.daily)
             .toList();
         break;
       case TodoFilter.all:
-        result = List<Todo>.from(widget.todos);
+        result = List<Todo>.from(nonDailyTodos);
         break;
     }
 
@@ -127,6 +140,11 @@ class _TasksScreenState extends State<TasksScreen>
     }
 
     result.sort((a, b) {
+      if (_filter == TodoFilter.daily) {
+        final doneCompare = (a.isDone ? 1 : 0).compareTo(b.isDone ? 1 : 0);
+        if (doneCompare != 0) return doneCompare;
+      }
+
       DateTime ka(Todo t) {
         if (t.taskType == TaskType.deadline) return t.ddl ?? farFutureDate;
         return t.startDate ?? t.createdAt ?? farFutureDate;
@@ -161,16 +179,29 @@ class _TasksScreenState extends State<TasksScreen>
               onSettingsPressed: widget.onSettingsPressed,
             ),
             SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 40.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    DailyProgressHeader(todos: widget.todos),
-                    const SizedBox(width: 80),
-                    ProgressHeader(todos: widget.todos),
-                  ],
-                ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final isCompact = constraints.maxWidth < 380;
+                  final circleSize = isCompact ? 112.0 : 140.0;
+                  final gap = isCompact ? 28.0 : 80.0;
+
+                  return Padding(
+                    padding: EdgeInsets.symmetric(
+                      vertical: isCompact ? 28.0 : 40.0,
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        DailyProgressHeader(
+                          todos: widget.todos,
+                          size: circleSize,
+                        ),
+                        SizedBox(width: gap),
+                        ProgressHeader(todos: widget.todos, size: circleSize),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
             FilterSection(
@@ -229,7 +260,9 @@ class _TasksScreenState extends State<TasksScreen>
         final todo = filteredList[index];
         return TweenAnimationBuilder<double>(
           key: ValueKey(todo.id),
-          duration: Duration(milliseconds: 180 + (index * 8).clamp(0, 64)),
+          duration: Duration(
+            milliseconds: 180 + (index * 8).clamp(0, 64),
+          ),
           curve: Curves.easeOutCubic,
           tween: Tween(begin: 0.0, end: 1.0),
           builder: (context, value, child) {

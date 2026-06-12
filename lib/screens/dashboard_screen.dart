@@ -145,12 +145,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final completed = widget.todos.where((todo) => todo.isCompleted).length;
-    final highUrgent = widget.todos
+    final nonDailyTodos = widget.todos
+        .where((todo) => todo.taskType != TaskType.daily)
+        .toList();
+    final completed = nonDailyTodos.where((todo) => todo.isCompleted).length;
+    final highUrgent = nonDailyTodos
         .where(
           (todo) =>
               !todo.isCompleted &&
-              PriorityEngine.isHighUrgency(todo, allTodos: widget.todos),
+              PriorityEngine.isHighUrgency(todo, allTodos: nonDailyTodos),
         )
         .length;
 

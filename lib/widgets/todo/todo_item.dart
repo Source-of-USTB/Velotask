@@ -69,14 +69,18 @@ class _TodoItemState extends State<TodoItem> {
   @override
   Widget build(BuildContext context) {
     final isDone = widget.todo.isDone;
+    final isDaily = widget.todo.taskType == TaskType.daily;
     final l10n = AppLocalizations.of(context)!;
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final tomorrow = today.add(const Duration(days: 1));
-    final dateStr = widget.todo.ddl != null
+    final dateStr = isDaily
+        ? l10n.taskTypeDaily
+        : widget.todo.ddl != null
         ? _formatDate(context, widget.todo.ddl!)
         : '-';
     final isUrgent =
+        !isDaily &&
         widget.todo.ddl != null &&
         (() {
           final ddlDay = DateTime(
@@ -86,14 +90,20 @@ class _TodoItemState extends State<TodoItem> {
           );
           return ddlDay == today || ddlDay == tomorrow;
         })();
-    final statusLabel = isDone ? l10n.filterDone : l10n.filterActive;
+    final statusLabel = isDaily && isDone
+        ? l10n.dailyCompleted
+        : isDone
+        ? l10n.filterDone
+        : l10n.filterActive;
     final priorityLabel = widget.todo.importance == 2
         ? l10n.priorityHigh
         : widget.todo.importance == 0
         ? l10n.priorityLow
         : l10n.priorityMed;
-    final urgencyValue = PriorityEngine.urgency(widget.todo);
-    final urgencyBand = PriorityEngine.urgencyBand(widget.todo);
+    final urgencyValue = isDaily ? 0.0 : PriorityEngine.urgency(widget.todo);
+    final urgencyBand = isDaily
+        ? UrgencyBand.relaxed
+        : PriorityEngine.urgencyBand(widget.todo);
     final urgencyColor = _urgencyColor(context, urgencyBand);
     final urgencyText = urgencyValue >= 9.99
         ? '9.99+'
@@ -310,7 +320,7 @@ class _TodoItemState extends State<TodoItem> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: isUrgent
+                                color: isUrgent || isDaily
                                     ? Theme.of(
                                         context,
                                       ).primaryColor.withValues(alpha: 0.12)
@@ -322,8 +332,8 @@ class _TodoItemState extends State<TodoItem> {
                                 dateStr,
                                 style: AppTheme.dateChipStyle(
                                   context,
-                                  urgent: isUrgent,
-                                  color: isUrgent
+                                  urgent: isUrgent || isDaily,
+                                  color: isUrgent || isDaily
                                       ? Theme.of(context).primaryColor
                                       : Theme.of(context).colorScheme.secondary,
                                 ),
@@ -349,24 +359,26 @@ class _TodoItemState extends State<TodoItem> {
                                 ),
                               ),
                             ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: urgencyColor.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                'U: $urgencyText',
-                                style: AppTheme.tinyBoldStyle(
-                                  context,
-                                  color: urgencyColor,
+                            if (!isDaily) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: urgencyColor.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  'U: $urgencyText',
+                                  style: AppTheme.tinyBoldStyle(
+                                    context,
+                                    color: urgencyColor,
+                                  ),
                                 ),
                               ),
-                            ),
+                            ],
                             const Spacer(),
                             SizedBox(
                               width: 44,

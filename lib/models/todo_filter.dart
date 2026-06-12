@@ -1,1 +1,1 @@
-enum TodoFilter { all, active, completed, highPriority }
+enum TodoFilter { all, active, completed, highPriority, daily }

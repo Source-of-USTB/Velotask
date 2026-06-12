@@ -32,9 +32,9 @@ class FilterSection extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Row(
               children: [
-                _buildStatusChip(context, l10n.filterActive, TodoFilter.active),
-                const SizedBox(width: 8),
                 _buildStatusChip(context, l10n.filterAll, TodoFilter.all),
+                const SizedBox(width: 8),
+                _buildStatusChip(context, l10n.filterActive, TodoFilter.active),
                 const SizedBox(width: 8),
                 _buildStatusChip(
                   context,
@@ -47,6 +47,8 @@ class FilterSection extends StatelessWidget {
                   l10n.filterEmergency,
                   TodoFilter.highPriority,
                 ),
+                const SizedBox(width: 8),
+                _buildStatusChip(context, l10n.taskTypeDaily, TodoFilter.daily),
               ],
             ),
           ),

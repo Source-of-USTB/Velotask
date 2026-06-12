@@ -5,8 +5,9 @@ import 'package:velotask/widgets/progress/progress_circle.dart';
 
 class DailyProgressHeader extends StatelessWidget {
   final List<Todo> todos;
+  final double size;
 
-  const DailyProgressHeader({super.key, required this.todos});
+  const DailyProgressHeader({super.key, required this.todos, this.size = 140});
 
   @override
   Widget build(BuildContext context) {
@@ -19,6 +20,7 @@ class DailyProgressHeader extends StatelessWidget {
       progress: progress,
       showCelebration: total > 0 && done == total,
       label: AppLocalizations.of(context)!.dailyCompleted,
+      size: size,
     );
   }
 }

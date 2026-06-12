@@ -32,10 +32,12 @@ void main() {
       final emergencyTodo = Todo(
         title: 'Emergency Task',
         isCompleted: false,
-        importance: 2,
+        ddl: DateTime.now().add(const Duration(minutes: 10)),
+        estimatedEffortHours: 4,
       );
+      final dailyTodo = Todo(title: 'Daily Task', taskType: TaskType.daily);
 
-      final todos = [activeTodo, completedTodo, emergencyTodo];
+      final todos = [activeTodo, completedTodo, emergencyTodo, dailyTodo];
 
       await tester.pumpWidget(
         createLocalizedWidgetForTesting(
@@ -58,6 +60,7 @@ void main() {
       // Should show Active Task and Emergency Task (since it's also active)
       expect(find.text('Active Task'), findsOneWidget);
       expect(find.text('Emergency Task'), findsOneWidget);
+      expect(find.text('Daily Task'), findsNothing);
       expect(find.text('Completed Task'), findsNothing);
 
       // Switch to 'Done' filter
@@ -66,6 +69,7 @@ void main() {
 
       expect(find.text('Active Task'), findsNothing);
       expect(find.text('Emergency Task'), findsNothing);
+      expect(find.text('Daily Task'), findsNothing);
       expect(find.text('Completed Task'), findsOneWidget);
 
       // Switch to 'Emergency' filter
@@ -74,6 +78,7 @@ void main() {
 
       expect(find.text('Active Task'), findsNothing);
       expect(find.text('Emergency Task'), findsOneWidget);
+      expect(find.text('Daily Task'), findsNothing);
       expect(find.text('Completed Task'), findsNothing);
 
       // Switch to 'All' filter
@@ -82,7 +87,54 @@ void main() {
 
       expect(find.text('Active Task'), findsOneWidget);
       expect(find.text('Emergency Task'), findsOneWidget);
+      expect(find.text('Daily Task'), findsNothing);
       expect(find.text('Completed Task'), findsOneWidget);
+    });
+
+    testWidgets('daily filter shows only daily tasks', (
+      WidgetTester tester,
+    ) async {
+      final activeTodo = Todo(title: 'Active Task', isCompleted: false);
+      final dailyTodo = Todo(
+        id: 1,
+        title: 'Daily Task',
+        taskType: TaskType.daily,
+      );
+      final doneDailyTodo = Todo(
+        id: 2,
+        title: 'Done Daily Task',
+        taskType: TaskType.daily,
+        lastCompletedDate: DateTime.now(),
+      );
+
+      await tester.pumpWidget(
+        createLocalizedWidgetForTesting(
+          child: TasksScreen(
+            todos: [doneDailyTodo, activeTodo, dailyTodo],
+            tags: [],
+            isLoading: false,
+            onToggle: (_) {},
+            onDelete: (_) {},
+            onEdit: (_) {},
+            onAIAction: () {},
+            onSettingsPressed: () {},
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      // Switch to 'Daily' filter
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Daily'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Active Task'), findsNothing);
+      expect(find.text('Daily Task'), findsOneWidget);
+      expect(find.text('Done Daily Task'), findsOneWidget);
+
+      final activeDailyTop = tester.getTopLeft(find.text('Daily Task')).dy;
+      final doneDailyTop = tester.getTopLeft(find.text('Done Daily Task')).dy;
+      expect(activeDailyTop, lessThan(doneDailyTop));
     });
   });
 
@@ -279,6 +331,7 @@ void main() {
       expect(find.text('All'), findsOneWidget);
       expect(find.text('Done'), findsOneWidget);
       expect(find.text('Emergency'), findsOneWidget);
+      expect(find.text('Daily'), findsOneWidget);
     });
 
     testWidgets('callbacks work when filters are tapped', (
