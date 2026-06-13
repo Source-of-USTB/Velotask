@@ -54,11 +54,9 @@ void main() {
     await tester.tap(find.text('Open Dialog'));
     await tester.pumpAndSettle();
 
-    // Verify initial state: Start Date is now with includeTime, so it shows M/d HH:mm
+    // Verify initial state: Deadline tasks only show the optional deadline field.
     final now = DateTime.now();
-    final expectedDateStr =
-        '${now.month}/${now.day} ${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
-    expect(find.text(expectedDateStr), findsOneWidget);
+    expect(find.text('--/-- --:--'), findsOneWidget);
 
     // Find the "To" date picker (DDL)
     // It has label 'To'
@@ -89,6 +87,6 @@ void main() {
     // Verify callback
     expect(selectedDdl, isNotNull);
     expect(selectedDdl!.day, targetDay);
-    expect(selectedStartDate, isNotNull);
+    expect(selectedStartDate, isNull);
   });
 }

@@ -133,11 +133,14 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
 
     if (!mounted) return;
 
+    final submitStartDate = _taskType == TaskType.task ? _startDate : null;
+    final submitDdl = _taskType == TaskType.daily ? null : _ddl;
+
     widget.onAdd(
       cleanTitle,
       cleanDesc,
-      _startDate,
-      _ddl,
+      submitStartDate,
+      submitDdl,
       _importance,
       allTags,
       _taskType,
@@ -220,80 +223,15 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
               ),
               const SizedBox(height: 24),
 
-              // Date Picker
-              DialogInputRow(
-                child: useVerticalDateLayout
-                    ? Column(
-                        children: [
-                          DialogDatePicker(
-                            label: l10n.dateFrom,
-                            date: _startDate,
-                            firstDate: DateTime.now().subtract(
-                              const Duration(days: 1),
-                            ),
-                            onSelect: (d) {
-                              if (d != null) {
-                                setState(() {
-                                  _startDate = d;
-                                  if (_ddl != null && _ddl!.isBefore(d)) {
-                                    _ddl = null;
-                                  }
-                                });
-                              }
-                            },
-                            includeTime: true,
-                          ),
-                          const SizedBox(height: 12),
-                          DialogDatePicker(
-                            label: l10n.dateTo,
-                            date: _ddl,
-                            firstDate: _startDate,
-                            onSelect: (d) => setState(() => _ddl = d),
-                            isOptional: true,
-                            includeTime: true,
-                          ),
-                        ],
-                      )
-                    : Row(
-                        children: [
-                          Expanded(
-                            child: DialogDatePicker(
-                              label: l10n.dateFrom,
-                              date: _startDate,
-                              firstDate: DateTime.now().subtract(
-                                const Duration(days: 1),
-                              ),
-                              onSelect: (d) {
-                                if (d != null) {
-                                  setState(() {
-                                    _startDate = d;
-                                    if (_ddl != null && _ddl!.isBefore(d)) {
-                                      _ddl = null;
-                                    }
-                                  });
-                                }
-                              },
-                              includeTime: true,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: DialogDatePicker(
-                              label: l10n.dateTo,
-                              date: _ddl,
-                              firstDate: _startDate,
-                              onSelect: (d) => setState(() => _ddl = d),
-                              isOptional: true,
-                              includeTime: true,
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
-              const SizedBox(height: 16),
-
               // Task Type Selector
               DialogInputRow(child: _buildTaskTypeSelector(context)),
+
+              if (_taskType != TaskType.daily) ...[
+                const SizedBox(height: 16),
+                DialogInputRow(
+                  child: _buildSchedulePicker(context, useVerticalDateLayout),
+                ),
+              ],
 
               const SizedBox(height: 16),
 
@@ -421,7 +359,9 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
 
   Widget _buildTaskTypeSelector(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Row(
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
         _buildTaskTypeChip(
           context,
@@ -429,20 +369,73 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
           l10n.taskTypeTask,
           Icons.task_alt_outlined,
         ),
-        const SizedBox(width: 8),
         _buildTaskTypeChip(
           context,
           TaskType.deadline,
           l10n.taskTypeDeadline,
           Icons.flag_outlined,
         ),
-        const SizedBox(width: 8),
         _buildTaskTypeChip(
           context,
           TaskType.daily,
           l10n.taskTypeDaily,
           Icons.repeat_outlined,
         ),
+      ],
+    );
+  }
+
+  Widget _buildSchedulePicker(BuildContext context, bool useVerticalLayout) {
+    final l10n = AppLocalizations.of(context)!;
+    final minDate = DateTime.now().subtract(const Duration(days: 1));
+
+    if (_taskType == TaskType.deadline) {
+      return DialogDatePicker(
+        label: l10n.dateTo,
+        date: _ddl,
+        firstDate: minDate,
+        onSelect: (d) => setState(() => _ddl = d),
+        isOptional: true,
+        includeTime: true,
+      );
+    }
+
+    final startPicker = DialogDatePicker(
+      label: l10n.dateFrom,
+      date: _startDate,
+      firstDate: minDate,
+      onSelect: (d) {
+        if (d != null) {
+          setState(() {
+            _startDate = d;
+            if (_ddl != null && _ddl!.isBefore(d)) {
+              _ddl = null;
+            }
+          });
+        }
+      },
+      includeTime: true,
+    );
+    final endPicker = DialogDatePicker(
+      label: l10n.dateTo,
+      date: _ddl,
+      firstDate: _startDate,
+      onSelect: (d) => setState(() => _ddl = d),
+      isOptional: true,
+      includeTime: true,
+    );
+
+    if (useVerticalLayout) {
+      return Column(
+        children: [startPicker, const SizedBox(height: 12), endPicker],
+      );
+    }
+
+    return Row(
+      children: [
+        Expanded(child: startPicker),
+        const SizedBox(width: 12),
+        Expanded(child: endPicker),
       ],
     );
   }
@@ -459,7 +452,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
     final color = isSelected ? theme.primaryColor : secondaryColor;
 
     return InkWell(
-      onTap: () => setState(() => _taskType = value),
+      onTap: () => _setTaskType(value),
       borderRadius: BorderRadius.circular(8),
       hoverColor: Colors.transparent,
       child: Container(
@@ -494,5 +487,14 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
         ),
       ),
     );
+  }
+
+  void _setTaskType(TaskType value) {
+    setState(() {
+      _taskType = value;
+      if (value == TaskType.daily) {
+        _ddl = null;
+      }
+    });
   }
 }

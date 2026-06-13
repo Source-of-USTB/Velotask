@@ -183,7 +183,6 @@ class DialogDatePicker extends StatelessWidget {
           },
         );
         if (picked == null) {
-          onSelect(null);
           return;
         }
 
@@ -243,19 +242,45 @@ class DialogDatePicker extends StatelessWidget {
               style: AppTheme.smallRegularStyle(context, color: secondaryColor),
             ),
             const SizedBox(width: 16),
-            Text(
-              date == null
-                  ? (isOptional
-                        ? (includeTime ? '--/-- --:--' : '--/--')
-                        : l10n.today)
-                  : includeTime
-                  ? '${date!.month}/${date!.day} ${date!.hour.toString().padLeft(2, '0')}:${date!.minute.toString().padLeft(2, '0')}'
-                  : '${date!.month}/${date!.day}',
-              style: AppTheme.accentBodyStyle(
-                context,
-                color: theme.primaryColor,
+            Expanded(
+              child: Text(
+                date == null
+                    ? (isOptional
+                          ? (includeTime ? '--/-- --:--' : '--/--')
+                          : l10n.today)
+                    : includeTime
+                    ? '${date!.month}/${date!.day} ${date!.hour.toString().padLeft(2, '0')}:${date!.minute.toString().padLeft(2, '0')}'
+                    : '${date!.month}/${date!.day}',
+                textAlign: TextAlign.end,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTheme.accentBodyStyle(
+                  context,
+                  color: theme.primaryColor,
+                ),
               ),
             ),
+            if (isOptional && date != null) ...[
+              const SizedBox(width: 4),
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: IconButton(
+                  tooltip: l10n.delete,
+                  onPressed: () => onSelect(null),
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: 16,
+                    color: secondaryColor,
+                  ),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(
+                    minWidth: 28,
+                    minHeight: 28,
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
