@@ -136,6 +136,57 @@ void main() {
       final doneDailyTop = tester.getTopLeft(find.text('Done Daily Task')).dy;
       expect(activeDailyTop, lessThan(doneDailyTop));
     });
+
+    testWidgets('daily filter respects custom order before done grouping', (
+      WidgetTester tester,
+    ) async {
+      final firstDaily = Todo(
+        id: 1,
+        title: 'First Daily Task',
+        taskType: TaskType.daily,
+      );
+      final secondDaily = Todo(
+        id: 2,
+        title: 'Second Daily Task',
+        taskType: TaskType.daily,
+      );
+      final doneDaily = Todo(
+        id: 3,
+        title: 'Done Daily Task',
+        taskType: TaskType.daily,
+        lastCompletedDate: DateTime.now(),
+      );
+
+      await tester.pumpWidget(
+        createLocalizedWidgetForTesting(
+          child: TasksScreen(
+            todos: [firstDaily, secondDaily, doneDaily],
+            tags: [],
+            isLoading: false,
+            onToggle: (_) {},
+            onDelete: (_) {},
+            onEdit: (_) {},
+            onAIAction: () {},
+            onSettingsPressed: () {},
+            dailyTaskOrder: const [2, 1, 3],
+          ),
+        ),
+      );
+
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ChoiceChip, 'Daily'));
+      await tester.pumpAndSettle();
+
+      final secondDailyTop = tester
+          .getTopLeft(find.text('Second Daily Task'))
+          .dy;
+      final firstDailyTop = tester.getTopLeft(find.text('First Daily Task')).dy;
+      final doneDailyTop = tester.getTopLeft(find.text('Done Daily Task')).dy;
+
+      expect(secondDailyTop, lessThan(firstDailyTop));
+      expect(firstDailyTop, lessThan(doneDailyTop));
+    });
   });
 
   group('TodoItem Tests', () {

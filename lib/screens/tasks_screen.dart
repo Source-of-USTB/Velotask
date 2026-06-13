@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -22,6 +23,8 @@ class TasksScreen extends StatefulWidget {
   final Function(Todo) onEdit;
   final VoidCallback onAIAction;
   final VoidCallback onSettingsPressed;
+  final List<int> dailyTaskOrder;
+  final Future<void> Function(List<Todo>)? onDailyReorder;
 
   const TasksScreen({
     super.key,
@@ -33,6 +36,8 @@ class TasksScreen extends StatefulWidget {
     required this.onEdit,
     required this.onAIAction,
     required this.onSettingsPressed,
+    this.dailyTaskOrder = const [],
+    this.onDailyReorder,
   });
 
   @override
@@ -139,10 +144,20 @@ class _TasksScreenState extends State<TasksScreen>
           .toList();
     }
 
+    final dailyOrder = {
+      for (var i = 0; i < widget.dailyTaskOrder.length; i++)
+        widget.dailyTaskOrder[i]: i,
+    };
+
     result.sort((a, b) {
       if (_filter == TodoFilter.daily) {
         final doneCompare = (a.isDone ? 1 : 0).compareTo(b.isDone ? 1 : 0);
         if (doneCompare != 0) return doneCompare;
+        const unorderedDailyIndex = 1 << 30;
+        final orderCompare = (dailyOrder[a.id] ?? unorderedDailyIndex)
+            .compareTo(dailyOrder[b.id] ?? unorderedDailyIndex);
+        if (orderCompare != 0) return orderCompare;
+        return a.id.compareTo(b.id);
       }
 
       DateTime ka(Todo t) {
@@ -255,38 +270,102 @@ class _TasksScreenState extends State<TasksScreen>
       return const EmptyState();
     }
 
+    if (_filter == TodoFilter.daily) {
+      return _buildDailyContent(filteredList);
+    }
+
     return SliverList(
       delegate: SliverChildBuilderDelegate((context, index) {
         final todo = filteredList[index];
-        return TweenAnimationBuilder<double>(
-          key: ValueKey(todo.id),
-          duration: Duration(
-            milliseconds: 180 + (index * 8).clamp(0, 64),
-          ),
-          curve: Curves.easeOutCubic,
-          tween: Tween(begin: 0.0, end: 1.0),
-          builder: (context, value, child) {
-            final opacity = 0.9 + (0.1 * value);
-            return Opacity(
-              opacity: opacity,
-              child: Transform.translate(
-                offset: Offset(0, 6 * (1 - value)),
-                child: Transform.scale(
-                  alignment: Alignment.center,
-                  scale: 0.992 + (0.008 * value),
-                  child: child,
-                ),
-              ),
-            );
-          },
-          child: TodoItem(
-            todo: todo,
-            onToggle: () => widget.onToggle(todo),
-            onDelete: () => widget.onDelete(todo),
-            onEdit: () => widget.onEdit(todo),
+        return _buildAnimatedTodoItem(todo, index);
+      }, childCount: filteredList.length),
+    );
+  }
+
+  Widget _buildDailyContent(List<Todo> filteredList) {
+    return SliverReorderableList(
+      itemCount: filteredList.length,
+      onReorderItem: (oldIndex, newIndex) {
+        final reordered = List<Todo>.from(filteredList);
+        final moved = reordered.removeAt(oldIndex);
+        reordered.insert(newIndex, moved);
+        final onDailyReorder = widget.onDailyReorder;
+        if (onDailyReorder != null) {
+          unawaited(onDailyReorder(reordered));
+        }
+      },
+      itemBuilder: (context, index) {
+        final todo = filteredList[index];
+        return KeyedSubtree(
+          key: ValueKey('daily_${todo.id}'),
+          child: _buildAnimatedTodoItem(
+            todo,
+            index,
+            leadingHandle: ReorderableDragStartListener(
+              index: index,
+              child: const _DailyDragHandle(),
+            ),
           ),
         );
-      }, childCount: filteredList.length),
+      },
+    );
+  }
+
+  Widget _buildAnimatedTodoItem(Todo todo, int index, {Widget? leadingHandle}) {
+    return TweenAnimationBuilder<double>(
+      key: ValueKey(todo.id),
+      duration: Duration(milliseconds: 180 + (index * 8).clamp(0, 64)),
+      curve: Curves.easeOutCubic,
+      tween: Tween(begin: 0.0, end: 1.0),
+      builder: (context, value, child) {
+        final opacity = 0.9 + (0.1 * value);
+        return Opacity(
+          opacity: opacity,
+          child: Transform.translate(
+            offset: Offset(0, 6 * (1 - value)),
+            child: Transform.scale(
+              alignment: Alignment.center,
+              scale: 0.992 + (0.008 * value),
+              child: child,
+            ),
+          ),
+        );
+      },
+      child: TodoItem(
+        todo: todo,
+        onToggle: () => widget.onToggle(todo),
+        onDelete: () => widget.onDelete(todo),
+        onEdit: () => widget.onEdit(todo),
+        leadingHandle: leadingHandle,
+      ),
+    );
+  }
+}
+
+class _DailyDragHandle extends StatelessWidget {
+  const _DailyDragHandle();
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).primaryColor;
+    final secondary = Theme.of(context).colorScheme.secondary;
+    return MouseRegion(
+      cursor: SystemMouseCursors.grab,
+      child: Container(
+        width: 34,
+        height: 56,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: primary.withValues(alpha: 0.10),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: primary.withValues(alpha: 0.36)),
+        ),
+        child: Icon(
+          Icons.drag_indicator_rounded,
+          size: 26,
+          color: Color.lerp(primary, secondary, 0.18),
+        ),
+      ),
     );
   }
 }

@@ -12,6 +12,7 @@ class TodoItem extends StatefulWidget {
   final VoidCallback onDelete;
   final VoidCallback onEdit;
   final List<Tag>? visibleTags; // For testing or explicit tag display
+  final Widget? leadingHandle;
 
   const TodoItem({
     super.key,
@@ -20,6 +21,7 @@ class TodoItem extends StatefulWidget {
     required this.onDelete,
     required this.onEdit,
     this.visibleTags,
+    this.leadingHandle,
   });
 
   @override
@@ -167,8 +169,12 @@ class _TodoItemState extends State<TodoItem> {
             ),
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                if (widget.leadingHandle != null) ...[
+                  widget.leadingHandle!,
+                  const SizedBox(width: 10),
+                ],
                 // Content
                 Expanded(
                   child: Padding(

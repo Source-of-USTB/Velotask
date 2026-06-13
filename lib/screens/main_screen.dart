@@ -9,6 +9,7 @@ import 'package:velotask/screens/settings_screen.dart';
 import 'package:velotask/screens/tasks_screen.dart';
 import 'package:velotask/screens/timeline_screen.dart';
 import 'package:velotask/services/ai_service.dart';
+import 'package:velotask/services/daily_task_order_controller.dart';
 import 'package:velotask/services/notification_service.dart';
 import 'package:velotask/services/todo_storage.dart';
 import 'package:velotask/utils/logger.dart';
@@ -28,6 +29,7 @@ class _MainScreenState extends State<MainScreen> {
   int _previousIndex = 0;
   List<Todo> todos = [];
   List<Tag> tags = [];
+  List<int> _dailyTaskOrder = [];
   bool _isLoading = true;
   final TodoStorage _storage = TodoStorage();
   final AIService _aiService = AIService();
@@ -52,7 +54,8 @@ class _MainScreenState extends State<MainScreen> {
 
   Future<void> _loadData() async {
     try {
-      await Future.wait([_loadTodos(), _loadTags()]);
+      await Future.wait([_loadTodos(), _loadTags(), _loadDailyTaskOrder()]);
+      await _normalizeDailyTaskOrder();
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -62,6 +65,62 @@ class _MainScreenState extends State<MainScreen> {
     } catch (e) {
       _logger.severe('Failed to load data', e);
     }
+  }
+
+  Future<void> _loadDailyTaskOrder() async {
+    try {
+      final loadedOrder = await DailyTaskOrderController.loadOrder();
+      if (mounted) {
+        setState(() {
+          _dailyTaskOrder = loadedOrder;
+        });
+      }
+    } catch (e) {
+      _logger.warning('Failed to load daily task order', e);
+    }
+  }
+
+  Future<void> _normalizeDailyTaskOrder() async {
+    final nextOrder = DailyTaskOrderController.normalizeOrder(
+      currentOrder: _dailyTaskOrder,
+      dailyTodoIds: todos
+          .where((todo) => todo.taskType == TaskType.daily)
+          .map((todo) => todo.id),
+    );
+
+    if (DailyTaskOrderController.hasSameOrder(_dailyTaskOrder, nextOrder)) {
+      return;
+    }
+
+    if (mounted) {
+      setState(() {
+        _dailyTaskOrder = nextOrder;
+      });
+    } else {
+      _dailyTaskOrder = nextOrder;
+    }
+
+    await DailyTaskOrderController.saveOrder(nextOrder);
+  }
+
+  Future<void> _reorderDailyTodos(List<Todo> reorderedTodos) async {
+    final nextOrder = DailyTaskOrderController.mergeReorderedSubset(
+      currentOrder: _dailyTaskOrder,
+      reorderedSubsetIds: reorderedTodos.map((todo) => todo.id).toList(),
+      dailyTodoIds: todos
+          .where((todo) => todo.taskType == TaskType.daily)
+          .map((todo) => todo.id),
+    );
+
+    if (mounted) {
+      setState(() {
+        _dailyTaskOrder = nextOrder;
+      });
+    } else {
+      _dailyTaskOrder = nextOrder;
+    }
+
+    await DailyTaskOrderController.saveOrder(nextOrder);
   }
 
   Future<void> _syncNotifications() async {
@@ -154,6 +213,7 @@ class _MainScreenState extends State<MainScreen> {
       setState(() {
         todos.add(savedTodo);
       });
+      await _normalizeDailyTaskOrder();
       await _loadTags();
       await _syncNotifications();
       _showSubmitFeedback(isEdit: false, estimating: presetEffortHours == null);
@@ -216,6 +276,7 @@ class _MainScreenState extends State<MainScreen> {
       setState(() {
         todos.removeWhere((t) => t.id == todo.id);
       });
+      await _normalizeDailyTaskOrder();
       await _syncNotifications();
     }
   }
@@ -308,6 +369,7 @@ class _MainScreenState extends State<MainScreen> {
       setState(() {
         todos.addAll(newTodos);
       });
+      await _normalizeDailyTaskOrder();
       await _syncNotifications();
     }
   }
@@ -339,6 +401,7 @@ class _MainScreenState extends State<MainScreen> {
               }
             });
           }
+          await _normalizeDailyTaskOrder();
           await _loadTags();
           await _syncNotifications();
           _showSubmitFeedback(isEdit: true, estimating: true);
@@ -430,6 +493,8 @@ class _MainScreenState extends State<MainScreen> {
                 onEdit: _editTodo,
                 onAIAction: _showAIInputDialog,
                 onSettingsPressed: _openSettings,
+                dailyTaskOrder: _dailyTaskOrder,
+                onDailyReorder: _reorderDailyTodos,
               )
             : _selectedIndex == 1
             ? TimelineScreen(

@@ -64,26 +64,42 @@ class ProgressCircle extends StatelessWidget {
                   return Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                        textBaseline: TextBaseline.alphabetic,
-                        children: [
-                          Text(
-                            '${(value * 100).toInt()}',
-                            style: AppTheme.progressValueStyle(
-                              context,
-                              color: Theme.of(context).primaryColor,
-                            ).copyWith(fontSize: 56 * scale, letterSpacing: 0),
+                      SizedBox(
+                        width: size * 0.72,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(
+                                '${(value * 100).toInt()}',
+                                style:
+                                    AppTheme.progressValueStyle(
+                                      context,
+                                      color: Theme.of(context).primaryColor,
+                                    ).copyWith(
+                                      fontSize: 56 * scale,
+                                      letterSpacing: 0,
+                                    ),
+                              ),
+                              Text(
+                                '%',
+                                style:
+                                    AppTheme.progressSymbolStyle(
+                                      context,
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.secondary,
+                                    ).copyWith(
+                                      fontSize: 24 * scale,
+                                      letterSpacing: 0,
+                                    ),
+                              ),
+                            ],
                           ),
-                          Text(
-                            '%',
-                            style: AppTheme.progressSymbolStyle(
-                              context,
-                              color: Theme.of(context).colorScheme.secondary,
-                            ).copyWith(fontSize: 24 * scale, letterSpacing: 0),
-                          ),
-                        ],
+                        ),
                       ),
                       SizedBox(height: 4 * scale),
                       Text(
