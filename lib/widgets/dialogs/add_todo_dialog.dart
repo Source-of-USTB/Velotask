@@ -7,8 +7,22 @@ import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/utils/tag_color.dart';
 import 'package:velotask/widgets/dialogs/dialog_components.dart';
 
+typedef GroupedTodoSubmitCallback =
+    void Function(
+      String title,
+      String desc,
+      DateTime? startDate,
+      DateTime? ddl,
+      int importance,
+      List<Tag> tags,
+      TaskType taskType,
+      int? parentTodoId,
+      TaskGroupMode groupMode,
+    );
+
 class AddTodoDialog extends StatefulWidget {
   final Todo? todo;
+  final List<Todo> allTodos;
   final Function(
     String title,
     String desc,
@@ -19,12 +33,15 @@ class AddTodoDialog extends StatefulWidget {
     TaskType taskType,
   )
   onAdd;
+  final GroupedTodoSubmitCallback? onAddWithGrouping;
   final VoidCallback? onDelete;
 
   const AddTodoDialog({
     super.key,
     required this.onAdd,
     this.todo,
+    this.allTodos = const [],
+    this.onAddWithGrouping,
     this.onDelete,
   });
 
@@ -41,6 +58,8 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
   DateTime? _ddl;
   int _importance = 1;
   TaskType _taskType = TaskType.deadline;
+  int? _parentTodoId;
+  TaskGroupMode _groupMode = TaskGroupMode.none;
   List<Tag> _availableTags = [];
   List<Tag> _selectedTags = [];
   bool _isSubmitting = false;
@@ -57,6 +76,8 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
       _ddl = widget.todo!.ddl;
       _importance = widget.todo!.importance;
       _taskType = widget.todo!.taskType;
+      _parentTodoId = widget.todo!.parentTodoId;
+      _groupMode = widget.todo!.groupMode;
       // _selectedTags is initialized after _loadTags completes.
     }
     _loadTags();
@@ -135,16 +156,37 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
 
     final submitStartDate = _taskType == TaskType.task ? _startDate : null;
     final submitDdl = _taskType == TaskType.daily ? null : _ddl;
+    final submitParentTodoId = _taskType == TaskType.daily
+        ? null
+        : _validParentId();
+    final submitGroupMode = _taskType == TaskType.daily
+        ? TaskGroupMode.none
+        : _groupMode;
 
-    widget.onAdd(
-      cleanTitle,
-      cleanDesc,
-      submitStartDate,
-      submitDdl,
-      _importance,
-      allTags,
-      _taskType,
-    );
+    final groupedCallback = widget.onAddWithGrouping;
+    if (groupedCallback != null) {
+      groupedCallback(
+        cleanTitle,
+        cleanDesc,
+        submitStartDate,
+        submitDdl,
+        _importance,
+        allTags,
+        _taskType,
+        submitParentTodoId,
+        submitGroupMode,
+      );
+    } else {
+      widget.onAdd(
+        cleanTitle,
+        cleanDesc,
+        submitStartDate,
+        submitDdl,
+        _importance,
+        allTags,
+        _taskType,
+      );
+    }
     Navigator.pop(context);
   }
 
@@ -231,6 +273,8 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                 DialogInputRow(
                   child: _buildSchedulePicker(context, useVerticalDateLayout),
                 ),
+                const SizedBox(height: 16),
+                DialogInputRow(child: _buildGroupingControls(context)),
               ],
 
               const SizedBox(height: 16),
@@ -385,6 +429,143 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
     );
   }
 
+  Widget _buildGroupingControls(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final secondaryColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    final parentOptions = _parentOptions();
+    final selectedParentId = _validParentId(parentOptions);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+          decoration: BoxDecoration(
+            color: secondaryColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              Text(
+                l10n.parentTask,
+                style: AppTheme.smallRegularStyle(
+                  context,
+                  color: secondaryColor,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<int?>(
+                    value: selectedParentId,
+                    isExpanded: true,
+                    alignment: AlignmentDirectional.centerEnd,
+                    items: [
+                      DropdownMenuItem<int?>(
+                        value: null,
+                        child: Text(l10n.noParentTask),
+                      ),
+                      ...parentOptions.map(
+                        (todo) => DropdownMenuItem<int?>(
+                          value: todo.id,
+                          child: Text(
+                            todo.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setState(() {
+                        _parentTodoId = value;
+                      });
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _buildGroupModeChip(
+              context,
+              TaskGroupMode.none,
+              l10n.taskGroupModeSolo,
+              Icons.radio_button_unchecked_rounded,
+            ),
+            _buildGroupModeChip(
+              context,
+              TaskGroupMode.subtasks,
+              l10n.taskGroupModeSubtasks,
+              Icons.account_tree_outlined,
+            ),
+            _buildGroupModeChip(
+              context,
+              TaskGroupMode.parallel,
+              l10n.taskGroupModeParallel,
+              Icons.view_week_outlined,
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGroupModeChip(
+    BuildContext context,
+    TaskGroupMode value,
+    String label,
+    IconData icon,
+  ) {
+    final isSelected = _groupMode == value;
+    final theme = Theme.of(context);
+    final secondaryColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    final color = isSelected ? theme.primaryColor : secondaryColor;
+
+    return InkWell(
+      onTap: () => setState(() => _groupMode = value),
+      borderRadius: BorderRadius.circular(8),
+      hoverColor: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? theme.primaryColor.withValues(alpha: 0.1)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected
+                ? theme.primaryColor
+                : secondaryColor.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: AppTheme.bodyStyle(context).merge(
+                AppTheme.selectableLabelStyle(
+                  context,
+                  selected: isSelected,
+                  color: color,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildSchedulePicker(BuildContext context, bool useVerticalLayout) {
     final l10n = AppLocalizations.of(context)!;
     final minDate = DateTime.now().subtract(const Duration(days: 1));
@@ -494,7 +675,52 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
       _taskType = value;
       if (value == TaskType.daily) {
         _ddl = null;
+        _parentTodoId = null;
+        _groupMode = TaskGroupMode.none;
       }
     });
+  }
+
+  List<Todo> _parentOptions() {
+    final currentId = widget.todo?.id;
+    return widget.allTodos.where((todo) {
+        if (todo.id == 0 || todo.taskType == TaskType.daily) {
+          return false;
+        }
+        if (currentId != null && todo.id == currentId) {
+          return false;
+        }
+        if (currentId != null && _isDescendantOf(todo.id, currentId)) {
+          return false;
+        }
+        return true;
+      }).toList()
+      ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+  }
+
+  int? _validParentId([List<Todo>? options]) {
+    final parentId = _parentTodoId;
+    if (parentId == null) {
+      return null;
+    }
+    final parentOptions = options ?? _parentOptions();
+    return parentOptions.any((todo) => todo.id == parentId) ? parentId : null;
+  }
+
+  bool _isDescendantOf(int candidateId, int ancestorId) {
+    final byId = {for (final todo in widget.allTodos) todo.id: todo};
+    var cursor = byId[candidateId]?.parentTodoId;
+    final seen = <int>{candidateId};
+
+    while (cursor != null) {
+      if (cursor == ancestorId) {
+        return true;
+      }
+      if (!seen.add(cursor)) {
+        return false;
+      }
+      cursor = byId[cursor]?.parentTodoId;
+    }
+    return false;
   }
 }

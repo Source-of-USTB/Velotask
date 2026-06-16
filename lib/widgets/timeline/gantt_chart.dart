@@ -6,8 +6,9 @@ import 'package:velotask/widgets/timeline/timeline_layout.dart';
 import 'package:velotask/widgets/timeline/timeline_task_row.dart';
 
 class GanttChart extends StatelessWidget {
-  final List<Todo> tasks;
+  final List<TimelineRow> rows;
   final void Function(Todo task)? onTaskDoubleTap;
+  final void Function(Todo task)? onToggleGroup;
   final ScrollController headerCtrl;
   final ScrollController bodyCtrl;
   final DateTime chartStart;
@@ -18,7 +19,7 @@ class GanttChart extends StatelessWidget {
 
   const GanttChart({
     super.key,
-    required this.tasks,
+    required this.rows,
     required this.headerCtrl,
     required this.bodyCtrl,
     required this.chartStart,
@@ -27,6 +28,7 @@ class GanttChart extends StatelessWidget {
     required this.totalWidth,
     required this.now,
     this.onTaskDoubleTap,
+    this.onToggleGroup,
   });
 
   @override
@@ -52,7 +54,7 @@ class GanttChart extends StatelessWidget {
             ),
           ),
           Expanded(
-            child: tasks.isEmpty
+            child: rows.isEmpty
                 ? const _EmptyState()
                 : SingleChildScrollView(
                     controller: bodyCtrl,
@@ -81,11 +83,12 @@ class GanttChart extends StatelessWidget {
                             color: p.colorByKey('ganttNowLine', b),
                           ),
                           child: ListView.builder(
-                            itemCount: tasks.length,
+                            itemCount: rows.length,
                             itemExtent: TimelineTaskRow.rowHeight,
                             itemBuilder: (_, i) => TimelineTaskRow(
-                              todo: tasks[i],
+                              row: rows[i],
                               onDoubleTap: onTaskDoubleTap,
+                              onToggleGroup: onToggleGroup,
                             ),
                           ),
                         ),

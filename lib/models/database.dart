@@ -28,6 +28,9 @@ class Todos extends Table {
   // 0 = task, 1 = deadline  (enum index)
   IntColumn get taskType => integer().withDefault(const Constant(0))();
   RealColumn get estimatedEffortHours => real().nullable()();
+  IntColumn get parentTodoId => integer().nullable().references(Todos, #id)();
+  // 0 = none, 1 = subtasks, 2 = parallel
+  IntColumn get groupMode => integer().withDefault(const Constant(0))();
 }
 
 /// Junction table for the many-to-many Todo ↔ Tag relationship.
@@ -48,7 +51,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -61,6 +64,10 @@ class AppDatabase extends _$AppDatabase {
       }
       if (from < 3) {
         await m.addColumn(todos, todos.lastCompletedDate);
+      }
+      if (from < 4) {
+        await m.addColumn(todos, todos.parentTodoId as GeneratedColumn);
+        await m.addColumn(todos, todos.groupMode as GeneratedColumn);
       }
     },
   );

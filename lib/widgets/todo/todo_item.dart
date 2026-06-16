@@ -13,6 +13,11 @@ class TodoItem extends StatefulWidget {
   final VoidCallback onEdit;
   final List<Tag>? visibleTags; // For testing or explicit tag display
   final Widget? leadingHandle;
+  final int depth;
+  final int subtaskCount;
+  final int completedSubtaskCount;
+  final bool isExpanded;
+  final VoidCallback? onToggleExpanded;
 
   const TodoItem({
     super.key,
@@ -22,6 +27,11 @@ class TodoItem extends StatefulWidget {
     required this.onEdit,
     this.visibleTags,
     this.leadingHandle,
+    this.depth = 0,
+    this.subtaskCount = 0,
+    this.completedSubtaskCount = 0,
+    this.isExpanded = false,
+    this.onToggleExpanded,
   });
 
   @override
@@ -110,6 +120,10 @@ class _TodoItemState extends State<TodoItem> {
     final urgencyText = urgencyValue >= 9.99
         ? '9.99+'
         : urgencyValue.toStringAsFixed(2);
+    final hasSubtasks = widget.subtaskCount > 0;
+    final nestedGuideColor = Theme.of(
+      context,
+    ).colorScheme.secondary.withValues(alpha: 0.18);
 
     return GestureDetector(
       onSecondaryTapUp: (details) =>
@@ -165,6 +179,9 @@ class _TodoItemState extends State<TodoItem> {
                     context,
                   ).colorScheme.secondary.withValues(alpha: 0.1),
                 ),
+                left: widget.depth > 0
+                    ? BorderSide(color: nestedGuideColor, width: 2)
+                    : BorderSide.none,
               ),
             ),
             padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -174,6 +191,36 @@ class _TodoItemState extends State<TodoItem> {
                 if (widget.leadingHandle != null) ...[
                   widget.leadingHandle!,
                   const SizedBox(width: 10),
+                ],
+                if (widget.depth > 0) SizedBox(width: widget.depth * 18.0),
+                if (widget.onToggleExpanded != null) ...[
+                  SizedBox(
+                    width: 32,
+                    height: 40,
+                    child: IconButton(
+                      tooltip: widget.isExpanded ? 'Collapse' : 'Expand',
+                      onPressed: widget.onToggleExpanded,
+                      icon: AnimatedRotation(
+                        turns: widget.isExpanded ? 0.25 : 0.0,
+                        duration: const Duration(milliseconds: 160),
+                        curve: Curves.easeOutCubic,
+                        child: Icon(
+                          Icons.chevron_right_rounded,
+                          size: 22,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      ),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 40,
+                      ),
+                      splashRadius: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                ] else if (widget.depth > 0) ...[
+                  const SizedBox(width: 28),
                 ],
                 // Content
                 Expanded(
@@ -382,6 +429,42 @@ class _TodoItemState extends State<TodoItem> {
                                     context,
                                     color: urgencyColor,
                                   ),
+                                ),
+                              ),
+                            ],
+                            if (hasSubtasks) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 4,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(
+                                    context,
+                                  ).primaryColor.withValues(alpha: 0.08),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      widget.todo.groupMode ==
+                                              TaskGroupMode.parallel
+                                          ? Icons.view_week_outlined
+                                          : Icons.account_tree_outlined,
+                                      size: 13,
+                                      color: Theme.of(context).primaryColor,
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      '${widget.completedSubtaskCount}/${widget.subtaskCount}',
+                                      style: AppTheme.tinyBoldStyle(
+                                        context,
+                                        color: Theme.of(context).primaryColor,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],

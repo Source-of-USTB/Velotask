@@ -5,9 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/todo.dart';
+import 'package:velotask/models/todo_hierarchy.dart';
 import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/utils/constants.dart';
 import 'package:velotask/widgets/timeline/gantt_chart.dart';
+import 'package:velotask/widgets/timeline/timeline_task_row.dart';
 
 class TimelineScreen extends StatefulWidget {
   final List<Todo> todos;
@@ -36,6 +38,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
   bool _syncing = false;
   bool _didAutoScroll = false;
+  final Set<int> _collapsedTodoIds = {};
   late Timer _nowTimer;
   DateTime _now = DateTime.now();
 
@@ -138,37 +141,10 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
   // ------------------------------------------------------------------------
 
-  List<Todo> _filteredTodos() {
+  List<TodoHierarchyNode> _filteredTodoNodes() {
     if (widget.todos.isEmpty) return [];
 
-    final now = DateTime.now();
-    final chartEnd = DateTime(now.year + _yearsAroundToday, 12, 31);
-
-    return widget.todos.where((todo) {
-      if (todo.taskType == TaskType.daily) return false;
-      if (todo.taskType == TaskType.deadline) {
-        final deadline = todo.ddl;
-        if (deadline == null) return false;
-        final deadlineDay = DateTime(
-          deadline.year,
-          deadline.month,
-          deadline.day,
-        );
-        return !deadlineDay.isBefore(_chartStart) &&
-            !deadlineDay.isAfter(chartEnd);
-      }
-      final start = DateTime(
-        (todo.startDate ?? todo.createdAt ?? _chartStart).year,
-        (todo.startDate ?? todo.createdAt ?? _chartStart).month,
-        (todo.startDate ?? todo.createdAt ?? _chartStart).day,
-      );
-      final end = DateTime(
-        (todo.ddl ?? start).year,
-        (todo.ddl ?? start).month,
-        (todo.ddl ?? start).day,
-      );
-      return !end.isBefore(_chartStart) && !start.isAfter(chartEnd);
-    }).toList()..sort((a, b) {
+    int compareTodos(Todo a, Todo b) {
       DateTime ka(Todo t) {
         if (t.taskType == TaskType.deadline) return t.ddl ?? farFutureDate;
         return t.startDate ?? t.createdAt ?? farFutureDate;
@@ -182,6 +158,190 @@ class _TimelineScreenState extends State<TimelineScreen> {
         return endA.compareTo(endB);
       }
       return a.id.compareTo(b.id);
+    }
+
+    final nodes = _filterTimelineNodes(buildTodoHierarchy(widget.todos));
+    sortTodoHierarchy(nodes, compareTodos);
+    return nodes;
+  }
+
+  List<TodoHierarchyNode> _filterTimelineNodes(List<TodoHierarchyNode> nodes) {
+    final result = <TodoHierarchyNode>[];
+    for (final node in nodes) {
+      final children = _filterTimelineNodes(node.children);
+      final copy = TodoHierarchyNode(todo: node.todo, children: children);
+      final range = _rangeForNode(copy);
+      if (range != null && _rangeIntersectsChart(range)) {
+        result.add(copy);
+      }
+    }
+    return result;
+  }
+
+  List<TimelineRow> _timelineRows(List<TodoHierarchyNode> nodes) {
+    final rows = <TimelineRow>[];
+    for (final node in nodes) {
+      _appendTimelineRows(rows, node, 0);
+    }
+    return rows;
+  }
+
+  void _appendTimelineRows(
+    List<TimelineRow> rows,
+    TodoHierarchyNode node,
+    int depth,
+  ) {
+    final hasChildren = node.hasChildren;
+    final isExpanded = hasChildren && !_collapsedTodoIds.contains(node.todo.id);
+    final range = _rangeForNode(node);
+
+    rows.add(
+      TimelineRow(
+        todos: [node.todo],
+        depth: depth,
+        isGroupHeader: hasChildren,
+        isExpanded: isExpanded,
+        childCount: node.descendantCount,
+        completedChildCount: node.doneDescendantCount,
+        effectiveStart: hasChildren ? range?.start : null,
+        effectiveEnd: hasChildren ? range?.end : null,
+      ),
+    );
+
+    if (!hasChildren || !isExpanded) {
+      return;
+    }
+
+    if (node.todo.groupMode == TaskGroupMode.parallel) {
+      final plainChildren = node.children
+          .where((child) => !child.hasChildren)
+          .toList();
+      final nestedGroups = node.children
+          .where((child) => child.hasChildren)
+          .toList();
+
+      for (final lane in _packParallelLanes(plainChildren)) {
+        rows.add(
+          TimelineRow(
+            todos: lane.map((child) => child.todo).toList(),
+            depth: depth + 1,
+            isParallelLane: true,
+          ),
+        );
+      }
+
+      for (final child in nestedGroups) {
+        _appendTimelineRows(rows, child, depth + 1);
+      }
+      return;
+    }
+
+    for (final child in node.children) {
+      _appendTimelineRows(rows, child, depth + 1);
+    }
+  }
+
+  List<List<TodoHierarchyNode>> _packParallelLanes(
+    List<TodoHierarchyNode> nodes,
+  ) {
+    final items =
+        nodes
+            .map((node) {
+              final range = _rangeForNode(node);
+              return range == null ? null : _TimelineItem(node, range);
+            })
+            .whereType<_TimelineItem>()
+            .toList()
+          ..sort((a, b) {
+            final byStart = a.range.start.compareTo(b.range.start);
+            if (byStart != 0) return byStart;
+            return a.range.end.compareTo(b.range.end);
+          });
+
+    final lanes = <List<TodoHierarchyNode>>[];
+    final laneEnds = <DateTime>[];
+
+    for (final item in items) {
+      var placed = false;
+      final itemEnd = item.range.safeEnd;
+      for (var i = 0; i < lanes.length; i++) {
+        if (!item.range.start.isBefore(laneEnds[i])) {
+          lanes[i].add(item.node);
+          laneEnds[i] = itemEnd;
+          placed = true;
+          break;
+        }
+      }
+      if (!placed) {
+        lanes.add([item.node]);
+        laneEnds.add(itemEnd);
+      }
+    }
+
+    return lanes;
+  }
+
+  _TaskRange? _rangeForNode(TodoHierarchyNode node) {
+    if (node.todo.taskType == TaskType.daily) {
+      return null;
+    }
+
+    DateTime? start = node.todo.taskType == TaskType.deadline
+        ? node.todo.ddl
+        : node.todo.startDate ?? node.todo.createdAt;
+    DateTime? end = node.todo.ddl;
+
+    for (final child in node.children) {
+      final childRange = _rangeForNode(child);
+      if (childRange == null) {
+        continue;
+      }
+      start = _earlier(start, childRange.start);
+      end = _later(end, childRange.end);
+    }
+
+    if (start == null && end != null) {
+      start = end;
+    }
+    if (end == null && start != null) {
+      end = start;
+    }
+    if (start == null || end == null) {
+      return null;
+    }
+    if (end.isBefore(start)) {
+      end = start;
+    }
+    return _TaskRange(start, end);
+  }
+
+  bool _rangeIntersectsChart(_TaskRange range) {
+    final now = DateTime.now();
+    final chartEnd = DateTime(now.year + _yearsAroundToday, 12, 31);
+    return !range.end.isBefore(_chartStart) && !range.start.isAfter(chartEnd);
+  }
+
+  DateTime? _earlier(DateTime? a, DateTime b) {
+    if (a == null || b.isBefore(a)) {
+      return b;
+    }
+    return a;
+  }
+
+  DateTime? _later(DateTime? a, DateTime b) {
+    if (a == null || b.isAfter(a)) {
+      return b;
+    }
+    return a;
+  }
+
+  void _toggleTimelineGroup(Todo todo) {
+    setState(() {
+      if (_collapsedTodoIds.contains(todo.id)) {
+        _collapsedTodoIds.remove(todo.id);
+      } else {
+        _collapsedTodoIds.add(todo.id);
+      }
     });
   }
 
@@ -189,9 +349,10 @@ class _TimelineScreenState extends State<TimelineScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final timelineTasks = _filteredTodos();
+    final timelineNodes = _filteredTodoNodes();
+    final timelineRows = _timelineRows(timelineNodes);
 
-    if (!_didAutoScroll && timelineTasks.isNotEmpty && _bodyCtrl.hasClients) {
+    if (!_didAutoScroll && timelineRows.isNotEmpty && _bodyCtrl.hasClients) {
       _didAutoScroll = true;
       _scrollToToday();
     }
@@ -221,7 +382,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
       body: Listener(
         onPointerSignal: _onPointerSignal,
         child: GanttChart(
-          tasks: timelineTasks,
+          rows: timelineRows,
           headerCtrl: _headerCtrl,
           bodyCtrl: _bodyCtrl,
           chartStart: _chartStart,
@@ -230,8 +391,26 @@ class _TimelineScreenState extends State<TimelineScreen> {
           totalWidth: _totalWidth,
           now: _now,
           onTaskDoubleTap: widget.onTaskDoubleTap,
+          onToggleGroup: _toggleTimelineGroup,
         ),
       ),
     );
   }
+}
+
+class _TaskRange {
+  final DateTime start;
+  final DateTime end;
+
+  const _TaskRange(this.start, this.end);
+
+  DateTime get safeEnd =>
+      end.isAfter(start) ? end : start.add(const Duration(minutes: 1));
+}
+
+class _TimelineItem {
+  final TodoHierarchyNode node;
+  final _TaskRange range;
+
+  const _TimelineItem(this.node, this.range);
 }

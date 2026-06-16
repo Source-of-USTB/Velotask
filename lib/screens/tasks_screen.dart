@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/models/todo_filter.dart';
+import 'package:velotask/models/todo_hierarchy.dart';
 import 'package:velotask/utils/constants.dart';
 import 'package:velotask/utils/priority_engine.dart';
 import 'package:velotask/widgets/app/home_app_bar.dart';
@@ -51,6 +52,7 @@ class _TasksScreenState extends State<TasksScreen>
   late final AnimationController _confettiController;
   bool _showConfetti = false;
   bool _hadAllCompleted = false;
+  final Set<int> _collapsedTodoIds = {};
 
   bool _isAllCompleted(List<Todo> list) {
     return list.isNotEmpty && list.every((todo) => todo.isDone);
@@ -104,8 +106,8 @@ class _TasksScreenState extends State<TasksScreen>
     super.dispose();
   }
 
-  List<Todo> get _filteredTodos {
-    List<Todo> result;
+  List<TodoHierarchyNode> get _filteredTodoNodes {
+    bool Function(Todo todo) matches;
     final nonDailyTodos = widget.todos
         .where((t) => t.taskType != TaskType.daily)
         .toList();
@@ -113,35 +115,30 @@ class _TasksScreenState extends State<TasksScreen>
     // 1. Apply Status/Priority Filter
     switch (_filter) {
       case TodoFilter.active:
-        result = nonDailyTodos.where((t) => !t.isDone).toList();
+        matches = (t) => t.taskType != TaskType.daily && !t.isDone;
         break;
       case TodoFilter.completed:
-        result = nonDailyTodos.where((t) => t.isDone).toList();
+        matches = (t) => t.taskType != TaskType.daily && t.isDone;
         break;
       case TodoFilter.highPriority:
-        result = nonDailyTodos
-            .where(
-              (t) =>
-                  !t.isDone &&
-                  PriorityEngine.isHighUrgency(t, allTodos: nonDailyTodos),
-            )
-            .toList();
+        matches = (t) =>
+            t.taskType != TaskType.daily &&
+            !t.isDone &&
+            PriorityEngine.isHighUrgency(t, allTodos: nonDailyTodos);
         break;
       case TodoFilter.daily:
-        result = widget.todos
-            .where((t) => t.taskType == TaskType.daily)
-            .toList();
+        matches = (t) => t.taskType == TaskType.daily;
         break;
       case TodoFilter.all:
-        result = List<Todo>.from(nonDailyTodos);
+        matches = (t) => t.taskType != TaskType.daily;
         break;
     }
 
     // 2. Apply Tag Filter (Intersection)
     if (_filterTag != null) {
-      result = result
-          .where((t) => t.tags.any((tag) => tag.id == _filterTag!.id))
-          .toList();
+      final previousMatches = matches;
+      matches = (t) =>
+          previousMatches(t) && t.tags.any((tag) => tag.id == _filterTag!.id);
     }
 
     final dailyOrder = {
@@ -149,7 +146,7 @@ class _TasksScreenState extends State<TasksScreen>
         widget.dailyTaskOrder[i]: i,
     };
 
-    result.sort((a, b) {
+    int compareTodos(Todo a, Todo b) {
       if (_filter == TodoFilter.daily) {
         final doneCompare = (a.isDone ? 1 : 0).compareTo(b.isDone ? 1 : 0);
         if (doneCompare != 0) return doneCompare;
@@ -173,13 +170,19 @@ class _TasksScreenState extends State<TasksScreen>
         return endA.compareTo(endB);
       }
       return a.id.compareTo(b.id);
-    });
-    return result;
+    }
+
+    final hierarchy = filterTodoHierarchy(
+      buildTodoHierarchy(widget.todos),
+      matches,
+    );
+    sortTodoHierarchy(hierarchy, compareTodos);
+    return hierarchy;
   }
 
   @override
   Widget build(BuildContext context) {
-    final filteredList = _filteredTodos;
+    final filteredNodes = _filteredTodoNodes;
 
     return Stack(
       children: [
@@ -230,7 +233,7 @@ class _TasksScreenState extends State<TasksScreen>
                 });
               },
             ),
-            _buildMainContent(filteredList),
+            _buildMainContent(filteredNodes),
             const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
           ],
         ),
@@ -259,26 +262,29 @@ class _TasksScreenState extends State<TasksScreen>
     );
   }
 
-  Widget _buildMainContent(List<Todo> filteredList) {
+  Widget _buildMainContent(List<TodoHierarchyNode> filteredNodes) {
     if (widget.isLoading) {
       return const SliverFillRemaining(
         child: Center(child: CircularProgressIndicator()),
       );
     }
 
-    if (filteredList.isEmpty) {
+    if (filteredNodes.isEmpty) {
       return const EmptyState();
     }
 
     if (_filter == TodoFilter.daily) {
-      return _buildDailyContent(filteredList);
+      return _buildDailyContent(
+        filteredNodes.map((node) => node.todo).toList(),
+      );
     }
 
+    final visibleEntries = _visibleEntries(filteredNodes);
     return SliverList(
       delegate: SliverChildBuilderDelegate((context, index) {
-        final todo = filteredList[index];
-        return _buildAnimatedTodoItem(todo, index);
-      }, childCount: filteredList.length),
+        final entry = visibleEntries[index];
+        return _buildAnimatedTodoItem(entry, index);
+      }, childCount: visibleEntries.length),
     );
   }
 
@@ -299,7 +305,7 @@ class _TasksScreenState extends State<TasksScreen>
         return KeyedSubtree(
           key: ValueKey('daily_${todo.id}'),
           child: _buildAnimatedTodoItem(
-            todo,
+            _VisibleTodoEntry(node: TodoHierarchyNode(todo: todo), depth: 0),
             index,
             leadingHandle: ReorderableDragStartListener(
               index: index,
@@ -311,7 +317,33 @@ class _TasksScreenState extends State<TasksScreen>
     );
   }
 
-  Widget _buildAnimatedTodoItem(Todo todo, int index, {Widget? leadingHandle}) {
+  List<_VisibleTodoEntry> _visibleEntries(List<TodoHierarchyNode> nodes) {
+    final result = <_VisibleTodoEntry>[];
+
+    void walk(TodoHierarchyNode node, int depth) {
+      result.add(_VisibleTodoEntry(node: node, depth: depth));
+      if (!node.hasChildren || _collapsedTodoIds.contains(node.todo.id)) {
+        return;
+      }
+      for (final child in node.children) {
+        walk(child, depth + 1);
+      }
+    }
+
+    for (final node in nodes) {
+      walk(node, 0);
+    }
+    return result;
+  }
+
+  Widget _buildAnimatedTodoItem(
+    _VisibleTodoEntry entry,
+    int index, {
+    Widget? leadingHandle,
+  }) {
+    final todo = entry.node.todo;
+    final hasChildren = entry.node.hasChildren;
+    final isExpanded = hasChildren && !_collapsedTodoIds.contains(todo.id);
     return TweenAnimationBuilder<double>(
       key: ValueKey(todo.id),
       duration: Duration(milliseconds: 180 + (index * 8).clamp(0, 64)),
@@ -337,9 +369,31 @@ class _TasksScreenState extends State<TasksScreen>
         onDelete: () => widget.onDelete(todo),
         onEdit: () => widget.onEdit(todo),
         leadingHandle: leadingHandle,
+        depth: entry.depth,
+        subtaskCount: entry.node.descendantCount,
+        completedSubtaskCount: entry.node.doneDescendantCount,
+        isExpanded: isExpanded,
+        onToggleExpanded: hasChildren
+            ? () {
+                setState(() {
+                  if (isExpanded) {
+                    _collapsedTodoIds.add(todo.id);
+                  } else {
+                    _collapsedTodoIds.remove(todo.id);
+                  }
+                });
+              }
+            : null,
       ),
     );
   }
+}
+
+class _VisibleTodoEntry {
+  final TodoHierarchyNode node;
+  final int depth;
+
+  const _VisibleTodoEntry({required this.node, required this.depth});
 }
 
 class _DailyDragHandle extends StatelessWidget {

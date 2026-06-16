@@ -3,6 +3,9 @@ import 'package:velotask/models/tag.dart';
 /// Logical task type.
 enum TaskType { task, deadline, daily }
 
+/// How a todo's children should be presented.
+enum TaskGroupMode { none, subtasks, parallel }
+
 /// Plain data class used throughout the UI.
 /// The actual Drift table definition lives in database.dart (Todos table).
 class Todo {
@@ -18,6 +21,8 @@ class Todo {
   int importance; // 0: Low, 1: Normal, 2: High
   TaskType taskType;
   double? estimatedEffortHours;
+  int? parentTodoId;
+  TaskGroupMode groupMode;
 
   /// Tags associated with this todo (loaded alongside the todo).
   List<Tag> tags;
@@ -35,6 +40,8 @@ class Todo {
     this.taskType = TaskType.task,
     List<Tag> tags = const [],
     this.estimatedEffortHours,
+    this.parentTodoId,
+    this.groupMode = TaskGroupMode.none,
   }) : tags = List<Tag>.from(tags);
 
   Todo copyWith({
@@ -50,6 +57,8 @@ class Todo {
     TaskType? taskType,
     List<Tag>? tags,
     double? estimatedEffortHours,
+    Object? parentTodoId = _sentinel,
+    TaskGroupMode? groupMode,
   }) {
     return Todo(
       id: id ?? this.id,
@@ -64,8 +73,14 @@ class Todo {
       taskType: taskType ?? this.taskType,
       tags: tags ?? this.tags,
       estimatedEffortHours: estimatedEffortHours ?? this.estimatedEffortHours,
+      parentTodoId: identical(parentTodoId, _sentinel)
+          ? this.parentTodoId
+          : parentTodoId as int?,
+      groupMode: groupMode ?? this.groupMode,
     );
   }
+
+  bool get hasParent => parentTodoId != null;
 
   bool get isDone {
     if (taskType != TaskType.daily) return isCompleted;
@@ -76,3 +91,5 @@ class Todo {
         lastCompletedDate!.day == today.day;
   }
 }
+
+const Object _sentinel = Object();

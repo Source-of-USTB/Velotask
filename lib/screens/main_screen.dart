@@ -194,6 +194,8 @@ class _MainScreenState extends State<MainScreen> {
     List<Tag> tags,
     TaskType taskType, {
     double? presetEffortHours,
+    int? parentTodoId,
+    TaskGroupMode groupMode = TaskGroupMode.none,
   }) async {
     if (title.isEmpty) return;
 
@@ -205,6 +207,8 @@ class _MainScreenState extends State<MainScreen> {
       importance: importance,
       taskType: taskType,
       estimatedEffortHours: presetEffortHours,
+      parentTodoId: parentTodoId,
+      groupMode: groupMode,
     );
     newTodo.tags.addAll(tags);
 
@@ -275,6 +279,9 @@ class _MainScreenState extends State<MainScreen> {
     if (mounted) {
       setState(() {
         todos.removeWhere((t) => t.id == todo.id);
+        for (final child in todos.where((t) => t.parentTodoId == todo.id)) {
+          child.parentTodoId = null;
+        }
       });
       await _normalizeDailyTaskOrder();
       await _syncNotifications();
@@ -379,6 +386,7 @@ class _MainScreenState extends State<MainScreen> {
       context: context,
       builder: (context) => AddTodoDialog(
         todo: todo,
+        allTodos: todos,
         onDelete: () => _deleteTodo(todo),
         onAdd: (title, desc, startDate, ddl, importance, tags, taskType) async {
           // Mutate the existing todo instance directly to preserve object identity.
@@ -390,6 +398,8 @@ class _MainScreenState extends State<MainScreen> {
           todo.taskType = taskType;
           todo.tags.clear();
           todo.tags.addAll(tags);
+          todo.parentTodoId = null;
+          todo.groupMode = TaskGroupMode.none;
 
           await _storage.updateTodo(todo);
 
@@ -417,6 +427,56 @@ class _MainScreenState extends State<MainScreen> {
             ),
           );
         },
+        onAddWithGrouping:
+            (
+              title,
+              desc,
+              startDate,
+              ddl,
+              importance,
+              tags,
+              taskType,
+              parentTodoId,
+              groupMode,
+            ) async {
+              // Mutate the existing todo instance directly to preserve object identity.
+              todo.title = title;
+              todo.description = desc;
+              todo.startDate = startDate;
+              todo.ddl = ddl;
+              todo.importance = importance;
+              todo.taskType = taskType;
+              todo.tags.clear();
+              todo.tags.addAll(tags);
+              todo.parentTodoId = parentTodoId == todo.id ? null : parentTodoId;
+              todo.groupMode = groupMode;
+
+              await _storage.updateTodo(todo);
+
+              if (mounted) {
+                setState(() {
+                  final index = todos.indexWhere((t) => t.id == todo.id);
+                  if (index != -1) {
+                    todos[index] = todo;
+                  }
+                });
+              }
+              await _normalizeDailyTaskOrder();
+              await _loadTags();
+              await _syncNotifications();
+              _showSubmitFeedback(isEdit: true, estimating: true);
+
+              unawaited(
+                _reestimateAndPatchTodo(
+                  todo,
+                  title: title,
+                  desc: desc,
+                  startDate: startDate,
+                  ddl: ddl,
+                  importance: importance,
+                ),
+              );
+            },
       ),
     );
   }
@@ -424,7 +484,34 @@ class _MainScreenState extends State<MainScreen> {
   void _showAddTodoDialog() {
     showDialog(
       context: context,
-      builder: (context) => AddTodoDialog(onAdd: _addTodo),
+      builder: (context) => AddTodoDialog(
+        allTodos: todos,
+        onAdd: _addTodo,
+        onAddWithGrouping:
+            (
+              title,
+              desc,
+              startDate,
+              ddl,
+              importance,
+              tags,
+              taskType,
+              parentTodoId,
+              groupMode,
+            ) {
+              _addTodo(
+                title,
+                desc,
+                startDate,
+                ddl,
+                importance,
+                tags,
+                taskType,
+                parentTodoId: parentTodoId,
+                groupMode: groupMode,
+              );
+            },
+      ),
     );
   }
 

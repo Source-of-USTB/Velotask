@@ -15,6 +15,20 @@ class TodoStorage {
   Tag _rowToTag(TagRow row) =>
       Tag(id: row.id, name: row.name, color: row.color);
 
+  TaskType _taskTypeFromIndex(int index) {
+    if (index < 0 || index >= TaskType.values.length) {
+      return TaskType.task;
+    }
+    return TaskType.values[index];
+  }
+
+  TaskGroupMode _groupModeFromIndex(int index) {
+    if (index < 0 || index >= TaskGroupMode.values.length) {
+      return TaskGroupMode.none;
+    }
+    return TaskGroupMode.values[index];
+  }
+
   Future<List<Tag>> _tagsForTodo(int todoId) async {
     final query = _db.select(_db.tags).join([
       innerJoin(_db.todoTags, _db.todoTags.tagId.equalsExp(_db.tags.id)),
@@ -33,8 +47,10 @@ class TodoStorage {
     ddl: row.ddl,
     lastCompletedDate: row.lastCompletedDate,
     importance: row.importance,
-    taskType: TaskType.values[row.taskType],
+    taskType: _taskTypeFromIndex(row.taskType),
     estimatedEffortHours: row.estimatedEffortHours,
+    parentTodoId: row.parentTodoId,
+    groupMode: _groupModeFromIndex(row.groupMode),
     tags: tags,
   );
 
@@ -136,6 +152,8 @@ class TodoStorage {
             importance: Value(todo.importance),
             taskType: Value(todo.taskType.index),
             estimatedEffortHours: Value(todo.estimatedEffortHours),
+            parentTodoId: Value(todo.parentTodoId),
+            groupMode: Value(todo.groupMode.index),
           ),
         );
     await _saveTodoTags(id, todo.tags);
@@ -154,6 +172,10 @@ class TodoStorage {
         importance: Value(todo.importance),
         taskType: Value(todo.taskType.index),
         estimatedEffortHours: Value(todo.estimatedEffortHours),
+        parentTodoId: Value(
+          todo.parentTodoId == todo.id ? null : todo.parentTodoId,
+        ),
+        groupMode: Value(todo.groupMode.index),
       ),
     );
     if (saveLinks) {
@@ -162,6 +184,8 @@ class TodoStorage {
   }
 
   Future<void> deleteTodo(int id) async {
+    await (_db.update(_db.todos)..where((t) => t.parentTodoId.equals(id)))
+        .write(const TodosCompanion(parentTodoId: Value(null)));
     await (_db.delete(_db.todoTags)..where((tt) => tt.todoId.equals(id))).go();
     await (_db.delete(_db.todos)..where((t) => t.id.equals(id))).go();
   }
