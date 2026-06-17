@@ -198,6 +198,15 @@ class _MainScreenState extends State<MainScreen> {
     TaskGroupMode groupMode = TaskGroupMode.none,
   }) async {
     if (title.isEmpty) return;
+    final effectiveGroupMode = taskType == TaskType.daily
+        ? TaskGroupMode.none
+        : groupMode;
+    final effectiveParentTodoId = effectiveGroupMode == TaskGroupMode.none
+        ? null
+        : parentTodoId;
+    if (effectiveGroupMode.requiresParent && effectiveParentTodoId == null) {
+      return;
+    }
 
     final newTodo = Todo(
       title: title,
@@ -207,8 +216,8 @@ class _MainScreenState extends State<MainScreen> {
       importance: importance,
       taskType: taskType,
       estimatedEffortHours: presetEffortHours,
-      parentTodoId: parentTodoId,
-      groupMode: groupMode,
+      parentTodoId: effectiveParentTodoId,
+      groupMode: effectiveGroupMode,
     );
     newTodo.tags.addAll(tags);
 
@@ -281,6 +290,7 @@ class _MainScreenState extends State<MainScreen> {
         todos.removeWhere((t) => t.id == todo.id);
         for (final child in todos.where((t) => t.parentTodoId == todo.id)) {
           child.parentTodoId = null;
+          child.groupMode = TaskGroupMode.none;
         }
       });
       await _normalizeDailyTaskOrder();
@@ -448,8 +458,17 @@ class _MainScreenState extends State<MainScreen> {
               todo.taskType = taskType;
               todo.tags.clear();
               todo.tags.addAll(tags);
-              todo.parentTodoId = parentTodoId == todo.id ? null : parentTodoId;
-              todo.groupMode = groupMode;
+              final effectiveGroupMode = taskType == TaskType.daily
+                  ? TaskGroupMode.none
+                  : groupMode;
+              final effectiveParentTodoId =
+                  effectiveGroupMode.requiresParent && parentTodoId != todo.id
+                  ? parentTodoId
+                  : null;
+              todo.groupMode = effectiveParentTodoId == null
+                  ? TaskGroupMode.none
+                  : effectiveGroupMode;
+              todo.parentTodoId = effectiveParentTodoId;
 
               await _storage.updateTodo(todo);
 

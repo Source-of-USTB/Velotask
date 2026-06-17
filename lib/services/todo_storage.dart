@@ -29,6 +29,16 @@ class TodoStorage {
     return TaskGroupMode.values[index];
   }
 
+  Todo _normalizeTodoForStorage(Todo todo) {
+    final effectiveGroupMode = todo.taskType == TaskType.daily
+        ? TaskGroupMode.none
+        : todo.groupMode;
+    return todo.copyWith(
+      parentTodoId: effectiveGroupMode.requiresParent ? todo.parentTodoId : null,
+      groupMode: effectiveGroupMode,
+    );
+  }
+
   Future<List<Tag>> _tagsForTodo(int todoId) async {
     final query = _db.select(_db.tags).join([
       innerJoin(_db.todoTags, _db.todoTags.tagId.equalsExp(_db.tags.id)),
@@ -37,22 +47,28 @@ class TodoStorage {
     return rows.map((r) => _rowToTag(r.readTable(_db.tags))).toList();
   }
 
-  Todo _rowToTodo(TodoRow row, List<Tag> tags) => Todo(
-    id: row.id,
-    title: row.title,
-    description: row.description,
-    isCompleted: row.isCompleted,
-    createdAt: row.createdAt,
-    startDate: row.startDate,
-    ddl: row.ddl,
-    lastCompletedDate: row.lastCompletedDate,
-    importance: row.importance,
-    taskType: _taskTypeFromIndex(row.taskType),
-    estimatedEffortHours: row.estimatedEffortHours,
-    parentTodoId: row.parentTodoId,
-    groupMode: _groupModeFromIndex(row.groupMode),
-    tags: tags,
-  );
+  Todo _rowToTodo(TodoRow row, List<Tag> tags) {
+    final rawGroupMode = _groupModeFromIndex(row.groupMode);
+    final groupMode = rawGroupMode.requiresParent && row.parentTodoId == null
+        ? TaskGroupMode.none
+        : rawGroupMode;
+    return Todo(
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      isCompleted: row.isCompleted,
+      createdAt: row.createdAt,
+      startDate: row.startDate,
+      ddl: row.ddl,
+      lastCompletedDate: row.lastCompletedDate,
+      importance: row.importance,
+      taskType: _taskTypeFromIndex(row.taskType),
+      estimatedEffortHours: row.estimatedEffortHours,
+      parentTodoId: groupMode == TaskGroupMode.none ? null : row.parentTodoId,
+      groupMode: groupMode,
+      tags: tags,
+    );
+  }
 
   Future<void> _saveTodoTags(int todoId, List<Tag> tags) async {
     await (_db.delete(
@@ -138,54 +154,61 @@ class TodoStorage {
   }
 
   Future<Todo> addTodo(Todo todo) async {
+    final normalizedTodo = _normalizeTodoForStorage(todo);
+    normalizedTodo.validateGrouping();
     final id = await _db
         .into(_db.todos)
         .insert(
           TodosCompanion.insert(
-            title: todo.title,
-            description: Value(todo.description),
-            isCompleted: Value(todo.isCompleted),
-            createdAt: Value(todo.createdAt),
-            startDate: Value(todo.startDate),
-            ddl: Value(todo.ddl),
-            lastCompletedDate: Value(todo.lastCompletedDate),
-            importance: Value(todo.importance),
-            taskType: Value(todo.taskType.index),
-            estimatedEffortHours: Value(todo.estimatedEffortHours),
-            parentTodoId: Value(todo.parentTodoId),
-            groupMode: Value(todo.groupMode.index),
+            title: normalizedTodo.title,
+            description: Value(normalizedTodo.description),
+            isCompleted: Value(normalizedTodo.isCompleted),
+            createdAt: Value(normalizedTodo.createdAt),
+            startDate: Value(normalizedTodo.startDate),
+            ddl: Value(normalizedTodo.ddl),
+            lastCompletedDate: Value(normalizedTodo.lastCompletedDate),
+            importance: Value(normalizedTodo.importance),
+            taskType: Value(normalizedTodo.taskType.index),
+            estimatedEffortHours: Value(normalizedTodo.estimatedEffortHours),
+            parentTodoId: Value(normalizedTodo.parentTodoId),
+            groupMode: Value(normalizedTodo.groupMode.index),
           ),
         );
-    await _saveTodoTags(id, todo.tags);
-    return todo.copyWith(id: id);
+    await _saveTodoTags(id, normalizedTodo.tags);
+    return normalizedTodo.copyWith(id: id);
   }
 
   Future<void> updateTodo(Todo todo, {bool saveLinks = true}) async {
+    final normalizedTodo = _normalizeTodoForStorage(todo);
+    normalizedTodo.validateGrouping();
     await (_db.update(_db.todos)..where((t) => t.id.equals(todo.id))).write(
       TodosCompanion(
-        title: Value(todo.title),
-        description: Value(todo.description),
-        isCompleted: Value(todo.isCompleted),
-        startDate: Value(todo.startDate),
-        ddl: Value(todo.ddl),
-        lastCompletedDate: Value(todo.lastCompletedDate),
-        importance: Value(todo.importance),
-        taskType: Value(todo.taskType.index),
-        estimatedEffortHours: Value(todo.estimatedEffortHours),
-        parentTodoId: Value(
-          todo.parentTodoId == todo.id ? null : todo.parentTodoId,
-        ),
-        groupMode: Value(todo.groupMode.index),
+        title: Value(normalizedTodo.title),
+        description: Value(normalizedTodo.description),
+        isCompleted: Value(normalizedTodo.isCompleted),
+        startDate: Value(normalizedTodo.startDate),
+        ddl: Value(normalizedTodo.ddl),
+        lastCompletedDate: Value(normalizedTodo.lastCompletedDate),
+        importance: Value(normalizedTodo.importance),
+        taskType: Value(normalizedTodo.taskType.index),
+        estimatedEffortHours: Value(normalizedTodo.estimatedEffortHours),
+        parentTodoId: Value(normalizedTodo.parentTodoId),
+        groupMode: Value(normalizedTodo.groupMode.index),
       ),
     );
     if (saveLinks) {
-      await _saveTodoTags(todo.id, todo.tags);
+      await _saveTodoTags(todo.id, normalizedTodo.tags);
     }
   }
 
   Future<void> deleteTodo(int id) async {
     await (_db.update(_db.todos)..where((t) => t.parentTodoId.equals(id)))
-        .write(const TodosCompanion(parentTodoId: Value(null)));
+        .write(
+          TodosCompanion(
+            parentTodoId: const Value(null),
+            groupMode: Value(TaskGroupMode.none.index),
+          ),
+        );
     await (_db.delete(_db.todoTags)..where((tt) => tt.todoId.equals(id))).go();
     await (_db.delete(_db.todos)..where((t) => t.id.equals(id))).go();
   }

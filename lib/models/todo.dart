@@ -6,6 +6,10 @@ enum TaskType { task, deadline, daily }
 /// How a todo's children should be presented.
 enum TaskGroupMode { none, subtasks, parallel }
 
+extension TaskGroupModeRules on TaskGroupMode {
+  bool get requiresParent => this != TaskGroupMode.none;
+}
+
 /// Plain data class used throughout the UI.
 /// The actual Drift table definition lives in database.dart (Todos table).
 class Todo {
@@ -81,6 +85,19 @@ class Todo {
   }
 
   bool get hasParent => parentTodoId != null;
+
+  bool get hasValidGrouping {
+    if (groupMode.requiresParent) {
+      return parentTodoId != null && parentTodoId != id;
+    }
+    return parentTodoId == null;
+  }
+
+  void validateGrouping() {
+    if (!hasValidGrouping) {
+      throw ArgumentError('Invalid todo grouping');
+    }
+  }
 
   bool get isDone {
     if (taskType != TaskType.daily) return isCompleted;
