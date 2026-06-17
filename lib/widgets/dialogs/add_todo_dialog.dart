@@ -63,6 +63,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
   List<Tag> _availableTags = [];
   List<Tag> _selectedTags = [];
   bool _isSubmitting = false;
+  bool _parentRequiredError = false;
   final TodoStorage _storage = TodoStorage();
 
   @override
@@ -120,6 +121,18 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
   Future<void> _submit() async {
     setState(() => _isSubmitting = true);
 
+    final submitGroupMode = _taskType == TaskType.daily
+        ? TaskGroupMode.none
+        : _groupMode;
+    final selectedParentId = _validParentId();
+    if (submitGroupMode.requiresParent && selectedParentId == null) {
+      setState(() {
+        _parentRequiredError = true;
+        _isSubmitting = false;
+      });
+      return;
+    }
+
     final (titleTagNames, cleanTitle) = _extractInlineTags(
       _titleController.text,
     );
@@ -156,12 +169,9 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
 
     final submitStartDate = _taskType == TaskType.task ? _startDate : null;
     final submitDdl = _taskType == TaskType.daily ? null : _ddl;
-    final submitParentTodoId = _taskType == TaskType.daily
-        ? null
-        : _validParentId();
-    final submitGroupMode = _taskType == TaskType.daily
-        ? TaskGroupMode.none
-        : _groupMode;
+    final submitParentTodoId = submitGroupMode.requiresParent
+        ? selectedParentId
+        : null;
 
     final groupedCallback = widget.onAddWithGrouping;
     if (groupedCallback != null) {
@@ -195,14 +205,14 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
     final l10n = AppLocalizations.of(context)!;
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
-    final dialogWidth = screenWidth > 700 ? 640.0 : screenWidth - 32;
+    final dialogWidth = screenWidth > (320 + 32) ? 320.0 : screenWidth - 32;
     final maxDialogBodyHeight = screenHeight * 0.72;
     final useVerticalDateLayout = screenWidth < 440;
 
     return AlertDialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
-      contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      contentPadding: const EdgeInsets.fromLTRB(30, 20, 30, 0),
+      actionsPadding: const EdgeInsets.fromLTRB(30, 10, 30, 20),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       title: Text(
         widget.todo == null ? l10n.newTask : l10n.editTask,
@@ -210,6 +220,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
       ),
       content: ConstrainedBox(
         constraints: BoxConstraints(
+          minWidth: dialogWidth,
           maxWidth: dialogWidth,
           maxHeight: maxDialogBodyHeight,
         ),
@@ -263,17 +274,19 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
                   minLines: 1,
                 ),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               // Task Type Selector
               DialogInputRow(child: _buildTaskTypeSelector(context)),
 
               if (_taskType != TaskType.daily) ...[
                 const SizedBox(height: 16),
+                // Date Picker
                 DialogInputRow(
                   child: _buildSchedulePicker(context, useVerticalDateLayout),
                 ),
                 const SizedBox(height: 16),
+                // Grouping Controls
                 DialogInputRow(child: _buildGroupingControls(context)),
               ],
 
@@ -431,67 +444,13 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
 
   Widget _buildGroupingControls(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    final secondaryColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
     final parentOptions = _parentOptions();
     final selectedParentId = _validParentId(parentOptions);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: secondaryColor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              Text(
-                l10n.parentTask,
-                style: AppTheme.smallRegularStyle(
-                  context,
-                  color: secondaryColor,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: DropdownButtonHideUnderline(
-                  child: DropdownButton<int?>(
-                    value: selectedParentId,
-                    isExpanded: true,
-                    alignment: AlignmentDirectional.centerEnd,
-                    items: [
-                      DropdownMenuItem<int?>(
-                        value: null,
-                        child: Text(l10n.noParentTask),
-                      ),
-                      ...parentOptions.map(
-                        (todo) => DropdownMenuItem<int?>(
-                          value: todo.id,
-                          child: Text(
-                            todo.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ),
-                    ],
-                    onChanged: (value) {
-                      setState(() {
-                        _parentTodoId = value;
-                      });
-                    },
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 12),
-        Wrap(
-          spacing: 8,
-          runSpacing: 8,
+        Row(
           children: [
             _buildGroupModeChip(
               context,
@@ -499,12 +458,14 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
               l10n.taskGroupModeSolo,
               Icons.radio_button_unchecked_rounded,
             ),
+            const SizedBox(width: 8),
             _buildGroupModeChip(
               context,
               TaskGroupMode.subtasks,
               l10n.taskGroupModeSubtasks,
               Icons.account_tree_outlined,
             ),
+            const SizedBox(width: 8),
             _buildGroupModeChip(
               context,
               TaskGroupMode.parallel,
@@ -512,6 +473,126 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
               Icons.view_week_outlined,
             ),
           ],
+        ),
+        if (_groupMode != TaskGroupMode.none) ...[
+          const SizedBox(height: 12),
+          _buildParentSelector(context, parentOptions, selectedParentId),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildParentSelector(
+    BuildContext context,
+    List<Todo> parentOptions,
+    int? selectedParentId,
+  ) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final secondaryColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
+    final hasError = _parentRequiredError && selectedParentId == null;
+
+    return Row(
+      children: [
+        SizedBox(
+          width: 80,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: Text(
+              l10n.parentTask,
+              style: AppTheme.bodyMediumStyle(context, color: secondaryColor),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Container(
+            height: 46,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: secondaryColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: hasError ? theme.colorScheme.error : Colors.transparent,
+              ),
+            ),
+            child: Theme(
+              data: theme.copyWith(
+                focusColor: Colors.transparent,
+                hoverColor: Colors.transparent,
+                highlightColor: Colors.transparent,
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<int?>(
+                  value: selectedParentId,
+                  focusColor: Colors.transparent,
+                  hint: Padding(
+                    padding: const EdgeInsets.only(left: 10),
+                    child: Text(
+                      l10n.noParentTask,
+                      style: AppTheme.accentBodyStyle(
+                        context,
+                        color: theme.colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                  isExpanded: true,
+                  itemHeight: 52,
+                  menuMaxHeight: 260,
+                  borderRadius: BorderRadius.circular(8),
+                  dropdownColor: theme.colorScheme.surface,
+                  alignment: AlignmentDirectional.centerStart,
+                  icon: Icon(
+                    Icons.keyboard_arrow_down_rounded,
+                    color: secondaryColor,
+                  ),
+                  style: AppTheme.accentBodyStyle(
+                    context,
+                    color: theme.colorScheme.onSurface,
+                  ),
+                  items: [
+                    ...parentOptions.map(
+                      (todo) => DropdownMenuItem<int?>(
+                        value: todo.id,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 10),
+                          child: Text(
+                            todo.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  selectedItemBuilder: (context) => [
+                    ...parentOptions.map(
+                      (todo) => Padding(
+                        padding: const EdgeInsets.only(left: 10),
+                        child: Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: Text(
+                            todo.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                  onChanged: parentOptions.isEmpty
+                      ? null
+                      : (value) {
+                          setState(() {
+                            _parentTodoId = value;
+                            _parentRequiredError = false;
+                          });
+                        },
+                ),
+              ),
+            ),
+          ),
         ),
       ],
     );
@@ -529,7 +610,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
     final color = isSelected ? theme.primaryColor : secondaryColor;
 
     return InkWell(
-      onTap: () => setState(() => _groupMode = value),
+      onTap: () => _setGroupMode(value),
       borderRadius: BorderRadius.circular(8),
       hoverColor: Colors.transparent,
       child: Container(
@@ -595,6 +676,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
           });
         }
       },
+      isOptional: true,
       includeTime: true,
     );
     final endPicker = DialogDatePicker(
@@ -677,6 +759,17 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
         _ddl = null;
         _parentTodoId = null;
         _groupMode = TaskGroupMode.none;
+        _parentRequiredError = false;
+      }
+    });
+  }
+
+  void _setGroupMode(TaskGroupMode value) {
+    setState(() {
+      _groupMode = value;
+      _parentRequiredError = false;
+      if (value == TaskGroupMode.none) {
+        _parentTodoId = null;
       }
     });
   }
