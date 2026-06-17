@@ -34,7 +34,9 @@ class TodoStorage {
         ? TaskGroupMode.none
         : todo.groupMode;
     return todo.copyWith(
-      parentTodoId: effectiveGroupMode.requiresParent ? todo.parentTodoId : null,
+      parentTodoId: effectiveGroupMode.requiresParent
+          ? todo.parentTodoId
+          : null,
       groupMode: effectiveGroupMode,
     );
   }
@@ -202,13 +204,14 @@ class TodoStorage {
   }
 
   Future<void> deleteTodo(int id) async {
-    await (_db.update(_db.todos)..where((t) => t.parentTodoId.equals(id)))
-        .write(
-          TodosCompanion(
-            parentTodoId: const Value(null),
-            groupMode: Value(TaskGroupMode.none.index),
-          ),
-        );
+    await (_db.update(
+      _db.todos,
+    )..where((t) => t.parentTodoId.equals(id))).write(
+      TodosCompanion(
+        parentTodoId: const Value(null),
+        groupMode: Value(TaskGroupMode.none.index),
+      ),
+    );
     await (_db.delete(_db.todoTags)..where((tt) => tt.todoId.equals(id))).go();
     await (_db.delete(_db.todos)..where((t) => t.id.equals(id))).go();
   }

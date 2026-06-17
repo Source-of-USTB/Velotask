@@ -214,7 +214,9 @@ class _TimelineScreenState extends State<TimelineScreen> {
 
     final usesParallelLanes =
         node.todo.groupMode == TaskGroupMode.parallel ||
-        node.children.any((child) => child.todo.groupMode == TaskGroupMode.parallel);
+        node.children.any(
+          (child) => child.todo.groupMode == TaskGroupMode.parallel,
+        );
 
     if (usesParallelLanes) {
       final plainChildren = node.children

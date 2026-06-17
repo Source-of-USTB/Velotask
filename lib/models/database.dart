@@ -184,6 +184,8 @@ class AppDatabase extends _$AppDatabase {
   }
 
   static QueryExecutor _openConnection() {
-    return driftDatabase(name: kDebugMode ? 'velotask_debug_db' : 'velotask_db');
+    return driftDatabase(
+      name: kDebugMode ? 'velotask_debug_db' : 'velotask_db',
+    );
   }
 }
