@@ -449,7 +449,9 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: [
             _buildGroupModeChip(
               context,
@@ -457,14 +459,12 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
               l10n.taskGroupModeSolo,
               Icons.radio_button_unchecked_rounded,
             ),
-            const SizedBox(width: 8),
             _buildGroupModeChip(
               context,
               TaskGroupMode.subtasks,
               l10n.taskGroupModeSubtasks,
               Icons.account_tree_outlined,
             ),
-            const SizedBox(width: 8),
             _buildGroupModeChip(
               context,
               TaskGroupMode.parallel,
