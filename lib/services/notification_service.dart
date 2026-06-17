@@ -23,6 +23,9 @@ class NotificationService {
   static const String _channelDescription =
       'Reminders for deadlines and daily summaries';
   static const Duration _minResyncInterval = Duration(seconds: 3);
+  static const bool _enableDebugNotifications = bool.fromEnvironment(
+    'VELO_ENABLE_DEBUG_NOTIFICATIONS',
+  );
 
   static const int _dailySummaryId = 888888;
 
@@ -43,6 +46,14 @@ class NotificationService {
 
     if (kIsWeb) {
       _logger.info('NotificationService disabled on web');
+      return;
+    }
+
+    if (kDebugMode && !_enableDebugNotifications) {
+      _logger.info(
+        'NotificationService disabled in debug mode. '
+        'Use --dart-define=VELO_ENABLE_DEBUG_NOTIFICATIONS=true to enable it.',
+      );
       return;
     }
 

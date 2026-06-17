@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:drift_flutter/drift_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 part 'database.g.dart';
 
@@ -60,19 +61,51 @@ class AppDatabase extends _$AppDatabase {
     },
     onUpgrade: (Migrator m, int from, int to) async {
       if (from < 2) {
-        await m.addColumn(todos, todos.estimatedEffortHours);
+        await _addTodoColumnIfMissing(
+          m,
+          'estimated_effort_hours',
+          todos.estimatedEffortHours as GeneratedColumn<Object>,
+        );
       }
       if (from < 3) {
-        await m.addColumn(todos, todos.lastCompletedDate);
+        await _addTodoColumnIfMissing(
+          m,
+          'last_completed_date',
+          todos.lastCompletedDate as GeneratedColumn<Object>,
+        );
       }
       if (from < 4) {
-        await m.addColumn(todos, todos.parentTodoId as GeneratedColumn);
-        await m.addColumn(todos, todos.groupMode as GeneratedColumn);
+        await _addTodoColumnIfMissing(
+          m,
+          'parent_todo_id',
+          todos.parentTodoId as GeneratedColumn<Object>,
+        );
+        await _addTodoColumnIfMissing(
+          m,
+          'group_mode',
+          todos.groupMode as GeneratedColumn<Object>,
+        );
       }
     },
   );
 
+  Future<void> _addTodoColumnIfMissing(
+    Migrator migrator,
+    String columnName,
+    GeneratedColumn<Object> column,
+  ) async {
+    if (await _todoColumnExists(columnName)) {
+      return;
+    }
+    await migrator.addColumn(todos, column);
+  }
+
+  Future<bool> _todoColumnExists(String columnName) async {
+    final rows = await customSelect("PRAGMA table_info('todos')").get();
+    return rows.any((row) => row.data['name'] == columnName);
+  }
+
   static QueryExecutor _openConnection() {
-    return driftDatabase(name: 'velotask_db');
+    return driftDatabase(name: kDebugMode ? 'velotask_debug_db' : 'velotask_db');
   }
 }
