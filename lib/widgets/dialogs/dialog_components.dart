@@ -277,8 +277,8 @@ class DialogDatePicker extends StatelessWidget {
   Widget _clearDateButton(BuildContext context, Color secondaryColor) {
     final l10n = AppLocalizations.of(context)!;
     return SizedBox(
-      width: 28,
-      height: 28,
+      width: 20,
+      height: 20,
       child: IconButton(
         tooltip: l10n.delete,
         onPressed: () => onSelect(null),
