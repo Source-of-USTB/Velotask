@@ -54,7 +54,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
 
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
-  DateTime _startDate = DateTime.now();
+  DateTime? _startDate;
   DateTime? _ddl;
   int _importance = 1;
   TaskType _taskType = TaskType.deadline;
@@ -72,8 +72,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
     if (widget.todo != null) {
       _titleController.text = widget.todo!.title;
       _descController.text = widget.todo!.description;
-      _startDate =
-          widget.todo!.startDate ?? widget.todo!.createdAt ?? DateTime.now();
+      _startDate = widget.todo!.startDate ?? widget.todo!.createdAt;
       _ddl = widget.todo!.ddl;
       _importance = widget.todo!.importance;
       _taskType = widget.todo!.taskType;
@@ -657,8 +656,6 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
         date: _ddl,
         firstDate: minDate,
         onSelect: (d) => setState(() => _ddl = d),
-        isOptional: true,
-        includeTime: true,
       );
     }
 
@@ -667,25 +664,19 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
       date: _startDate,
       firstDate: minDate,
       onSelect: (d) {
-        if (d != null) {
-          setState(() {
-            _startDate = d;
-            if (_ddl != null && _ddl!.isBefore(d)) {
-              _ddl = null;
-            }
-          });
-        }
+        setState(() {
+          _startDate = d;
+          if (d != null && _ddl != null && _ddl!.isBefore(d)) {
+            _ddl = null;
+          }
+        });
       },
-      isOptional: true,
-      includeTime: true,
     );
     final endPicker = DialogDatePicker(
       label: l10n.dateTo,
       date: _ddl,
-      firstDate: _startDate,
+      firstDate: _startDate ?? minDate,
       onSelect: (d) => setState(() => _ddl = d),
-      isOptional: true,
-      includeTime: true,
     );
 
     if (useVerticalLayout) {

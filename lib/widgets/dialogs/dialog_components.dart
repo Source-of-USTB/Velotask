@@ -90,7 +90,7 @@ class PrioritySelector extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       hoverColor: Colors.transparent,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
         decoration: BoxDecoration(
           color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
@@ -132,101 +132,23 @@ class DialogDatePicker extends StatelessWidget {
   final String label;
   final DateTime? date;
   final Function(DateTime?) onSelect;
-  final bool isOptional;
   final DateTime? firstDate;
-  final bool includeTime;
 
   const DialogDatePicker({
     super.key,
     required this.label,
     required this.date,
     required this.onSelect,
-    this.isOptional = false,
     this.firstDate,
-    this.includeTime = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final secondaryColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
-    final l10n = AppLocalizations.of(context)!;
 
     return InkWell(
-      onTap: () async {
-        final initialDate = date ?? DateTime.now();
-        final effectiveFirstDate = firstDate ?? DateTime(2000);
-
-        // Ensure initialDate is not before firstDate
-        final validInitialDate = initialDate.isBefore(effectiveFirstDate)
-            ? effectiveFirstDate
-            : initialDate;
-
-        final picked = await showDatePicker(
-          context: context,
-          initialDate: validInitialDate,
-          firstDate: effectiveFirstDate,
-          lastDate: DateTime(2100),
-          builder: (context, child) {
-            return Theme(
-              data: Theme.of(context).copyWith(
-                datePickerTheme: DatePickerThemeData(
-                  dayShape: WidgetStateProperty.all(
-                    RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                ),
-              ),
-              child: child!,
-            );
-          },
-        );
-        if (picked == null) {
-          return;
-        }
-
-        if (!includeTime) {
-          onSelect(picked);
-          return;
-        }
-
-        if (!context.mounted) return;
-
-        final initialTime = date != null
-            ? TimeOfDay(hour: date!.hour, minute: date!.minute)
-            : const TimeOfDay(hour: 23, minute: 59);
-
-        final pickedTime = await showTimePicker(
-          context: context,
-          initialTime: initialTime,
-          builder: (context, child) {
-            final theme = Theme.of(context);
-            return Theme(
-              data: theme.copyWith(
-                timePickerTheme: TimePickerThemeData(
-                  backgroundColor: theme.colorScheme.surface,
-                  hourMinuteShape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-              child: child!,
-            );
-          },
-        );
-
-        final effectiveTime = pickedTime ?? initialTime;
-        onSelect(
-          DateTime(
-            picked.year,
-            picked.month,
-            picked.day,
-            effectiveTime.hour,
-            effectiveTime.minute,
-          ),
-        );
-      },
+      onTap: () => _pickDateTime(context),
       borderRadius: BorderRadius.circular(8),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
@@ -237,53 +159,144 @@ class DialogDatePicker extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(
-              label,
-              style: AppTheme.smallRegularStyle(context, color: secondaryColor),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                date == null
-                    ? (isOptional
-                          ? (includeTime ? '--/-- --:--' : '--/--')
-                          : l10n.today)
-                    : includeTime
-                    ? '${date!.month}/${date!.day} ${date!.hour.toString().padLeft(2, '0')}:${date!.minute.toString().padLeft(2, '0')}'
-                    : '${date!.month}/${date!.day}',
-                textAlign: TextAlign.end,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTheme.accentBodyStyle(
-                  context,
-                  color: theme.primaryColor,
-                ),
-              ),
-            ),
-            if (isOptional && date != null) ...[
+            _dateLabel(context, secondaryColor),
+            _dateValue(context),
+            if (date != null) ...[
               const SizedBox(width: 4),
-              SizedBox(
-                width: 28,
-                height: 28,
-                child: IconButton(
-                  tooltip: l10n.delete,
-                  onPressed: () => onSelect(null),
-                  icon: Icon(
-                    Icons.close_rounded,
-                    size: 16,
-                    color: secondaryColor,
-                  ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 28,
-                    minHeight: 28,
-                  ),
-                ),
-              ),
+              _clearDateButton(context, secondaryColor),
             ],
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _pickDateTime(BuildContext context) async {
+    final picked = await _pickDate(context);
+    if (picked == null || !context.mounted) {
+      return;
+    }
+
+    final initialTime = _initialTime();
+    final pickedTime = await _pickTime(context, initialTime);
+    final effectiveTime = pickedTime ?? initialTime;
+
+    onSelect(
+      DateTime(
+        picked.year,
+        picked.month,
+        picked.day,
+        effectiveTime.hour,
+        effectiveTime.minute,
+      ),
+    );
+  }
+
+  Future<DateTime?> _pickDate(BuildContext context) {
+    final effectiveFirstDate = firstDate ?? DateTime(2000);
+    final initialDate = date ?? DateTime.now();
+    final validInitialDate = initialDate.isBefore(effectiveFirstDate)
+        ? effectiveFirstDate
+        : initialDate;
+
+    return showDatePicker(
+      context: context,
+      initialDate: validInitialDate,
+      firstDate: effectiveFirstDate,
+      lastDate: DateTime(2100),
+      builder: (context, child) => _datePickerTheme(context, child),
+    );
+  }
+
+  Widget _datePickerTheme(BuildContext context, Widget? child) {
+    return Theme(
+      data: Theme.of(context).copyWith(
+        datePickerTheme: DatePickerThemeData(
+          dayShape: WidgetStateProperty.all(
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+        ),
+      ),
+      child: child!,
+    );
+  }
+
+  TimeOfDay _initialTime() {
+    final value = date;
+    if (value == null) {
+      return const TimeOfDay(hour: 23, minute: 59);
+    }
+    return TimeOfDay(hour: value.hour, minute: value.minute);
+  }
+
+  Future<TimeOfDay?> _pickTime(BuildContext context, TimeOfDay initialTime) {
+    return showTimePicker(
+      context: context,
+      initialTime: initialTime,
+      builder: (context, child) => _timePickerTheme(context, child),
+    );
+  }
+
+  Widget _timePickerTheme(BuildContext context, Widget? child) {
+    final theme = Theme.of(context);
+    return Theme(
+      data: theme.copyWith(
+        timePickerTheme: TimePickerThemeData(
+          backgroundColor: theme.colorScheme.surface,
+          hourMinuteShape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      ),
+      child: child!,
+    );
+  }
+
+  Widget _dateLabel(BuildContext context, Color secondaryColor) {
+    return Text(
+      label,
+      style: AppTheme.smallRegularStyle(context, color: secondaryColor),
+    );
+  }
+
+  Widget _dateValue(BuildContext context) {
+    return Expanded(
+      child: Text(
+        _dateText(),
+        textAlign: TextAlign.end,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: AppTheme.accentBodyStyle(
+          context,
+          color: Theme.of(context).primaryColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _clearDateButton(BuildContext context, Color secondaryColor) {
+    final l10n = AppLocalizations.of(context)!;
+    return SizedBox(
+      width: 28,
+      height: 28,
+      child: IconButton(
+        tooltip: l10n.delete,
+        onPressed: () => onSelect(null),
+        icon: Icon(Icons.close_rounded, size: 16, color: secondaryColor),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+      ),
+    );
+  }
+
+  String _dateText() {
+    final value = date;
+    if (value == null) {
+      return '--/-- --:--';
+    }
+
+    final hour = value.hour.toString().padLeft(2, '0');
+    final minute = value.minute.toString().padLeft(2, '0');
+    return '${value.month}/${value.day} $hour:$minute';
   }
 }
