@@ -212,7 +212,11 @@ class _TimelineScreenState extends State<TimelineScreen> {
       return;
     }
 
-    if (node.todo.groupMode == TaskGroupMode.parallel) {
+    final usesParallelLanes =
+        node.todo.groupMode == TaskGroupMode.parallel ||
+        node.children.any((child) => child.todo.groupMode == TaskGroupMode.parallel);
+
+    if (usesParallelLanes) {
       final plainChildren = node.children
           .where((child) => !child.hasChildren)
           .toList();
@@ -287,7 +291,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
     }
 
     DateTime? start = node.todo.taskType == TaskType.deadline
-        ? node.todo.ddl
+        ? _deadlineRangeStart(node.todo.ddl)
         : node.todo.startDate ?? node.todo.createdAt;
     DateTime? end = node.todo.ddl;
 
@@ -333,6 +337,16 @@ class _TimelineScreenState extends State<TimelineScreen> {
       return b;
     }
     return a;
+  }
+
+  DateTime? _deadlineRangeStart(DateTime? ddl) {
+    if (ddl == null) {
+      return null;
+    }
+    final dayStart = DateTime(ddl.year, ddl.month, ddl.day);
+    return dayStart.isBefore(ddl)
+        ? dayStart
+        : ddl.subtract(const Duration(days: 1));
   }
 
   void _toggleTimelineGroup(Todo todo) {
