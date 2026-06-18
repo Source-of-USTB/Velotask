@@ -171,7 +171,10 @@ void main() {
     });
 
     test('same length, different elements return false', () {
-      expect(DailyTaskOrderController.hasSameOrder([1, 2, 3], [1, 3, 2]), false);
+      expect(
+        DailyTaskOrderController.hasSameOrder([1, 2, 3], [1, 3, 2]),
+        false,
+      );
     });
 
     test('empty lists return true', () {

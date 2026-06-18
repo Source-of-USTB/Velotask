@@ -42,10 +42,7 @@ void main() {
     });
 
     test('subtasks mode without parent is invalid', () {
-      final t = Todo(
-        title: 'x',
-        groupMode: TaskGroupMode.subtasks,
-      );
+      final t = Todo(title: 'x', groupMode: TaskGroupMode.subtasks);
       expect(t.hasValidGrouping, false);
     });
 
@@ -60,10 +57,7 @@ void main() {
     });
 
     test('parallel mode without parent is invalid', () {
-      final t = Todo(
-        title: 'x',
-        groupMode: TaskGroupMode.parallel,
-      );
+      final t = Todo(title: 'x', groupMode: TaskGroupMode.parallel);
       expect(t.hasValidGrouping, false);
     });
 

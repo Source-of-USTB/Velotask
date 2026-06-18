@@ -2,7 +2,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/models/todo_hierarchy.dart';
 
-Todo _todo(int id, {int? parentId, TaskGroupMode groupMode = TaskGroupMode.none}) {
+Todo _todo(
+  int id, {
+  int? parentId,
+  TaskGroupMode groupMode = TaskGroupMode.none,
+}) {
   return Todo(
     id: id,
     title: 'Todo $id',
@@ -25,10 +29,7 @@ void main() {
     });
 
     test('parent-child link', () {
-      final nodes = buildTodoHierarchy([
-        _todo(1),
-        _todo(2, parentId: 1),
-      ]);
+      final nodes = buildTodoHierarchy([_todo(1), _todo(2, parentId: 1)]);
       expect(nodes.length, 1);
       expect(nodes.first.todo.id, 1);
       expect(nodes.first.children.length, 1);
@@ -90,9 +91,7 @@ void main() {
     });
 
     test('id==0 is treated as root without being in nodeById', () {
-      final nodes = buildTodoHierarchy([
-        Todo(id: 0, title: 'unsaved'),
-      ]);
+      final nodes = buildTodoHierarchy([Todo(id: 0, title: 'unsaved')]);
       expect(nodes.length, 1);
       expect(nodes.first.todo.id, 0);
     });
@@ -138,7 +137,10 @@ void main() {
     });
 
     test('parent that matches keeps all matching descendants', () {
-      final result = filterTodoHierarchy(hierarchy, (t) => t.id == 1 || t.id == 3);
+      final result = filterTodoHierarchy(
+        hierarchy,
+        (t) => t.id == 1 || t.id == 3,
+      );
       expect(result.length, 1);
       expect(result.first.todo.id, 1);
       // Child 3 matches, child 2 does not but has no matching descendant
@@ -197,10 +199,7 @@ void main() {
 
   group('hasTodoDescendant', () {
     test('returns true for direct child', () {
-      final root = buildTodoHierarchy([
-        _todo(1),
-        _todo(2, parentId: 1),
-      ]).first;
+      final root = buildTodoHierarchy([_todo(1), _todo(2, parentId: 1)]).first;
       expect(hasTodoDescendant(root, 2), true);
     });
 
@@ -214,10 +213,7 @@ void main() {
     });
 
     test('returns false for non-existent id', () {
-      final root = buildTodoHierarchy([
-        _todo(1),
-        _todo(2, parentId: 1),
-      ]).first;
+      final root = buildTodoHierarchy([_todo(1), _todo(2, parentId: 1)]).first;
       expect(hasTodoDescendant(root, 99), false);
     });
 
