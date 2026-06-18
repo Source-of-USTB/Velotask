@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:velotask/l10n/app_localizations.dart';
-import 'package:velotask/models/todo.dart';
 import 'package:velotask/services/app_settings_controller.dart';
 import 'package:velotask/theme/app_theme.dart';
 
 class HomeAppBar extends StatelessWidget {
-  final List<Todo> todos;
   final VoidCallback onAIAction;
   final VoidCallback onSettingsPressed;
 
   const HomeAppBar({
     super.key,
-    required this.todos,
     required this.onAIAction,
     required this.onSettingsPressed,
   });

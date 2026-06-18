@@ -39,8 +39,6 @@ class _TagsScreenState extends State<TagsScreen> {
     }
   }
 
-  Color _parseTagColor(Tag tag) => tag.displayColor;
-
   BoxDecoration _surfaceDecoration(BuildContext context) {
     return BoxDecoration(
       color: Theme.of(context).colorScheme.surfaceContainerLowest,
@@ -125,7 +123,7 @@ class _TagsScreenState extends State<TagsScreen> {
   void _showEditTagDialog(Tag tag) {
     final l10n = AppLocalizations.of(context)!;
     final nameCtrl = TextEditingController(text: tag.name);
-    Color editColor = _parseTagColor(tag);
+    Color editColor = tag.displayColor;
 
     showDialog(
       context: context,
@@ -273,7 +271,7 @@ class _TagsScreenState extends State<TagsScreen> {
               separatorBuilder: (context, index) => const SizedBox(height: 10),
               itemBuilder: (context, index) {
                 final tag = _tags[index];
-                final tagColor = _parseTagColor(tag);
+                final tagColor = tag.displayColor;
                 return Container(
                   decoration: _surfaceDecoration(context),
                   child: ListTile(

@@ -192,7 +192,6 @@ class _TasksScreenState extends State<TasksScreen>
           ),
           slivers: [
             HomeAppBar(
-              todos: widget.todos,
               onAIAction: widget.onAIAction,
               onSettingsPressed: widget.onSettingsPressed,
             ),

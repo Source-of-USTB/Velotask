@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:velotask/l10n/app_localizations.dart';
-import 'package:velotask/models/tag.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/utils/priority_engine.dart';
@@ -11,7 +10,6 @@ class TodoItem extends StatefulWidget {
   final VoidCallback onToggle;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
-  final List<Tag>? visibleTags; // For testing or explicit tag display
   final Widget? leadingHandle;
   final int depth;
   final int subtaskCount;
@@ -25,7 +23,6 @@ class TodoItem extends StatefulWidget {
     required this.onToggle,
     required this.onDelete,
     required this.onEdit,
-    this.visibleTags,
     this.leadingHandle,
     this.depth = 0,
     this.subtaskCount = 0,
@@ -229,41 +226,33 @@ class _TodoItemState extends State<TodoItem> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if ((widget.visibleTags ?? widget.todo.tags).isNotEmpty)
+                        if (widget.todo.tags.isNotEmpty)
                           Padding(
                             padding: const EdgeInsets.only(bottom: 4),
                             child: SingleChildScrollView(
                               scrollDirection: Axis.horizontal,
                               child: Row(
-                                children:
-                                    (widget.visibleTags ?? widget.todo.tags)
-                                        .map((tag) {
-                                          final tagColor = tag.displayColor;
-                                          return Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 6,
-                                              vertical: 2,
-                                            ),
-                                            margin: const EdgeInsets.only(
-                                              right: 6,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: tagColor.withValues(
-                                                alpha: 0.1,
-                                              ),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                            ),
-                                            child: Text(
-                                              tag.name.toUpperCase(),
-                                              style: AppTheme.tinyBoldStyle(
-                                                context,
-                                                color: tagColor,
-                                              ),
-                                            ),
-                                          );
-                                        })
-                                        .toList(),
+                                children: widget.todo.tags.map((tag) {
+                                  final tagColor = tag.displayColor;
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 6,
+                                      vertical: 2,
+                                    ),
+                                    margin: const EdgeInsets.only(right: 6),
+                                    decoration: BoxDecoration(
+                                      color: tagColor.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: Text(
+                                      tag.name.toUpperCase(),
+                                      style: AppTheme.tinyBoldStyle(
+                                        context,
+                                        color: tagColor,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
                               ),
                             ),
                           ),

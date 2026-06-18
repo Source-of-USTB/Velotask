@@ -253,9 +253,6 @@ class TimelineTaskRow extends StatelessWidget {
     if (row.isGroupHeader && todo.id == row.primaryTodo.id) {
       return row.effectiveEnd ?? todo.ddl ?? start;
     }
-    if (todo.taskType == TaskType.deadline) {
-      return todo.ddl;
-    }
     return todo.ddl;
   }
 }
