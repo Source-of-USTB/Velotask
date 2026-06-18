@@ -67,112 +67,143 @@ class _AIInputDialogState extends State<AIInputDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
     if (_error == 'config_missing') {
-      return AlertDialog(
-        title: Text(l10n.aiSettings),
-        content: Text(l10n.aiSettingsSubtitle),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await widget.onOpenAISettings();
-              if (!mounted) return;
-              setState(() {
-                _error = null;
-              });
-            },
-            child: Text(l10n.settings),
-          ),
-        ],
-      );
+      return _buildMissingConfigDialog(context);
     }
 
+    return _buildInputDialog(context);
+  }
+
+  Widget _buildMissingConfigDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
     return AlertDialog(
-      title: Row(
-        children: [
-          const Icon(Icons.auto_awesome, color: Colors.blue),
-          const SizedBox(width: 8),
-          Text(l10n.aiQuickAdd, style: AppTheme.dialogTitleStyle(context)),
-        ],
-      ),
-      content: SizedBox(
-        width: 420,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              controller: _controller,
-              decoration: InputDecoration(
-                hintText: l10n.aiInputHint,
-                border: const OutlineInputBorder(),
-                suffixIcon: _controller.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          setState(() {
-                            _controller.clear();
-                          });
-                        },
-                      )
-                    : null,
-              ),
-              maxLines: 3,
-              enabled: !_isProcessing,
-              autofocus: true,
-              onChanged: (_) => setState(() {}),
-            ),
-            if (_error != null) ...[
-              const SizedBox(height: 12),
-              Container(
-                constraints: const BoxConstraints(maxHeight: 100),
-                decoration: BoxDecoration(
-                  color: Colors.red.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                padding: const EdgeInsets.all(10),
-                child: SingleChildScrollView(
-                  child: Text(
-                    _error!,
-                    style: AppTheme.smallRegularStyle(
-                      context,
-                      color: Colors.red,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ],
+      title: Text(l10n.aiSettings),
+      content: Text(l10n.aiSettingsSubtitle),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
         ),
-      ),
+        ElevatedButton(
+          onPressed: _openSettingsAndResetError,
+          child: Text(l10n.settings),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInputDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return AlertDialog(
+      title: _buildTitle(context, l10n),
+      content: _buildContent(context, l10n),
       actions: [
         TextButton(
           onPressed: _isProcessing ? null : () => Navigator.pop(context),
           child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
         ),
-        ElevatedButton(
-          onPressed: _isProcessing ? null : _processInput,
-          child: _isProcessing
-              ? Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(l10n.aiProcessing),
-                  ],
-                )
-              : Text(l10n.aiSubmit),
-        ),
+        _buildSubmitButton(l10n),
       ],
     );
+  }
+
+  Widget _buildTitle(BuildContext context, AppLocalizations l10n) {
+    return Row(
+      children: [
+        const Icon(Icons.auto_awesome, color: Colors.blue),
+        const SizedBox(width: 8),
+        Text(l10n.aiQuickAdd, style: AppTheme.dialogTitleStyle(context)),
+      ],
+    );
+  }
+
+  Widget _buildContent(BuildContext context, AppLocalizations l10n) {
+    return SizedBox(
+      width: 420,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildInputField(l10n),
+          if (_error != null) ...[
+            const SizedBox(height: 12),
+            _buildErrorPanel(context),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputField(AppLocalizations l10n) {
+    return TextField(
+      controller: _controller,
+      decoration: InputDecoration(
+        hintText: l10n.aiInputHint,
+        border: const OutlineInputBorder(),
+        suffixIcon: _controller.text.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear),
+                onPressed: () {
+                  setState(() {
+                    _controller.clear();
+                  });
+                },
+              )
+            : null,
+      ),
+      maxLines: 3,
+      enabled: !_isProcessing,
+      autofocus: true,
+      onChanged: (_) => setState(() {}),
+    );
+  }
+
+  Widget _buildErrorPanel(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxHeight: 100),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: const EdgeInsets.all(10),
+      child: SingleChildScrollView(
+        child: Text(
+          _error!,
+          style: AppTheme.smallRegularStyle(context, color: Colors.red),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubmitButton(AppLocalizations l10n) {
+    return ElevatedButton(
+      onPressed: _isProcessing ? null : _processInput,
+      child: _isProcessing ? _buildProcessingLabel(l10n) : Text(l10n.aiSubmit),
+    );
+  }
+
+  Widget _buildProcessingLabel(AppLocalizations l10n) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const SizedBox(
+          width: 16,
+          height: 16,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+        const SizedBox(width: 8),
+        Text(l10n.aiProcessing),
+      ],
+    );
+  }
+
+  Future<void> _openSettingsAndResetError() async {
+    await widget.onOpenAISettings();
+    if (!mounted) return;
+    setState(() {
+      _error = null;
+    });
   }
 }

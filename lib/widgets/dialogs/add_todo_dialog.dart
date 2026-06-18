@@ -217,199 +217,207 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
         widget.todo == null ? l10n.newTask : l10n.editTask,
         style: AppTheme.dialogTitleStyle(context),
       ),
-      content: ConstrainedBox(
-        constraints: BoxConstraints(
-          minWidth: dialogWidth,
-          maxWidth: dialogWidth,
-          maxHeight: maxDialogBodyHeight,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Title Input
-              DialogInputRow(
-                isInput: true,
-                child: TextField(
-                  controller: _titleController,
-                  autofocus: true,
-                  style: AppTheme.bodyStrongStyle(context),
-                  decoration: InputDecoration(
-                    hintText: l10n.titleHint,
-                    hintStyle: TextStyle(
-                      color: Colors.grey.withValues(alpha: 0.5),
-                    ),
-                    filled: false,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                    isDense: true,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Description Input
-              DialogInputRow(
-                isInput: true,
-                child: TextField(
-                  controller: _descController,
-                  style: AppTheme.bodyStrongStyle(context),
-                  decoration: InputDecoration(
-                    hintText: l10n.descHint,
-                    hintStyle: TextStyle(
-                      color: Colors.grey.withValues(alpha: 0.5),
-                    ),
-                    filled: false,
-                    border: InputBorder.none,
-                    enabledBorder: InputBorder.none,
-                    focusedBorder: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                    isDense: true,
-                  ),
-                  maxLines: 3,
-                  minLines: 1,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Task Type Selector
-              DialogInputRow(child: _buildTaskTypeSelector(context)),
-
-              if (_taskType != TaskType.daily) ...[
-                const SizedBox(height: 16),
-                // Date Picker
-                DialogInputRow(
-                  child: _buildSchedulePicker(context, useVerticalDateLayout),
-                ),
-                const SizedBox(height: 16),
-                // Grouping Controls
-                DialogInputRow(child: _buildGroupingControls(context)),
-              ],
-
-              const SizedBox(height: 16),
-
-              // Priority Row
-              DialogInputRow(
-                child: PrioritySelector(
-                  selectedPriority: _importance,
-                  onPriorityChanged: (val) => setState(() => _importance = val),
-                ),
-              ),
-
-              // Tags Row
-              if (_availableTags.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                DialogInputRow(
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _availableTags.map((tag) {
-                      final isSelected = _selectedTags.any(
-                        (t) => t.id == tag.id,
-                      );
-                      final tagColor = tag.displayColor;
-                      return FilterChip(
-                        label: Text(tag.name),
-                        selected: isSelected,
-                        onSelected: (selected) {
-                          setState(() {
-                            if (selected) {
-                              _selectedTags.add(tag);
-                            } else {
-                              _selectedTags.removeWhere((t) => t.id == tag.id);
-                            }
-                          });
-                        },
-                        materialTapTargetSize: MaterialTapTargetSize.padded,
-                        backgroundColor: Colors.transparent,
-                        selectedColor: tagColor.withValues(alpha: 0.2),
-                        labelStyle: TextStyle(
-                          color: isSelected
-                              ? tagColor
-                              : Theme.of(context).colorScheme.onSurface,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          side: BorderSide(
-                            color: isSelected
-                                ? tagColor
-                                : Colors.grey.withValues(alpha: 0.3),
-                          ),
-                        ),
-                        showCheckmark: false,
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
+      content: _buildDialogContent(
+        context,
+        dialogWidth: dialogWidth,
+        maxDialogBodyHeight: maxDialogBodyHeight,
+        useVerticalDateLayout: useVerticalDateLayout,
       ),
-      actions: [
-        Row(
+      actions: [_buildActions(context)],
+    );
+  }
+
+  Widget _buildDialogContent(
+    BuildContext context, {
+    required double dialogWidth,
+    required double maxDialogBodyHeight,
+    required bool useVerticalDateLayout,
+  }) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minWidth: dialogWidth,
+        maxWidth: dialogWidth,
+        maxHeight: maxDialogBodyHeight,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (widget.todo != null)
-              TextButton(
-                onPressed: () {
-                  widget.onDelete?.call();
-                  if (context.mounted) Navigator.pop(context);
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                ),
-                child: Text(l10n.delete),
+            _buildTitleInput(context),
+            const SizedBox(height: 16),
+            _buildDescriptionInput(context),
+            const SizedBox(height: 16),
+            DialogInputRow(child: _buildTaskTypeSelector(context)),
+            if (_taskType != TaskType.daily) ...[
+              const SizedBox(height: 16),
+              DialogInputRow(
+                child: _buildSchedulePicker(context, useVerticalDateLayout),
               ),
-            const Spacer(),
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              style: TextButton.styleFrom(
-                foregroundColor: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withValues(alpha: 0.6),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
-              ),
-              child: Text(l10n.cancel),
-            ),
-            const SizedBox(width: 8),
-            FilledButton(
-              onPressed: _isSubmitting
-                  ? null
-                  : () {
-                      if (_titleController.text.isNotEmpty) {
-                        _submit();
-                      }
-                    },
-              style: FilledButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 12,
-                ),
-              ),
-              child: Text(
-                widget.todo == null ? l10n.create : l10n.save,
-                style: AppTheme.bodyStrongStyle(
-                  context,
-                  color: Theme.of(context).colorScheme.onPrimary,
-                ),
+              const SizedBox(height: 16),
+              DialogInputRow(child: _buildGroupingControls(context)),
+            ],
+            const SizedBox(height: 16),
+            DialogInputRow(
+              child: PrioritySelector(
+                selectedPriority: _importance,
+                onPriorityChanged: (val) => setState(() => _importance = val),
               ),
             ),
+            if (_availableTags.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              DialogInputRow(child: _buildTagSelector(context)),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildTitleInput(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return DialogInputRow(
+      isInput: true,
+      child: TextField(
+        controller: _titleController,
+        autofocus: true,
+        style: AppTheme.bodyStrongStyle(context),
+        decoration: _textInputDecoration(l10n.titleHint),
+      ),
+    );
+  }
+
+  Widget _buildDescriptionInput(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return DialogInputRow(
+      isInput: true,
+      child: TextField(
+        controller: _descController,
+        style: AppTheme.bodyStrongStyle(context),
+        decoration: _textInputDecoration(l10n.descHint),
+        maxLines: 3,
+        minLines: 1,
+      ),
+    );
+  }
+
+  InputDecoration _textInputDecoration(String hintText) {
+    return InputDecoration(
+      hintText: hintText,
+      hintStyle: TextStyle(color: Colors.grey.withValues(alpha: 0.5)),
+      filled: false,
+      border: InputBorder.none,
+      enabledBorder: InputBorder.none,
+      focusedBorder: InputBorder.none,
+      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+      isDense: true,
+    );
+  }
+
+  Widget _buildTagSelector(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: _availableTags.map((tag) {
+        final isSelected = _selectedTags.any((t) => t.id == tag.id);
+        final tagColor = tag.displayColor;
+        return FilterChip(
+          label: Text(tag.name),
+          selected: isSelected,
+          onSelected: (selected) => _setTagSelected(tag, selected),
+          materialTapTargetSize: MaterialTapTargetSize.padded,
+          backgroundColor: Colors.transparent,
+          selectedColor: tagColor.withValues(alpha: 0.2),
+          labelStyle: TextStyle(
+            color: isSelected
+                ? tagColor
+                : Theme.of(context).colorScheme.onSurface,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(
+              color: isSelected ? tagColor : Colors.grey.withValues(alpha: 0.3),
+            ),
+          ),
+          showCheckmark: false,
+        );
+      }).toList(),
+    );
+  }
+
+  void _setTagSelected(Tag tag, bool selected) {
+    setState(() {
+      if (selected) {
+        _selectedTags.add(tag);
+      } else {
+        _selectedTags.removeWhere((t) => t.id == tag.id);
+      }
+    });
+  }
+
+  Widget _buildActions(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return Row(
+      children: [
+        if (widget.todo != null) _buildDeleteButton(context, l10n),
+        const Spacer(),
+        _buildCancelButton(context, l10n),
+        const SizedBox(width: 8),
+        _buildSubmitButton(context, l10n),
       ],
+    );
+  }
+
+  Widget _buildDeleteButton(BuildContext context, AppLocalizations l10n) {
+    return TextButton(
+      onPressed: () {
+        widget.onDelete?.call();
+        if (context.mounted) Navigator.pop(context);
+      },
+      style: TextButton.styleFrom(
+        foregroundColor: Colors.red,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+      child: Text(l10n.delete),
+    );
+  }
+
+  Widget _buildCancelButton(BuildContext context, AppLocalizations l10n) {
+    return TextButton(
+      onPressed: () => Navigator.pop(context),
+      style: TextButton.styleFrom(
+        foregroundColor: Theme.of(
+          context,
+        ).colorScheme.onSurface.withValues(alpha: 0.6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      ),
+      child: Text(l10n.cancel),
+    );
+  }
+
+  Widget _buildSubmitButton(BuildContext context, AppLocalizations l10n) {
+    return FilledButton(
+      onPressed: _isSubmitting
+          ? null
+          : () {
+              if (_titleController.text.isNotEmpty) {
+                _submit();
+              }
+            },
+      style: FilledButton.styleFrom(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      ),
+      child: Text(
+        widget.todo == null ? l10n.create : l10n.save,
+        style: AppTheme.bodyStrongStyle(
+          context,
+          color: Theme.of(context).colorScheme.onPrimary,
+        ),
+      ),
     );
   }
 

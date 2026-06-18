@@ -21,67 +21,72 @@ class FilterSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
     return SliverToBoxAdapter(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        children: [_buildStatusFilters(context), _buildTagFilters(context)],
+      ),
+    );
+  }
+
+  Widget _buildStatusFilters(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
         children: [
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              children: [
-                _buildStatusChip(context, l10n.filterAll, TodoFilter.all),
-                const SizedBox(width: 8),
-                _buildStatusChip(context, l10n.filterActive, TodoFilter.active),
-                const SizedBox(width: 8),
-                _buildStatusChip(
-                  context,
-                  l10n.filterDone,
-                  TodoFilter.completed,
-                ),
-                const SizedBox(width: 8),
-                _buildStatusChip(
-                  context,
-                  l10n.filterEmergency,
-                  TodoFilter.highPriority,
-                ),
-                const SizedBox(width: 8),
-                _buildStatusChip(context, l10n.taskTypeDaily, TodoFilter.daily),
-              ],
-            ),
+          _buildStatusChip(context, l10n.filterAll, TodoFilter.all),
+          const SizedBox(width: 8),
+          _buildStatusChip(context, l10n.filterActive, TodoFilter.active),
+          const SizedBox(width: 8),
+          _buildStatusChip(context, l10n.filterDone, TodoFilter.completed),
+          const SizedBox(width: 8),
+          _buildStatusChip(
+            context,
+            l10n.filterEmergency,
+            TodoFilter.highPriority,
           ),
-          if (tags.isNotEmpty) ...[
-            const SizedBox(height: 12),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Row(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(right: 8),
-                    child: Icon(
-                      Icons.label_outline_rounded,
-                      size: 18,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.outline.withValues(alpha: 0.5),
-                    ),
-                  ),
-                  ...tags.map((tag) {
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8),
-                      child: _buildTagChip(context, tag),
-                    );
-                  }),
-                ],
+          const SizedBox(width: 8),
+          _buildStatusChip(context, l10n.taskTypeDaily, TodoFilter.daily),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTagFilters(BuildContext context) {
+    if (tags.isEmpty) {
+      return const SizedBox(height: 16);
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        child: Row(
+          children: [
+            _buildTagFilterIcon(context),
+            ...tags.map(
+              (tag) => Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: _buildTagChip(context, tag),
               ),
             ),
-          ] else ...[
-            const SizedBox(height: 16),
           ],
-        ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTagFilterIcon(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: Icon(
+        Icons.label_outline_rounded,
+        size: 18,
+        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
       ),
     );
   }

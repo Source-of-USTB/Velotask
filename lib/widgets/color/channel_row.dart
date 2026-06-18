@@ -88,66 +88,79 @@ class _ChannelRowState extends State<ChannelRow> {
 
   @override
   Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(width: 20, child: Text(_channelLabel(context))),
+        const SizedBox(width: 8),
+        _buildValueInput(),
+        const SizedBox(width: 8),
+        _buildSlider(),
+      ],
+    );
+  }
+
+  String _channelLabel(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final chLabel = widget.channel == 'R'
+    return widget.channel == 'R'
         ? l10n.redLabel
         : widget.channel == 'G'
         ? l10n.greenLabel
         : widget.channel == 'B'
         ? l10n.blueLabel
         : l10n.alphaLabel;
+  }
 
-    return Row(
-      children: [
-        SizedBox(width: 20, child: Text(chLabel)),
-        const SizedBox(width: 8),
-        SizedBox(
-          width: 64,
-          child: TextField(
-            controller: _ctrl,
-            focusNode: _focus,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            textAlign: TextAlign.center,
-            decoration: InputDecoration(
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 4,
-                vertical: 6,
-              ),
-            ),
+  Widget _buildValueInput() {
+    return SizedBox(
+      width: 64,
+      child: TextField(
+        controller: _ctrl,
+        focusNode: _focus,
+        keyboardType: TextInputType.number,
+        inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+        textAlign: TextAlign.center,
+        decoration: InputDecoration(
+          isDense: true,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 4,
+            vertical: 6,
           ),
         ),
-        const SizedBox(width: 8),
-        SliderTheme(
-          data: SliderThemeData(
-            trackHeight: 4,
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
-          ),
-          child: Expanded(
-            child: Slider(
-              value: _lastValid.toDouble(),
-              min: 0,
-              max: 255,
-              onChanged: (v) {
-                final iv = v.round();
-                _ctrl.text = iv.toString();
-                setState(() => _lastValid = iv);
-              },
-              onChangeEnd: (v) {
-                final iv = v.round();
-                final ch = widget.channel;
-                final c = widget.color;
-                final r = ch == 'R' ? iv : (c.r * 255).round();
-                final g = ch == 'G' ? iv : (c.g * 255).round();
-                final b = ch == 'B' ? iv : (c.b * 255).round();
-                final a = ch == 'A' ? iv : (c.a * 255).round();
-                widget.onChanged(Color.fromARGB(a, r, g, b));
-              },
-            ),
-          ),
-        ),
-      ],
+      ),
     );
+  }
+
+  Widget _buildSlider() {
+    return SliderTheme(
+      data: SliderThemeData(
+        trackHeight: 4,
+        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+      ),
+      child: Expanded(
+        child: Slider(
+          value: _lastValid.toDouble(),
+          min: 0,
+          max: 255,
+          onChanged: _updateSliderPreview,
+          onChangeEnd: (v) => _commitChannelValue(v.round()),
+        ),
+      ),
+    );
+  }
+
+  void _updateSliderPreview(double value) {
+    final iv = value.round();
+    _ctrl.text = iv.toString();
+    setState(() => _lastValid = iv);
+  }
+
+  void _commitChannelValue(int value) {
+    final ch = widget.channel;
+    final c = widget.color;
+    final r = ch == 'R' ? value : (c.r * 255).round();
+    final g = ch == 'G' ? value : (c.g * 255).round();
+    final b = ch == 'B' ? value : (c.b * 255).round();
+    final a = ch == 'A' ? value : (c.a * 255).round();
+    widget.onChanged(Color.fromARGB(a, r, g, b));
   }
 }

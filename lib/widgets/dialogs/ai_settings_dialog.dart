@@ -175,71 +175,105 @@ class _AISettingsDialogState extends State<AISettingsDialog> {
       contentPadding: const EdgeInsets.fromLTRB(24, 20, 24, 8),
       actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       title: Text(l10n.aiSettings),
-      content: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxWidth: dialogWidth,
-          maxHeight: maxDialogBodyHeight,
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: _aiBaseUrlController,
-                decoration: InputDecoration(
-                  labelText: l10n.aiBaseUrl,
-                  hintText: 'https://api.openai.com/v1',
-                ),
-              ),
-              const SizedBox(height: 18),
-              TextField(
-                controller: _aiApiKeyController,
-                decoration: InputDecoration(
-                  labelText: l10n.aiApiKey,
-                  hintText: 'sk-...',
-                ),
-                obscureText: true,
-              ),
-              const SizedBox(height: 18),
-              TextField(
-                controller: _aiModelController,
-                decoration: InputDecoration(
-                  labelText: l10n.aiModel,
-                  hintText: 'gpt-3.5-turbo',
-                ),
-              ),
-            ],
+      content: _buildContent(
+        context,
+        dialogWidth: dialogWidth,
+        maxDialogBodyHeight: maxDialogBodyHeight,
+      ),
+      actions: _buildActions(context),
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context, {
+    required double dialogWidth,
+    required double maxDialogBodyHeight,
+  }) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxWidth: dialogWidth,
+        maxHeight: maxDialogBodyHeight,
+      ),
+      child: SingleChildScrollView(child: _buildSettingsFields(context)),
+    );
+  }
+
+  Widget _buildSettingsFields(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: _aiBaseUrlController,
+          decoration: InputDecoration(
+            labelText: l10n.aiBaseUrl,
+            hintText: 'https://api.openai.com/v1',
           ),
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-          child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+        const SizedBox(height: 18),
+        TextField(
+          controller: _aiApiKeyController,
+          decoration: InputDecoration(
+            labelText: l10n.aiApiKey,
+            hintText: 'sk-...',
+          ),
+          obscureText: true,
         ),
-        TextButton.icon(
-          onPressed: _isTestingModel ? null : () => _testAIModelConfig(context),
-          style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-          icon: _isTestingModel
-              ? const SizedBox(
-                  width: 14,
-                  height: 14,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.play_circle_outline),
-          label: Text(_isTestingModel ? l10n.aiProcessing : l10n.aiTestModel),
-        ),
-        TextButton(
-          onPressed: () async {
-            await _saveAISettings();
-            if (!context.mounted) return;
-            Navigator.pop(context);
-          },
-          style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
-          child: Text(MaterialLocalizations.of(context).okButtonLabel),
+        const SizedBox(height: 18),
+        TextField(
+          controller: _aiModelController,
+          decoration: InputDecoration(
+            labelText: l10n.aiModel,
+            hintText: 'gpt-3.5-turbo',
+          ),
         ),
       ],
+    );
+  }
+
+  List<Widget> _buildActions(BuildContext context) {
+    return [
+      _buildCancelButton(context),
+      _buildTestButton(context),
+      _buildSaveButton(context),
+    ];
+  }
+
+  Widget _buildCancelButton(BuildContext context) {
+    return TextButton(
+      onPressed: () => Navigator.pop(context),
+      style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+      child: Text(MaterialLocalizations.of(context).cancelButtonLabel),
+    );
+  }
+
+  Widget _buildTestButton(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return TextButton.icon(
+      onPressed: _isTestingModel ? null : () => _testAIModelConfig(context),
+      style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+      icon: _isTestingModel
+          ? const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : const Icon(Icons.play_circle_outline),
+      label: Text(_isTestingModel ? l10n.aiProcessing : l10n.aiTestModel),
+    );
+  }
+
+  Widget _buildSaveButton(BuildContext context) {
+    return TextButton(
+      onPressed: () async {
+        await _saveAISettings();
+        if (!context.mounted) return;
+        Navigator.pop(context);
+      },
+      style: TextButton.styleFrom(minimumSize: const Size(44, 44)),
+      child: Text(MaterialLocalizations.of(context).okButtonLabel),
     );
   }
 }

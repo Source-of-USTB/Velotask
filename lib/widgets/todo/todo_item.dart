@@ -129,21 +129,8 @@ class _TodoItemState extends State<TodoItem> {
           _showContextMenu(context, details.globalPosition, isDone, l10n),
       child: Dismissible(
         key: Key(widget.todo.id.toString()),
-        background: Container(
-          color: Theme.of(context).primaryColor.withValues(alpha: 0.14),
-          alignment: Alignment.centerLeft,
-          padding: const EdgeInsets.only(left: 20),
-          child: Icon(
-            isDone ? Icons.undo_rounded : Icons.done_rounded,
-            color: Theme.of(context).primaryColor,
-          ),
-        ),
-        secondaryBackground: Container(
-          color: Theme.of(context).colorScheme.error,
-          alignment: Alignment.centerRight,
-          padding: const EdgeInsets.only(right: 20),
-          child: const Icon(Icons.delete_outline, color: Colors.white),
-        ),
+        background: _buildToggleBackground(context, isDone),
+        secondaryBackground: _buildDeleteBackground(context),
         direction: DismissDirection.horizontal,
         confirmDismiss: (direction) async {
           if (direction == DismissDirection.startToEnd) {
@@ -157,337 +144,436 @@ class _TodoItemState extends State<TodoItem> {
             widget.onDelete();
           }
         },
-        child: AnimatedOpacity(
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutCubic,
-          opacity: isDone ? 0.6 : 1.0,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            decoration: BoxDecoration(
-              color: isDone
-                  ? Theme.of(
-                      context,
-                    ).colorScheme.secondary.withValues(alpha: 0.04)
-                  : Colors.transparent,
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(
-                    context,
-                  ).colorScheme.secondary.withValues(alpha: 0.1),
+        child: _buildAnimatedBody(
+          context,
+          isDone: isDone,
+          isDaily: isDaily,
+          statusLabel: statusLabel,
+          dateStr: dateStr,
+          isUrgent: isUrgent,
+          priorityLabel: priorityLabel,
+          urgencyColor: urgencyColor,
+          urgencyText: urgencyText,
+          hasSubtasks: hasSubtasks,
+          nestedGuideColor: nestedGuideColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAnimatedBody(
+    BuildContext context, {
+    required bool isDone,
+    required bool isDaily,
+    required String statusLabel,
+    required String dateStr,
+    required bool isUrgent,
+    required String priorityLabel,
+    required Color urgencyColor,
+    required String urgencyText,
+    required bool hasSubtasks,
+    required Color nestedGuideColor,
+  }) {
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOutCubic,
+      opacity: isDone ? 0.6 : 1.0,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
+        decoration: BoxDecoration(
+          color: isDone
+              ? Theme.of(context).colorScheme.secondary.withValues(alpha: 0.04)
+              : Colors.transparent,
+          border: Border(
+            bottom: BorderSide(
+              color: Theme.of(
+                context,
+              ).colorScheme.secondary.withValues(alpha: 0.1),
+            ),
+            left: widget.depth > 0
+                ? BorderSide(color: nestedGuideColor, width: 2)
+                : BorderSide.none,
+          ),
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _buildLeadingControls(context),
+            _buildContent(
+              context,
+              isDone: isDone,
+              isDaily: isDaily,
+              statusLabel: statusLabel,
+              dateStr: dateStr,
+              isUrgent: isUrgent,
+              priorityLabel: priorityLabel,
+              urgencyColor: urgencyColor,
+              urgencyText: urgencyText,
+              hasSubtasks: hasSubtasks,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContent(
+    BuildContext context, {
+    required bool isDone,
+    required bool isDaily,
+    required String statusLabel,
+    required String dateStr,
+    required bool isUrgent,
+    required String priorityLabel,
+    required Color urgencyColor,
+    required String urgencyText,
+    required bool hasSubtasks,
+  }) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 4),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildTagChips(context),
+            _buildTitleBlock(context, isDone, statusLabel),
+            const SizedBox(height: 8),
+            _buildMetadataRow(
+              context,
+              isDaily: isDaily,
+              dateStr: dateStr,
+              isUrgent: isUrgent,
+              priorityLabel: priorityLabel,
+              urgencyColor: urgencyColor,
+              urgencyText: urgencyText,
+              hasSubtasks: hasSubtasks,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildToggleBackground(BuildContext context, bool isDone) {
+    return Container(
+      color: Theme.of(context).primaryColor.withValues(alpha: 0.14),
+      alignment: Alignment.centerLeft,
+      padding: const EdgeInsets.only(left: 20),
+      child: Icon(
+        isDone ? Icons.undo_rounded : Icons.done_rounded,
+        color: Theme.of(context).primaryColor,
+      ),
+    );
+  }
+
+  Widget _buildDeleteBackground(BuildContext context) {
+    return Container(
+      color: Theme.of(context).colorScheme.error,
+      alignment: Alignment.centerRight,
+      padding: const EdgeInsets.only(right: 20),
+      child: const Icon(Icons.delete_outline, color: Colors.white),
+    );
+  }
+
+  Widget _buildLeadingControls(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (widget.leadingHandle != null) ...[
+          widget.leadingHandle!,
+          const SizedBox(width: 10),
+        ],
+        if (widget.depth > 0) SizedBox(width: widget.depth * 18.0),
+        if (widget.onToggleExpanded != null) ...[
+          SizedBox(
+            width: 32,
+            height: 40,
+            child: IconButton(
+              tooltip: widget.isExpanded ? 'Collapse' : 'Expand',
+              onPressed: widget.onToggleExpanded,
+              icon: AnimatedRotation(
+                turns: widget.isExpanded ? 0.25 : 0.0,
+                duration: const Duration(milliseconds: 160),
+                curve: Curves.easeOutCubic,
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  size: 22,
+                  color: Theme.of(context).primaryColor,
                 ),
-                left: widget.depth > 0
-                    ? BorderSide(color: nestedGuideColor, width: 2)
-                    : BorderSide.none,
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 32, minHeight: 40),
+              splashRadius: 20,
+            ),
+          ),
+          const SizedBox(width: 4),
+        ] else if (widget.depth > 0) ...[
+          const SizedBox(width: 28),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildTagChips(BuildContext context) {
+    if (widget.todo.tags.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        child: Row(
+          children: widget.todo.tags.map((tag) {
+            final tagColor = tag.displayColor;
+            return Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              margin: const EdgeInsets.only(right: 6),
+              decoration: BoxDecoration(
+                color: tagColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                tag.name.toUpperCase(),
+                style: AppTheme.tinyBoldStyle(context, color: tagColor),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTitleBlock(
+    BuildContext context,
+    bool isDone,
+    String statusLabel,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 200),
+                style: AppTheme.bodyMediumStyle(context).copyWith(
+                  decoration: isDone
+                      ? TextDecoration.lineThrough
+                      : TextDecoration.none,
+                  color: isDone
+                      ? Theme.of(context).colorScheme.secondary
+                      : Theme.of(context).primaryColor,
+                  decorationColor: Theme.of(context).colorScheme.secondary,
+                ),
+                child: Text(
+                  widget.todo.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ),
-            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                if (widget.leadingHandle != null) ...[
-                  widget.leadingHandle!,
-                  const SizedBox(width: 10),
-                ],
-                if (widget.depth > 0) SizedBox(width: widget.depth * 18.0),
-                if (widget.onToggleExpanded != null) ...[
-                  SizedBox(
-                    width: 32,
-                    height: 40,
-                    child: IconButton(
-                      tooltip: widget.isExpanded ? 'Collapse' : 'Expand',
-                      onPressed: widget.onToggleExpanded,
-                      icon: AnimatedRotation(
-                        turns: widget.isExpanded ? 0.25 : 0.0,
-                        duration: const Duration(milliseconds: 160),
-                        curve: Curves.easeOutCubic,
-                        child: Icon(
-                          Icons.chevron_right_rounded,
-                          size: 22,
-                          color: Theme.of(context).primaryColor,
-                        ),
-                      ),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 40,
-                      ),
-                      splashRadius: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                ] else if (widget.depth > 0) ...[
-                  const SizedBox(width: 28),
-                ],
-                // Content
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (widget.todo.tags.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 4),
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: Row(
-                                children: widget.todo.tags.map((tag) {
-                                  final tagColor = tag.displayColor;
-                                  return Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 6,
-                                      vertical: 2,
-                                    ),
-                                    margin: const EdgeInsets.only(right: 6),
-                                    decoration: BoxDecoration(
-                                      color: tagColor.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(
-                                      tag.name.toUpperCase(),
-                                      style: AppTheme.tinyBoldStyle(
-                                        context,
-                                        color: tagColor,
-                                      ),
-                                    ),
-                                  );
-                                }).toList(),
-                              ),
-                            ),
-                          ),
-                        // 第一层：标题 + 状态
-                        Row(
-                          children: [
-                            Expanded(
-                              child: AnimatedDefaultTextStyle(
-                                duration: const Duration(milliseconds: 200),
-                                style: AppTheme.bodyMediumStyle(context)
-                                    .copyWith(
-                                      decoration: isDone
-                                          ? TextDecoration.lineThrough
-                                          : TextDecoration.none,
-                                      color: isDone
-                                          ? Theme.of(
-                                              context,
-                                            ).colorScheme.secondary
-                                          : Theme.of(context).primaryColor,
-                                      decorationColor: Theme.of(
-                                        context,
-                                      ).colorScheme.secondary,
-                                    ),
-                                child: Text(
-                                  widget.todo.title,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            if (isDone)
-                              AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 180),
-                                switchInCurve: Curves.easeOutCubic,
-                                switchOutCurve: Curves.easeInCubic,
-                                transitionBuilder: (child, animation) {
-                                  return FadeTransition(
-                                    opacity: animation,
-                                    child: ScaleTransition(
-                                      scale: Tween<double>(
-                                        begin: 0.92,
-                                        end: 1.0,
-                                      ).animate(animation),
-                                      child: child,
-                                    ),
-                                  );
-                                },
-                                child: Transform.rotate(
-                                  key: ValueKey(
-                                    'stamp_${widget.todo.id}_$isDone',
-                                  ),
-                                  angle: -0.08,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 9,
-                                      vertical: 3,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(6),
-                                      border: Border.all(
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.error,
-                                        width: 1.4,
-                                      ),
-                                      color: Theme.of(context).colorScheme.error
-                                          .withValues(alpha: 0.08),
-                                    ),
-                                    child: Text(
-                                      statusLabel.toUpperCase(),
-                                      style: AppTheme.stampStyle(
-                                        context,
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.error,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        if (widget.todo.description.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2),
-                            child: Text(
-                              widget.todo.description,
-                              style: AppTheme.smallRegularStyle(context)
-                                  .copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .secondary
-                                        .withValues(alpha: 0.8),
-                                  ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        const SizedBox(height: 8),
-                        // 第二层：DDL + 优先级 + 编辑
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isUrgent || isDaily
-                                    ? Theme.of(
-                                        context,
-                                      ).primaryColor.withValues(alpha: 0.12)
-                                    : Theme.of(context).colorScheme.secondary
-                                          .withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                dateStr,
-                                style: AppTheme.dateChipStyle(
-                                  context,
-                                  urgent: isUrgent || isDaily,
-                                  color: isUrgent || isDaily
-                                      ? Theme.of(context).primaryColor
-                                      : Theme.of(context).colorScheme.secondary,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: _getImportanceColor().withValues(
-                                  alpha: 0.1,
-                                ),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                priorityLabel,
-                                style: AppTheme.tinyBoldStyle(
-                                  context,
-                                  color: _getImportanceColor(),
-                                ),
-                              ),
-                            ),
-                            if (!isDaily) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: urgencyColor.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  'U: $urgencyText',
-                                  style: AppTheme.tinyBoldStyle(
-                                    context,
-                                    color: urgencyColor,
-                                  ),
-                                ),
-                              ),
-                            ],
-                            if (hasSubtasks) ...[
-                              const SizedBox(width: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(
-                                    context,
-                                  ).primaryColor.withValues(alpha: 0.08),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Icon(
-                                      widget.todo.groupMode ==
-                                              TaskGroupMode.parallel
-                                          ? Icons.view_week_outlined
-                                          : Icons.account_tree_outlined,
-                                      size: 13,
-                                      color: Theme.of(context).primaryColor,
-                                    ),
-                                    const SizedBox(width: 4),
-                                    Text(
-                                      '${widget.completedSubtaskCount}/${widget.subtaskCount}',
-                                      style: AppTheme.tinyBoldStyle(
-                                        context,
-                                        color: Theme.of(context).primaryColor,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                            const Spacer(),
-                            SizedBox(
-                              width: 44,
-                              height: 44,
-                              child: IconButton(
-                                icon: Icon(
-                                  Icons.edit_outlined,
-                                  size: 18,
-                                  color: Theme.of(context).colorScheme.secondary
-                                      .withValues(alpha: 0.5),
-                                ),
-                                onPressed: widget.onEdit,
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(
-                                  minWidth: 44,
-                                  minHeight: 44,
-                                ),
-                                splashRadius: 22,
-                                hoverColor: Colors.transparent,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+            const SizedBox(width: 8),
+            if (isDone) _buildStatusStamp(context, statusLabel, isDone),
+          ],
+        ),
+        if (widget.todo.description.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 2),
+            child: Text(
+              widget.todo.description,
+              style: AppTheme.smallRegularStyle(context).copyWith(
+                color: Theme.of(
+                  context,
+                ).colorScheme.secondary.withValues(alpha: 0.8),
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildStatusStamp(
+    BuildContext context,
+    String statusLabel,
+    bool isDone,
+  ) {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 180),
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.92, end: 1.0).animate(animation),
+            child: child,
+          ),
+        );
+      },
+      child: Transform.rotate(
+        key: ValueKey('stamp_${widget.todo.id}_$isDone'),
+        angle: -0.08,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(6),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.error,
+              width: 1.4,
+            ),
+            color: Theme.of(context).colorScheme.error.withValues(alpha: 0.08),
+          ),
+          child: Text(
+            statusLabel.toUpperCase(),
+            style: AppTheme.stampStyle(
+              context,
+              color: Theme.of(context).colorScheme.error,
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildMetadataRow(
+    BuildContext context, {
+    required bool isDaily,
+    required String dateStr,
+    required bool isUrgent,
+    required String priorityLabel,
+    required Color urgencyColor,
+    required String urgencyText,
+    required bool hasSubtasks,
+  }) {
+    return Row(
+      children: [
+        _buildDateChip(context, dateStr, isUrgent || isDaily),
+        const SizedBox(width: 8),
+        _buildPriorityChip(context, priorityLabel),
+        if (!isDaily) ...[
+          const SizedBox(width: 8),
+          _buildUrgencyChip(context, urgencyColor, urgencyText),
+        ],
+        if (hasSubtasks) ...[
+          const SizedBox(width: 8),
+          _buildSubtaskChip(context),
+        ],
+        const Spacer(),
+        _buildEditButton(context),
+      ],
+    );
+  }
+
+  Widget _buildDateChip(
+    BuildContext context,
+    String dateStr,
+    bool highlighted,
+  ) {
+    final color = highlighted
+        ? Theme.of(context).primaryColor
+        : Theme.of(context).colorScheme.secondary;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: highlighted ? 0.12 : 0.1),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        dateStr,
+        style: AppTheme.dateChipStyle(
+          context,
+          urgent: highlighted,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPriorityChip(BuildContext context, String priorityLabel) {
+    final importanceColor = _getImportanceColor();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: importanceColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        priorityLabel,
+        style: AppTheme.tinyBoldStyle(context, color: importanceColor),
+      ),
+    );
+  }
+
+  Widget _buildUrgencyChip(
+    BuildContext context,
+    Color urgencyColor,
+    String urgencyText,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: urgencyColor.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        'U: $urgencyText',
+        style: AppTheme.tinyBoldStyle(context, color: urgencyColor),
+      ),
+    );
+  }
+
+  Widget _buildSubtaskChip(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            widget.todo.groupMode == TaskGroupMode.parallel
+                ? Icons.view_week_outlined
+                : Icons.account_tree_outlined,
+            size: 13,
+            color: Theme.of(context).primaryColor,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            '${widget.completedSubtaskCount}/${widget.subtaskCount}',
+            style: AppTheme.tinyBoldStyle(
+              context,
+              color: Theme.of(context).primaryColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEditButton(BuildContext context) {
+    return SizedBox(
+      width: 44,
+      height: 44,
+      child: IconButton(
+        icon: Icon(
+          Icons.edit_outlined,
+          size: 18,
+          color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.5),
+        ),
+        onPressed: widget.onEdit,
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+        splashRadius: 22,
+        hoverColor: Colors.transparent,
       ),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:velotask/models/color_preset.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/services/color_config_manager.dart';
 import 'package:velotask/widgets/timeline/timeline_header.dart';
@@ -33,8 +34,6 @@ class GanttChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final p = ColorConfigManager.instance.activePreset!;
-    final b = Theme.of(context).brightness;
     return TimelineLayout(
       chartStart: chartStart,
       totalDays: totalDays,
@@ -42,61 +41,80 @@ class GanttChart extends StatelessWidget {
       totalWidth: totalWidth,
       child: Column(
         children: [
-          SingleChildScrollView(
-            controller: headerCtrl,
-            scrollDirection: Axis.horizontal,
-            physics: const NeverScrollableScrollPhysics(),
-            child: TimelineHeader(
-              chartStart: chartStart,
-              daysToShow: totalDays,
-              dayWidth: dayWidth,
-              now: now,
-            ),
-          ),
-          Expanded(
-            child: rows.isEmpty
-                ? const _EmptyState()
-                : SingleChildScrollView(
-                    controller: bodyCtrl,
-                    scrollDirection: Axis.horizontal,
-                    child: SizedBox(
-                      width: totalWidth,
-                      child: CustomPaint(
-                        painter: _WeekendStripePainter(
-                          chartStart: chartStart,
-                          totalDays: totalDays,
-                          dayWidth: dayWidth,
-                          weekendColor: p.colorByKey('ganttWeekendStripe', b),
-                        ),
-                        child: CustomPaint(
-                          painter: _GridLinePainter(
-                            chartStart: chartStart,
-                            totalDays: totalDays,
-                            dayWidth: dayWidth,
-                            monthColor: p.colorByKey('ganttMonthGridLine', b),
-                            weekColor: p.colorByKey('ganttWeekGridLine', b),
-                          ),
-                          foregroundPainter: _NowLinePainter(
-                            chartStart: chartStart,
-                            now: now,
-                            dayWidth: dayWidth,
-                            color: p.colorByKey('ganttNowLine', b),
-                          ),
-                          child: ListView.builder(
-                            itemCount: rows.length,
-                            itemExtent: TimelineTaskRow.rowHeight,
-                            itemBuilder: (_, i) => TimelineTaskRow(
-                              row: rows[i],
-                              onDoubleTap: onTaskDoubleTap,
-                              onToggleGroup: onToggleGroup,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-          ),
+          _buildHeader(),
+          Expanded(child: _buildBody(context)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return SingleChildScrollView(
+      controller: headerCtrl,
+      scrollDirection: Axis.horizontal,
+      physics: const NeverScrollableScrollPhysics(),
+      child: TimelineHeader(
+        chartStart: chartStart,
+        daysToShow: totalDays,
+        dayWidth: dayWidth,
+        now: now,
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    if (rows.isEmpty) {
+      return const _EmptyState();
+    }
+
+    final p = ColorConfigManager.instance.activePreset!;
+    final b = Theme.of(context).brightness;
+
+    return SingleChildScrollView(
+      controller: bodyCtrl,
+      scrollDirection: Axis.horizontal,
+      child: SizedBox(
+        width: totalWidth,
+        child: CustomPaint(
+          painter: _WeekendStripePainter(
+            chartStart: chartStart,
+            totalDays: totalDays,
+            dayWidth: dayWidth,
+            weekendColor: p.colorByKey('ganttWeekendStripe', b),
+          ),
+          child: _buildGridLayer(p, b),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGridLayer(ColorPreset p, Brightness b) {
+    return CustomPaint(
+      painter: _GridLinePainter(
+        chartStart: chartStart,
+        totalDays: totalDays,
+        dayWidth: dayWidth,
+        monthColor: p.colorByKey('ganttMonthGridLine', b),
+        weekColor: p.colorByKey('ganttWeekGridLine', b),
+      ),
+      foregroundPainter: _NowLinePainter(
+        chartStart: chartStart,
+        now: now,
+        dayWidth: dayWidth,
+        color: p.colorByKey('ganttNowLine', b),
+      ),
+      child: _buildTaskList(),
+    );
+  }
+
+  Widget _buildTaskList() {
+    return ListView.builder(
+      itemCount: rows.length,
+      itemExtent: TimelineTaskRow.rowHeight,
+      itemBuilder: (_, i) => TimelineTaskRow(
+        row: rows[i],
+        onDoubleTap: onTaskDoubleTap,
+        onToggleGroup: onToggleGroup,
       ),
     );
   }

@@ -286,70 +286,91 @@ class _TaskBar extends StatelessWidget {
         alignment: Alignment.centerLeft,
         child: Row(
           children: [
-            if (onToggleExpanded != null) ...[
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: IconButton(
-                  onPressed: onToggleExpanded,
-                  icon: AnimatedRotation(
-                    turns: isExpanded ? 0.25 : 0.0,
-                    duration: const Duration(milliseconds: 160),
-                    curve: Curves.easeOutCubic,
-                    child: Icon(
-                      Icons.chevron_right_rounded,
-                      color: textColor,
-                      size: 18,
-                    ),
-                  ),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(
-                    minWidth: 24,
-                    minHeight: 24,
-                  ),
-                  splashRadius: 16,
-                ),
-              ),
-              const SizedBox(width: 2),
-            ] else if (isDone) ...[
-              Icon(Icons.check, color: textColor, size: 14),
-              const SizedBox(width: 4),
-            ],
-            Expanded(
-              child: Text(
-                todo.title,
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
-              ),
-            ),
-            if (isGroupHeader && childCount > 0) ...[
-              const SizedBox(width: 6),
-              Icon(
-                todo.groupMode == TaskGroupMode.parallel
-                    ? Icons.view_week_outlined
-                    : Icons.account_tree_outlined,
-                color: textColor.withValues(alpha: 0.86),
-                size: 13,
-              ),
-              const SizedBox(width: 3),
-              Text(
-                '$completedChildCount/$childCount',
-                style: TextStyle(
-                  color: textColor.withValues(alpha: 0.9),
-                  fontSize: 10,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+            ..._buildLeadingWidgets(isDone),
+            _buildTitle(),
+            ..._buildGroupSummary(),
           ],
         ),
       ),
     );
+  }
+
+  List<Widget> _buildLeadingWidgets(bool isDone) {
+    if (onToggleExpanded != null) {
+      return [
+        SizedBox(
+          width: 24,
+          height: 24,
+          child: IconButton(
+            onPressed: onToggleExpanded,
+            icon: AnimatedRotation(
+              turns: isExpanded ? 0.25 : 0.0,
+              duration: const Duration(milliseconds: 160),
+              curve: Curves.easeOutCubic,
+              child: Icon(
+                Icons.chevron_right_rounded,
+                color: textColor,
+                size: 18,
+              ),
+            ),
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+            splashRadius: 16,
+          ),
+        ),
+        const SizedBox(width: 2),
+      ];
+    }
+
+    if (!isDone) {
+      return const [];
+    }
+
+    return [
+      Icon(Icons.check, color: textColor, size: 14),
+      const SizedBox(width: 4),
+    ];
+  }
+
+  Widget _buildTitle() {
+    return Expanded(
+      child: Text(
+        todo.title,
+        style: TextStyle(
+          color: textColor,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+        overflow: TextOverflow.ellipsis,
+        maxLines: 1,
+      ),
+    );
+  }
+
+  List<Widget> _buildGroupSummary() {
+    if (!isGroupHeader || childCount == 0) {
+      return const [];
+    }
+
+    return [
+      const SizedBox(width: 6),
+      Icon(
+        todo.groupMode == TaskGroupMode.parallel
+            ? Icons.view_week_outlined
+            : Icons.account_tree_outlined,
+        color: textColor.withValues(alpha: 0.86),
+        size: 13,
+      ),
+      const SizedBox(width: 3),
+      Text(
+        '$completedChildCount/$childCount',
+        style: TextStyle(
+          color: textColor.withValues(alpha: 0.9),
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    ];
   }
 }
 
