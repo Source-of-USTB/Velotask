@@ -58,112 +58,158 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
       body: ListView(
         children: [
-          _buildSectionHeader(context, l10n.general),
-          ValueListenableBuilder<ThemeMode>(
-            valueListenable: AppSettingsController.themeNotifier,
-            builder: (context, currentMode, child) {
-              return ListTile(
-                leading: const Icon(Icons.brightness_6_outlined),
-                title: Text(l10n.theme),
-                subtitle: Text(
-                  currentMode == ThemeMode.system
-                      ? l10n.systemDefault
-                      : currentMode == ThemeMode.dark
-                      ? l10n.darkMode
-                      : l10n.lightMode,
-                ),
-                onTap: () => _showThemeDialog(context, currentMode),
-              );
-            },
-          ),
-          ValueListenableBuilder<Locale?>(
-            valueListenable: AppSettingsController.localeNotifier,
-            builder: (context, currentLocale, child) {
-              return ListTile(
-                leading: const Icon(Icons.language),
-                title: Text(l10n.language),
-                subtitle: Text(
-                  currentLocale?.languageCode == 'zh'
-                      ? l10n.chinese
-                      : l10n.english,
-                ),
-                onTap: () => _showLanguageDialog(context, currentLocale),
-              );
-            },
-          ),
-          const Divider(),
-          _buildSectionHeader(context, l10n.organization),
-          ListTile(
-            leading: const Icon(Icons.label_outline),
-            title: Text(l10n.manageTags),
-            subtitle: Text(l10n.manageTagsSubtitle),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const TagsScreen()),
-              );
-            },
-          ),
-          ListTile(
-            leading: const Icon(Icons.palette_outlined),
-            title: Text(l10n.colorSettings),
-            subtitle: Text(l10n.colorSettingsSubtitle),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ColorEditorScreen(),
-                ),
-              );
-            },
-          ),
-          const Divider(),
-          _buildSectionHeader(context, l10n.aiAssistant),
-          ListTile(
-            leading: const Icon(Icons.auto_awesome_outlined),
-            title: Text(l10n.aiSettings),
-            subtitle: Text(l10n.aiSettingsSubtitle),
-            onTap: () => _showAISettingsDialog(context),
-          ),
-          const Divider(),
-          _buildSectionHeader(context, l10n.notifications),
-          ListTile(
-            leading: const Icon(Icons.notifications_active_outlined),
-            title: Text(l10n.testNotification),
-            subtitle: Text(l10n.testNotificationSubtitle),
-            onTap: () => _showTestNotification(context),
-          ),
-          const Divider(),
-          _buildSectionHeader(context, l10n.about),
-          ListTile(
-            leading: const Icon(Icons.info_outline),
-            title: Text(l10n.version),
-            subtitle: Text(_version),
-          ),
-          ListTile(
-            leading: const Icon(Icons.code),
-            title: Text(l10n.sourceCode),
-            subtitle: Text(l10n.viewOnGithub),
-            onTap: () async {
-              final uri = Uri.parse(
-                'https://github.com/Source-of-USTB/Velotask',
-              );
-              final launched = await launchUrl(
-                uri,
-                mode: LaunchMode.externalApplication,
-              );
-              if (!launched && context.mounted) {
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(l10n.unableToOpenLink)));
-              }
-            },
-          ),
+          _buildGeneralSection(context, l10n),
+          _buildOrganizationSection(context, l10n),
+          _buildAISection(context, l10n),
+          _buildNotificationsSection(context, l10n),
+          _buildAboutSection(context, l10n),
         ],
       ),
     );
+  }
+
+  Widget _buildGeneralSection(BuildContext context, AppLocalizations l10n) {
+    return Column(
+      children: [
+        _buildSectionHeader(context, l10n.general),
+        ValueListenableBuilder<ThemeMode>(
+          valueListenable: AppSettingsController.themeNotifier,
+          builder: (context, currentMode, child) {
+            return ListTile(
+              leading: const Icon(Icons.brightness_6_outlined),
+              title: Text(l10n.theme),
+              subtitle: Text(
+                currentMode == ThemeMode.system
+                    ? l10n.systemDefault
+                    : currentMode == ThemeMode.dark
+                    ? l10n.darkMode
+                    : l10n.lightMode,
+              ),
+              onTap: () => _showThemeDialog(context, currentMode),
+            );
+          },
+        ),
+        ValueListenableBuilder<Locale?>(
+          valueListenable: AppSettingsController.localeNotifier,
+          builder: (context, currentLocale, child) {
+            return ListTile(
+              leading: const Icon(Icons.language),
+              title: Text(l10n.language),
+              subtitle: Text(
+                currentLocale?.languageCode == 'zh'
+                    ? l10n.chinese
+                    : l10n.english,
+              ),
+              onTap: () => _showLanguageDialog(context, currentLocale),
+            );
+          },
+        ),
+        const Divider(),
+      ],
+    );
+  }
+
+  Widget _buildOrganizationSection(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) {
+    return Column(
+      children: [
+        _buildSectionHeader(context, l10n.organization),
+        ListTile(
+          leading: const Icon(Icons.label_outline),
+          title: Text(l10n.manageTags),
+          subtitle: Text(l10n.manageTagsSubtitle),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const TagsScreen()),
+            );
+          },
+        ),
+        ListTile(
+          leading: const Icon(Icons.palette_outlined),
+          title: Text(l10n.colorSettings),
+          subtitle: Text(l10n.colorSettingsSubtitle),
+          trailing: const Icon(Icons.chevron_right),
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const ColorEditorScreen(),
+              ),
+            );
+          },
+        ),
+        const Divider(),
+      ],
+    );
+  }
+
+  Widget _buildAISection(BuildContext context, AppLocalizations l10n) {
+    return Column(
+      children: [
+        _buildSectionHeader(context, l10n.aiAssistant),
+        ListTile(
+          leading: const Icon(Icons.auto_awesome_outlined),
+          title: Text(l10n.aiSettings),
+          subtitle: Text(l10n.aiSettingsSubtitle),
+          onTap: () => _showAISettingsDialog(context),
+        ),
+        const Divider(),
+      ],
+    );
+  }
+
+  Widget _buildNotificationsSection(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) {
+    return Column(
+      children: [
+        _buildSectionHeader(context, l10n.notifications),
+        ListTile(
+          leading: const Icon(Icons.notifications_active_outlined),
+          title: Text(l10n.testNotification),
+          subtitle: Text(l10n.testNotificationSubtitle),
+          onTap: () => _showTestNotification(context),
+        ),
+        const Divider(),
+      ],
+    );
+  }
+
+  Widget _buildAboutSection(BuildContext context, AppLocalizations l10n) {
+    return Column(
+      children: [
+        _buildSectionHeader(context, l10n.about),
+        ListTile(
+          leading: const Icon(Icons.info_outline),
+          title: Text(l10n.version),
+          subtitle: Text(_version),
+        ),
+        ListTile(
+          leading: const Icon(Icons.code),
+          title: Text(l10n.sourceCode),
+          subtitle: Text(l10n.viewOnGithub),
+          onTap: () => _openSourceCode(context, l10n),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _openSourceCode(
+    BuildContext context,
+    AppLocalizations l10n,
+  ) async {
+    final uri = Uri.parse('https://github.com/Source-of-USTB/Velotask');
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.unableToOpenLink)));
+    }
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {

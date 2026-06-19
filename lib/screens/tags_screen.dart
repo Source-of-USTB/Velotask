@@ -234,104 +234,115 @@ class _TagsScreenState extends State<TagsScreen> {
           ),
         ),
       ),
-      body: _tags.isEmpty
-          ? ListView(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 28,
-                  ),
-                  decoration: _surfaceDecoration(context),
-                  child: Column(
-                    children: [
-                      Icon(
-                        Icons.label_outline,
-                        size: 54,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.secondary.withValues(alpha: 0.7),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        l10n.noTags,
-                        style: AppTheme.bodyStrongStyle(context).copyWith(
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-              itemCount: _tags.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 10),
-              itemBuilder: (context, index) {
-                final tag = _tags[index];
-                final tagColor = tag.displayColor;
-                return Container(
-                  decoration: _surfaceDecoration(context),
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
-                    ),
-                    leading: GestureDetector(
-                      onTap: () => _showEditTagDialog(tag),
-                      child: Container(
-                        width: 32,
-                        height: 32,
-                        decoration: BoxDecoration(
-                          color: tagColor.withValues(alpha: 0.14),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(Icons.label, color: tagColor, size: 18),
-                      ),
-                    ),
-                    title: Text(tag.name),
-                    titleTextStyle: AppTheme.bodyMediumStrongStyle(
-                      context,
-                    ).copyWith(color: Theme.of(context).colorScheme.onSurface),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            color: tagColor,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: Theme.of(context).dividerColor,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () async {
-                            await _storage.deleteTag(tag.id);
-                            _loadTags();
-                          },
-                          constraints: const BoxConstraints(
-                            minWidth: 44,
-                            minHeight: 44,
-                          ),
-                        ),
-                      ],
-                    ),
-                    onTap: () => _showEditTagDialog(tag),
-                  ),
-                );
-              },
+      body: _buildBody(context, l10n),
+      floatingActionButton: _buildAddButton(),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, AppLocalizations l10n) {
+    return _tags.isEmpty
+        ? _buildEmptyState(context, l10n)
+        : _buildTagList(context);
+  }
+
+  Widget _buildEmptyState(BuildContext context, AppLocalizations l10n) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+      children: [
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 28),
+          decoration: _surfaceDecoration(context),
+          child: Column(
+            children: [
+              Icon(
+                Icons.label_outline,
+                size: 54,
+                color: Theme.of(
+                  context,
+                ).colorScheme.secondary.withValues(alpha: 0.7),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l10n.noTags,
+                style: AppTheme.bodyStrongStyle(
+                  context,
+                ).copyWith(color: Theme.of(context).colorScheme.onSurface),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTagList(BuildContext context) {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+      itemCount: _tags.length,
+      separatorBuilder: (context, index) => const SizedBox(height: 10),
+      itemBuilder: (context, index) => _buildTagItem(context, _tags[index]),
+    );
+  }
+
+  Widget _buildTagItem(BuildContext context, Tag tag) {
+    final tagColor = tag.displayColor;
+
+    return Container(
+      decoration: _surfaceDecoration(context),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        leading: GestureDetector(
+          onTap: () => _showEditTagDialog(tag),
+          child: Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: tagColor.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(8),
             ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddTagDialog,
-        child: const Icon(Icons.add),
+            child: Icon(Icons.label, color: tagColor, size: 18),
+          ),
+        ),
+        title: Text(tag.name),
+        titleTextStyle: AppTheme.bodyMediumStrongStyle(
+          context,
+        ).copyWith(color: Theme.of(context).colorScheme.onSurface),
+        trailing: _buildTagActions(context, tag, tagColor),
+        onTap: () => _showEditTagDialog(tag),
       ),
+    );
+  }
+
+  Widget _buildTagActions(BuildContext context, Tag tag, Color tagColor) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 24,
+          height: 24,
+          decoration: BoxDecoration(
+            color: tagColor,
+            shape: BoxShape.circle,
+            border: Border.all(color: Theme.of(context).dividerColor),
+          ),
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          icon: const Icon(Icons.delete_outline),
+          onPressed: () async {
+            await _storage.deleteTag(tag.id);
+            _loadTags();
+          },
+          constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAddButton() {
+    return FloatingActionButton(
+      onPressed: _showAddTagDialog,
+      child: const Icon(Icons.add),
     );
   }
 }

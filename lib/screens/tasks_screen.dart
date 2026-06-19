@@ -186,78 +186,83 @@ class _TasksScreenState extends State<TasksScreen>
 
     return Stack(
       children: [
-        CustomScrollView(
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
-          ),
-          slivers: [
-            HomeAppBar(
-              onAIAction: widget.onAIAction,
-              onSettingsPressed: widget.onSettingsPressed,
-            ),
-            SliverToBoxAdapter(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  final isCompact = constraints.maxWidth < 380;
-                  final circleSize = isCompact ? 112.0 : 140.0;
-                  final gap = isCompact ? 28.0 : 80.0;
-
-                  return Padding(
-                    padding: EdgeInsets.symmetric(
-                      vertical: isCompact ? 28.0 : 40.0,
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        DailyProgressHeader(
-                          todos: widget.todos,
-                          size: circleSize,
-                        ),
-                        SizedBox(width: gap),
-                        ProgressHeader(todos: widget.todos, size: circleSize),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-            FilterSection(
-              currentFilter: _filter,
-              currentTag: _filterTag,
-              tags: widget.tags,
-              onFilterChanged: (filter, tag) {
-                setState(() {
-                  _filter = filter;
-                  _filterTag = tag;
-                });
-              },
-            ),
-            _buildMainContent(filteredNodes),
-            const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
-          ],
-        ),
-        if (_showConfetti)
-          Positioned.fill(
-            child: IgnorePointer(
-              child: AnimatedBuilder(
-                animation: _confettiController,
-                builder: (context, child) {
-                  return Opacity(
-                    opacity: (1 - _confettiController.value * 0.85).clamp(
-                      0.0,
-                      1.0,
-                    ),
-                    child: CustomPaint(
-                      painter: _ConfettiPainter(
-                        progress: _confettiController.value,
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ),
+        _buildTaskScrollView(filteredNodes),
+        if (_showConfetti) _buildConfettiOverlay(),
       ],
+    );
+  }
+
+  Widget _buildTaskScrollView(List<TodoHierarchyNode> filteredNodes) {
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(
+        parent: AlwaysScrollableScrollPhysics(),
+      ),
+      slivers: [
+        HomeAppBar(
+          onAIAction: widget.onAIAction,
+          onSettingsPressed: widget.onSettingsPressed,
+        ),
+        _buildProgressSection(),
+        _buildFilterSection(),
+        _buildMainContent(filteredNodes),
+        const SliverPadding(padding: EdgeInsets.only(bottom: 100)),
+      ],
+    );
+  }
+
+  Widget _buildProgressSection() {
+    return SliverToBoxAdapter(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isCompact = constraints.maxWidth < 380;
+          final circleSize = isCompact ? 112.0 : 140.0;
+          final gap = isCompact ? 28.0 : 80.0;
+
+          return Padding(
+            padding: EdgeInsets.symmetric(vertical: isCompact ? 28.0 : 40.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                DailyProgressHeader(todos: widget.todos, size: circleSize),
+                SizedBox(width: gap),
+                ProgressHeader(todos: widget.todos, size: circleSize),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildFilterSection() {
+    return FilterSection(
+      currentFilter: _filter,
+      currentTag: _filterTag,
+      tags: widget.tags,
+      onFilterChanged: (filter, tag) {
+        setState(() {
+          _filter = filter;
+          _filterTag = tag;
+        });
+      },
+    );
+  }
+
+  Widget _buildConfettiOverlay() {
+    return Positioned.fill(
+      child: IgnorePointer(
+        child: AnimatedBuilder(
+          animation: _confettiController,
+          builder: (context, child) {
+            return Opacity(
+              opacity: (1 - _confettiController.value * 0.85).clamp(0.0, 1.0),
+              child: CustomPaint(
+                painter: _ConfettiPainter(progress: _confettiController.value),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 

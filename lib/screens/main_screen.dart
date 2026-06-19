@@ -568,80 +568,97 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
-      body: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        transitionBuilder: (Widget child, Animation<double> animation) {
-          final slideBegin = _selectedIndex > _previousIndex
-              ? const Offset(0.05, 0.0)
-              : const Offset(-0.05, 0.0);
-          return FadeTransition(
-            opacity: animation,
-            child: SlideTransition(
-              position: Tween<Offset>(begin: slideBegin, end: Offset.zero)
-                  .animate(
-                    CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOutCubic,
-                    ),
-                  ),
-              child: child,
-            ),
-          );
-        },
-        child: _selectedIndex == 0
-            ? TasksScreen(
-                key: const ValueKey('todo_list'),
-                todos: todos,
-                tags: tags,
-                isLoading: _isLoading,
-                onToggle: _toggleTodo,
-                onDelete: _deleteTodo,
-                onEdit: _editTodo,
-                onAIAction: _showAIInputDialog,
-                onSettingsPressed: _openSettings,
-                dailyTaskOrder: _dailyTaskOrder,
-                onDailyReorder: _reorderDailyTodos,
-              )
-            : _selectedIndex == 1
-            ? TimelineScreen(
-                key: const ValueKey('timeline'),
-                todos: todos,
-                onTaskDoubleTap: _editTodo,
-              )
-            : DashboardScreen(key: const ValueKey('dashboard'), todos: todos),
+      body: _buildBody(),
+      bottomNavigationBar: _buildNavigationBar(l10n),
+      floatingActionButton: _selectedIndex == 0 ? _buildAddButton() : null,
+    );
+  }
+
+  Widget _buildBody() {
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      transitionBuilder: _buildPageTransition,
+      child: _buildSelectedScreen(),
+    );
+  }
+
+  Widget _buildPageTransition(Widget child, Animation<double> animation) {
+    final slideBegin = _selectedIndex > _previousIndex
+        ? const Offset(0.05, 0.0)
+        : const Offset(-0.05, 0.0);
+
+    return FadeTransition(
+      opacity: animation,
+      child: SlideTransition(
+        position: Tween<Offset>(begin: slideBegin, end: Offset.zero).animate(
+          CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+        ),
+        child: child,
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            _previousIndex = _selectedIndex;
-            _selectedIndex = index;
-          });
-        },
-        destinations: [
-          NavigationDestination(
-            icon: const Icon(Icons.task_alt_outlined),
-            selectedIcon: const Icon(Icons.task_alt),
-            label: l10n.tasks,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.calendar_today_outlined),
-            selectedIcon: const Icon(Icons.calendar_today),
-            label: l10n.timeline,
-          ),
-          NavigationDestination(
-            icon: const Icon(Icons.person_outline),
-            selectedIcon: const Icon(Icons.person),
-            label: l10n.dashboard,
-          ),
-        ],
-      ),
-      floatingActionButton: _selectedIndex == 0
-          ? FloatingActionButton(
-              onPressed: _showAddTodoDialog,
-              child: const Icon(Icons.add),
-            )
-          : null,
+    );
+  }
+
+  Widget _buildSelectedScreen() {
+    if (_selectedIndex == 0) {
+      return TasksScreen(
+        key: const ValueKey('todo_list'),
+        todos: todos,
+        tags: tags,
+        isLoading: _isLoading,
+        onToggle: _toggleTodo,
+        onDelete: _deleteTodo,
+        onEdit: _editTodo,
+        onAIAction: _showAIInputDialog,
+        onSettingsPressed: _openSettings,
+        dailyTaskOrder: _dailyTaskOrder,
+        onDailyReorder: _reorderDailyTodos,
+      );
+    }
+
+    if (_selectedIndex == 1) {
+      return TimelineScreen(
+        key: const ValueKey('timeline'),
+        todos: todos,
+        onTaskDoubleTap: _editTodo,
+      );
+    }
+
+    return DashboardScreen(key: const ValueKey('dashboard'), todos: todos);
+  }
+
+  Widget _buildNavigationBar(AppLocalizations l10n) {
+    return NavigationBar(
+      selectedIndex: _selectedIndex,
+      onDestinationSelected: (index) {
+        setState(() {
+          _previousIndex = _selectedIndex;
+          _selectedIndex = index;
+        });
+      },
+      destinations: [
+        NavigationDestination(
+          icon: const Icon(Icons.task_alt_outlined),
+          selectedIcon: const Icon(Icons.task_alt),
+          label: l10n.tasks,
+        ),
+        NavigationDestination(
+          icon: const Icon(Icons.calendar_today_outlined),
+          selectedIcon: const Icon(Icons.calendar_today),
+          label: l10n.timeline,
+        ),
+        NavigationDestination(
+          icon: const Icon(Icons.person_outline),
+          selectedIcon: const Icon(Icons.person),
+          label: l10n.dashboard,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAddButton() {
+    return FloatingActionButton(
+      onPressed: _showAddTodoDialog,
+      child: const Icon(Icons.add),
     );
   }
 }

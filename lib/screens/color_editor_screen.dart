@@ -347,7 +347,6 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
     final l = AppLocalizations.of(context)!;
     final t = Theme.of(context);
     final activeId = _mgr.activePresetId;
-    final presets = _mgr.presets;
 
     return Scaffold(
       appBar: AppBar(
@@ -372,19 +371,23 @@ class _ColorEditorScreenState extends State<ColorEditorScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 560),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
-            children: [
-              _buildHeader(presets, activeId),
-              const SizedBox(height: 24),
-              _buildColorColumnHeaders(),
-              const SizedBox(height: 8),
-              for (final g in _groups) _buildGroup(g, t),
-            ],
-          ),
+      body: _buildEditorBody(t, activeId),
+    );
+  }
+
+  Widget _buildEditorBody(ThemeData theme, String activeId) {
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 560),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 40),
+          children: [
+            _buildHeader(_mgr.presets, activeId),
+            const SizedBox(height: 24),
+            _buildColorColumnHeaders(),
+            const SizedBox(height: 8),
+            for (final group in _groups) _buildGroup(group, theme),
+          ],
         ),
       ),
     );
@@ -647,60 +650,7 @@ class _ColorEditDialogState extends State<_ColorEditDialog> {
     final l = AppLocalizations.of(context)!;
     return AlertDialog(
       title: Text(widget.title, style: AppTheme.dialogTitleStyle(context)),
-      content: SizedBox(
-        width: 380,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ChannelRow(
-                color: _color,
-                onChanged: (c) => setState(() => _color = c),
-                channel: 'R',
-              ),
-              const SizedBox(height: 6),
-              ChannelRow(
-                color: _color,
-                onChanged: (c) => setState(() => _color = c),
-                channel: 'G',
-              ),
-              const SizedBox(height: 6),
-              ChannelRow(
-                color: _color,
-                onChanged: (c) => setState(() => _color = c),
-                channel: 'B',
-              ),
-              const SizedBox(height: 6),
-              ChannelRow(
-                color: _color,
-                onChanged: (c) => setState(() => _color = c),
-                channel: 'A',
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: _color,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: Theme.of(context).colorScheme.outlineVariant,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    '#${_color.toARGB32().toRadixString(16).substring(2)}',
-                    style: AppTheme.bodyMediumStyle(context),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
+      content: _buildContent(context),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
@@ -709,6 +659,59 @@ class _ColorEditDialogState extends State<_ColorEditDialog> {
         FilledButton(
           onPressed: () => Navigator.pop(context, _color),
           child: Text(l.save),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContent(BuildContext context) {
+    return SizedBox(
+      width: 380,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _buildChannel('R'),
+            const SizedBox(height: 6),
+            _buildChannel('G'),
+            const SizedBox(height: 6),
+            _buildChannel('B'),
+            const SizedBox(height: 6),
+            _buildChannel('A'),
+            const SizedBox(height: 12),
+            _buildColorPreview(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChannel(String channel) {
+    return ChannelRow(
+      color: _color,
+      onChanged: (color) => setState(() => _color = color),
+      channel: channel,
+    );
+  }
+
+  Widget _buildColorPreview(BuildContext context) {
+    return Row(
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: _color,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: Theme.of(context).colorScheme.outlineVariant,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          '#${_color.toARGB32().toRadixString(16).substring(2)}',
+          style: AppTheme.bodyMediumStyle(context),
         ),
       ],
     );

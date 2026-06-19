@@ -148,6 +148,140 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final nonDailyTodos = widget.todos
         .where((todo) => todo.taskType != TaskType.daily)
         .toList();
+    final displayName = _effectiveName(l10n);
+
+    return SafeArea(
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+        children: [
+          _buildTitle(context, l10n),
+          const SizedBox(height: 16),
+          _buildProfileCard(context, l10n, displayName),
+          const SizedBox(height: 16),
+          _buildStatsSection(context, l10n, nonDailyTodos),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTitle(BuildContext context, AppLocalizations l10n) {
+    return Text(
+      l10n.dashboard,
+      style: AppTheme.pageTitleStyle(
+        context,
+        color: Theme.of(context).primaryColor,
+      ),
+    );
+  }
+
+  Widget _buildProfileCard(
+    BuildContext context,
+    AppLocalizations l10n,
+    String displayName,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Row(
+        children: [
+          _buildAvatar(context, displayName),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  displayName,
+                  style: AppTheme.bodyStrongStyle(
+                    context,
+                  ).copyWith(color: Theme.of(context).colorScheme.onSurface),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            tooltip: l10n.dashboardEditName,
+            onPressed: _editDisplayName,
+            icon: const Icon(Icons.edit_outlined),
+            constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatar(BuildContext context, String displayName) {
+    return Container(
+      width: 52,
+      height: 52,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Theme.of(context).primaryColor.withValues(alpha: 0.14),
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                customBorder: const CircleBorder(),
+                onTap: _pickAvatarImage,
+                child: _buildAvatarContent(context, displayName),
+              ),
+            ),
+          ),
+          Positioned(
+            right: -2,
+            bottom: -2,
+            child: Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Theme.of(context).primaryColor,
+              ),
+              child: Icon(
+                Icons.photo_camera_outlined,
+                size: 12,
+                color: Theme.of(context).colorScheme.onPrimary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAvatarContent(BuildContext context, String displayName) {
+    if (_avatarImagePath != null) {
+      return ClipOval(
+        child: Image.file(File(_avatarImagePath!), fit: BoxFit.cover),
+      );
+    }
+
+    return Center(
+      child: Text(
+        _initialLetter(displayName),
+        style: AppTheme.bodyStrongStyle(
+          context,
+          color: Theme.of(context).primaryColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatsSection(
+    BuildContext context,
+    AppLocalizations l10n,
+    List<Todo> nonDailyTodos,
+  ) {
     final completed = nonDailyTodos.where((todo) => todo.isCompleted).length;
     final highUrgent = nonDailyTodos
         .where(
@@ -157,172 +291,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
         )
         .length;
 
-    final statsTitle = l10n.dashboardTaskStats;
-    final editNameText = l10n.dashboardEditName;
-    final labelDone = l10n.dashboardCompletedTasks;
-    final labelHighUrgency = l10n.dashboardHighUrgency;
-    final displayName = _effectiveName(l10n);
-
-    return SafeArea(
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            l10n.dashboard,
-            style: AppTheme.pageTitleStyle(
-              context,
-              color: Theme.of(context).primaryColor,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(
-                color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
+          Row(
+            children: [
+              Icon(
+                Icons.query_stats,
+                size: 20,
+                color: Theme.of(context).primaryColor,
               ),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  width: 52,
-                  height: 52,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    color: Theme.of(
-                      context,
-                    ).primaryColor.withValues(alpha: 0.14),
-                  ),
-                  child: Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Positioned.fill(
-                        child: Material(
-                          color: Colors.transparent,
-                          child: InkWell(
-                            customBorder: const CircleBorder(),
-                            onTap: _pickAvatarImage,
-                            child: _avatarImagePath != null
-                                ? ClipOval(
-                                    child: Image.file(
-                                      File(_avatarImagePath!),
-                                      fit: BoxFit.cover,
-                                    ),
-                                  )
-                                : Center(
-                                    child: Text(
-                                      _initialLetter(displayName),
-                                      style: AppTheme.bodyStrongStyle(
-                                        context,
-                                        color: Theme.of(context).primaryColor,
-                                      ),
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        right: -2,
-                        bottom: -2,
-                        child: Container(
-                          width: 18,
-                          height: 18,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Theme.of(context).primaryColor,
-                          ),
-                          child: Icon(
-                            Icons.photo_camera_outlined,
-                            size: 12,
-                            color: Theme.of(context).colorScheme.onPrimary,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+              const SizedBox(width: 8),
+              Text(
+                l10n.dashboardTaskStats,
+                style: AppTheme.sectionTitleStyle(
+                  context,
+                  color: Theme.of(context).primaryColor,
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        displayName,
-                        style: AppTheme.bodyStrongStyle(context).copyWith(
-                          color: Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                IconButton(
-                  tooltip: editNameText,
-                  onPressed: _editDisplayName,
-                  icon: const Icon(Icons.edit_outlined),
-                  constraints: const BoxConstraints(
-                    minWidth: 44,
-                    minHeight: 44,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: Theme.of(context).dividerColor.withValues(alpha: 0.2),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.query_stats,
-                      size: 20,
-                      color: Theme.of(context).primaryColor,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      statsTitle,
-                      style: AppTheme.sectionTitleStyle(
-                        context,
-                        color: Theme.of(context).primaryColor,
-                      ),
-                    ),
-                  ],
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _StatCard(
+                  label: l10n.dashboardCompletedTasks,
+                  value: completed.toString(),
+                  icon: Icons.check_circle_outline,
+                  color: Theme.of(context).colorScheme.secondary,
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _StatCard(
-                        label: labelDone,
-                        value: completed.toString(),
-                        icon: Icons.check_circle_outline,
-                        color: Theme.of(context).colorScheme.secondary,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: _StatCard(
-                        label: labelHighUrgency,
-                        value: highUrgent.toString(),
-                        icon: Icons.priority_high,
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ],
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _StatCard(
+                  label: l10n.dashboardHighUrgency,
+                  value: highUrgent.toString(),
+                  icon: Icons.priority_high,
+                  color: Theme.of(context).colorScheme.error,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ],
       ),

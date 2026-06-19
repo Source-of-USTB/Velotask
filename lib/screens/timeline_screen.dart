@@ -373,6 +373,15 @@ class _TimelineScreenState extends State<TimelineScreen> {
       _scrollToToday();
     }
 
+    return _buildTimeline(context, theme, l10n, timelineRows);
+  }
+
+  Widget _buildTimeline(
+    BuildContext context,
+    ThemeData theme,
+    AppLocalizations l10n,
+    List<TimelineRow> timelineRows,
+  ) {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       appBar: AppBar(
@@ -395,20 +404,24 @@ class _TimelineScreenState extends State<TimelineScreen> {
           ),
         ],
       ),
-      body: Listener(
-        onPointerSignal: _onPointerSignal,
-        child: GanttChart(
-          rows: timelineRows,
-          headerCtrl: _headerCtrl,
-          bodyCtrl: _bodyCtrl,
-          chartStart: _chartStart,
-          totalDays: _totalDays,
-          dayWidth: _dayWidth,
-          totalWidth: _totalWidth,
-          now: _now,
-          onTaskDoubleTap: widget.onTaskDoubleTap,
-          onToggleGroup: _toggleTimelineGroup,
-        ),
+      body: _buildTimelineBody(timelineRows),
+    );
+  }
+
+  Widget _buildTimelineBody(List<TimelineRow> timelineRows) {
+    return Listener(
+      onPointerSignal: _onPointerSignal,
+      child: GanttChart(
+        rows: timelineRows,
+        headerCtrl: _headerCtrl,
+        bodyCtrl: _bodyCtrl,
+        chartStart: _chartStart,
+        totalDays: _totalDays,
+        dayWidth: _dayWidth,
+        totalWidth: _totalWidth,
+        now: _now,
+        onTaskDoubleTap: widget.onTaskDoubleTap,
+        onToggleGroup: _toggleTimelineGroup,
       ),
     );
   }
