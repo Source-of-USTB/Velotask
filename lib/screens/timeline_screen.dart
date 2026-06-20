@@ -238,79 +238,58 @@ class _TimelineScreenState extends State<TimelineScreen> {
       return;
     }
 
-    final usesParallelLanes =
-        node.todo.groupMode == TaskGroupMode.parallel ||
-        node.children.any(
-          (child) => child.todo.groupMode == TaskGroupMode.parallel,
-        );
+    final parallelChildren = node.children
+        .where(
+          (child) =>
+              !child.hasChildren &&
+              child.todo.groupMode == TaskGroupMode.parallel,
+        )
+        .toList();
+    final regularChildren = node.children
+        .where(
+          (child) =>
+              !child.hasChildren &&
+              child.todo.groupMode != TaskGroupMode.parallel,
+        )
+        .toList();
+    final nestedGroups = node.children
+        .where((child) => child.hasChildren)
+        .toList();
 
-    if (usesParallelLanes) {
-      final plainChildren = node.children
-          .where((child) => !child.hasChildren)
-          .toList();
-      final nestedGroups = node.children
-          .where((child) => child.hasChildren)
-          .toList();
-
-      for (final lane in _packParallelLanes(plainChildren)) {
-        rows.add(
-          TimelineRow(
-            todos: lane.map((child) => child.todo).toList(),
-            depth: depth + 1,
-            isParallelLane: true,
-          ),
-        );
-      }
-
-      for (final child in nestedGroups) {
-        _appendTimelineRows(rows, child, depth + 1);
-      }
-      return;
+    for (final child in regularChildren) {
+      _appendTimelineRows(rows, child, depth + 1);
     }
 
-    for (final child in node.children) {
+    for (final plan in _groupParallelPlans(parallelChildren)) {
+      rows.add(
+        TimelineRow(
+          todos: plan.value.map((child) => child.todo).toList(),
+          depth: depth + 1,
+          isParallelLane: true,
+          parallelPlan: plan.key,
+        ),
+      );
+    }
+
+    for (final child in nestedGroups) {
       _appendTimelineRows(rows, child, depth + 1);
     }
   }
 
-  List<List<TodoHierarchyNode>> _packParallelLanes(
+  List<MapEntry<String, List<TodoHierarchyNode>>> _groupParallelPlans(
     List<TodoHierarchyNode> nodes,
   ) {
-    final items =
-        nodes
-            .map((node) {
-              final range = _rangeForNode(node);
-              return range == null ? null : _TimelineItem(node, range);
-            })
-            .whereType<_TimelineItem>()
-            .toList()
-          ..sort((a, b) {
-            final byStart = a.range.start.compareTo(b.range.start);
-            if (byStart != 0) return byStart;
-            return a.range.end.compareTo(b.range.end);
-          });
-
-    final lanes = <List<TodoHierarchyNode>>[];
-    final laneEnds = <DateTime>[];
-
-    for (final item in items) {
-      var placed = false;
-      final itemEnd = item.range.safeEnd;
-      for (var i = 0; i < lanes.length; i++) {
-        if (!item.range.start.isBefore(laneEnds[i])) {
-          lanes[i].add(item.node);
-          laneEnds[i] = itemEnd;
-          placed = true;
-          break;
-        }
-      }
-      if (!placed) {
-        lanes.add([item.node]);
-        laneEnds.add(itemEnd);
-      }
+    final plans = <String, List<TodoHierarchyNode>>{};
+    for (final node in nodes) {
+      final plan =
+          Todo.normalizeParallelPlan(node.todo.parallelPlan) ??
+          Todo.defaultParallelPlan;
+      plans.putIfAbsent(plan, () => []).add(node);
     }
 
-    return lanes;
+    final entries = plans.entries.toList()
+      ..sort((a, b) => a.key.toLowerCase().compareTo(b.key.toLowerCase()));
+    return entries;
   }
 
   _TaskRange? _rangeForNode(TodoHierarchyNode node) {
@@ -457,14 +436,4 @@ class _TaskRange {
   final DateTime end;
 
   const _TaskRange(this.start, this.end);
-
-  DateTime get safeEnd =>
-      end.isAfter(start) ? end : start.add(const Duration(minutes: 1));
-}
-
-class _TimelineItem {
-  final TodoHierarchyNode node;
-  final _TaskRange range;
-
-  const _TimelineItem(this.node, this.range);
 }

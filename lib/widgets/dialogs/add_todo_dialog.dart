@@ -18,6 +18,7 @@ typedef GroupedTodoSubmitCallback =
       TaskType taskType,
       int? parentTodoId,
       TaskGroupMode groupMode,
+      String? parallelPlan,
     );
 
 class AddTodoDialog extends StatefulWidget {
@@ -54,6 +55,9 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
 
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _descController = TextEditingController();
+  final TextEditingController _parallelPlanController = TextEditingController(
+    text: Todo.defaultParallelPlan,
+  );
   DateTime? _startDate;
   DateTime? _ddl;
   int _importance = 1;
@@ -64,6 +68,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
   List<Tag> _selectedTags = [];
   bool _isSubmitting = false;
   bool _parentRequiredError = false;
+  bool _parallelPlanError = false;
   final TodoStorage _storage = TodoStorage();
 
   @override
@@ -78,6 +83,8 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
       _taskType = widget.todo!.taskType;
       _parentTodoId = widget.todo!.parentTodoId;
       _groupMode = widget.todo!.groupMode;
+      _parallelPlanController.text =
+          widget.todo!.parallelPlan ?? Todo.defaultParallelPlan;
       // _selectedTags is initialized after _loadTags completes.
     }
     _loadTags();
@@ -101,6 +108,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
   void dispose() {
     _titleController.dispose();
     _descController.dispose();
+    _parallelPlanController.dispose();
     super.dispose();
   }
 
@@ -127,6 +135,18 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
     if (submitGroupMode.requiresParent && selectedParentId == null) {
       setState(() {
         _parentRequiredError = true;
+        _isSubmitting = false;
+      });
+      return;
+    }
+    final submitParallelPlan = submitGroupMode == TaskGroupMode.parallel
+        ? Todo.normalizeParallelPlan(_parallelPlanController.text)
+        : null;
+    if (submitGroupMode == TaskGroupMode.parallel &&
+        (submitParallelPlan == null ||
+            submitParallelPlan.length > Todo.maxParallelPlanLength)) {
+      setState(() {
+        _parallelPlanError = true;
         _isSubmitting = false;
       });
       return;
@@ -184,6 +204,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
         _taskType,
         submitParentTodoId,
         submitGroupMode,
+        submitParallelPlan,
       );
     } else {
       widget.onAdd(
@@ -485,6 +506,50 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
           const SizedBox(height: 12),
           _buildParentSelector(context, parentOptions, selectedParentId),
         ],
+        if (_groupMode == TaskGroupMode.parallel) ...[
+          const SizedBox(height: 12),
+          _buildParallelPlanInput(context),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildParallelPlanInput(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final secondaryColor = theme.colorScheme.onSurface.withValues(alpha: 0.6);
+
+    return Row(
+      children: [
+        SizedBox(
+          width: 80,
+          child: Padding(
+            padding: const EdgeInsets.only(left: 12),
+            child: Text(
+              l10n.parallelPlan,
+              style: AppTheme.bodyMediumStyle(context, color: secondaryColor),
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: TextField(
+            controller: _parallelPlanController,
+            maxLength: Todo.maxParallelPlanLength,
+            decoration: InputDecoration(
+              hintText: l10n.parallelPlanHint,
+              errorText: _parallelPlanError ? l10n.parallelPlanInvalid : null,
+              counterText: '',
+              border: const OutlineInputBorder(),
+              isDense: true,
+            ),
+            onChanged: (_) {
+              if (_parallelPlanError) {
+                setState(() => _parallelPlanError = false);
+              }
+            },
+          ),
+        ),
       ],
     );
   }
@@ -759,6 +824,7 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
         _parentTodoId = null;
         _groupMode = TaskGroupMode.none;
         _parentRequiredError = false;
+        _parallelPlanError = false;
       }
     });
   }
@@ -767,8 +833,12 @@ class _AddTodoDialogState extends State<AddTodoDialog> {
     setState(() {
       _groupMode = value;
       _parentRequiredError = false;
+      _parallelPlanError = false;
       if (value == TaskGroupMode.none) {
         _parentTodoId = null;
+      } else if (value == TaskGroupMode.parallel &&
+          Todo.normalizeParallelPlan(_parallelPlanController.text) == null) {
+        _parallelPlanController.text = Todo.defaultParallelPlan;
       }
     });
   }

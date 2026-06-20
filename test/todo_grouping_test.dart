@@ -52,12 +52,17 @@ void main() {
         title: 'x',
         groupMode: TaskGroupMode.parallel,
         parentTodoId: 1,
+        parallelPlan: 'A',
       );
       expect(t.hasValidGrouping, true);
     });
 
     test('parallel mode without parent is invalid', () {
-      final t = Todo(title: 'x', groupMode: TaskGroupMode.parallel);
+      final t = Todo(
+        title: 'x',
+        groupMode: TaskGroupMode.parallel,
+        parallelPlan: 'A',
+      );
       expect(t.hasValidGrouping, false);
     });
 
@@ -77,8 +82,74 @@ void main() {
         title: 'x',
         groupMode: TaskGroupMode.parallel,
         parentTodoId: 1,
+        parallelPlan: 'A',
       );
       expect(t.hasValidGrouping, false);
+    });
+
+    test('parallel mode without a plan is invalid', () {
+      final t = Todo(
+        id: 2,
+        title: 'x',
+        groupMode: TaskGroupMode.parallel,
+        parentTodoId: 1,
+      );
+      expect(t.hasValidGrouping, false);
+    });
+
+    test('parallel mode with a blank plan is invalid', () {
+      final t = Todo(
+        id: 2,
+        title: 'x',
+        groupMode: TaskGroupMode.parallel,
+        parentTodoId: 1,
+        parallelPlan: '   ',
+      );
+      expect(t.hasValidGrouping, false);
+    });
+
+    test('parallel mode with an oversized plan is invalid', () {
+      final t = Todo(
+        id: 2,
+        title: 'x',
+        groupMode: TaskGroupMode.parallel,
+        parentTodoId: 1,
+        parallelPlan: List.filled(Todo.maxParallelPlanLength + 1, 'A').join(),
+      );
+      expect(t.hasValidGrouping, false);
+    });
+
+    test('non-parallel mode with a plan is invalid', () {
+      final t = Todo(
+        id: 2,
+        title: 'x',
+        groupMode: TaskGroupMode.subtasks,
+        parentTodoId: 1,
+        parallelPlan: 'A',
+      );
+      expect(t.hasValidGrouping, false);
+    });
+  });
+
+  group('Todo.normalizeParallelPlan', () {
+    test('trims a plan identifier', () {
+      expect(Todo.normalizeParallelPlan('  A  '), 'A');
+    });
+
+    test('turns blank identifiers into null', () {
+      expect(Todo.normalizeParallelPlan('   '), isNull);
+    });
+
+    test('copyWith can clear a plan identifier', () {
+      final todo = Todo(
+        id: 2,
+        title: 'x',
+        groupMode: TaskGroupMode.parallel,
+        parentTodoId: 1,
+        parallelPlan: 'A',
+      );
+
+      expect(todo.copyWith(parallelPlan: null).parallelPlan, isNull);
     });
   });
 

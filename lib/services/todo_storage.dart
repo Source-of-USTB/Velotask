@@ -38,6 +38,9 @@ class TodoStorage {
           ? todo.parentTodoId
           : null,
       groupMode: effectiveGroupMode,
+      parallelPlan: effectiveGroupMode == TaskGroupMode.parallel
+          ? Todo.normalizeParallelPlan(todo.parallelPlan)
+          : null,
     );
   }
 
@@ -54,6 +57,10 @@ class TodoStorage {
     final groupMode = rawGroupMode.requiresParent && row.parentTodoId == null
         ? TaskGroupMode.none
         : rawGroupMode;
+    final parallelPlan = groupMode == TaskGroupMode.parallel
+        ? Todo.normalizeParallelPlan(row.parallelPlan) ??
+              Todo.defaultParallelPlan
+        : null;
     return Todo(
       id: row.id,
       title: row.title,
@@ -68,6 +75,7 @@ class TodoStorage {
       estimatedEffortHours: row.estimatedEffortHours,
       parentTodoId: groupMode == TaskGroupMode.none ? null : row.parentTodoId,
       groupMode: groupMode,
+      parallelPlan: parallelPlan,
       tags: tags,
     );
   }
@@ -174,6 +182,7 @@ class TodoStorage {
             estimatedEffortHours: Value(normalizedTodo.estimatedEffortHours),
             parentTodoId: Value(normalizedTodo.parentTodoId),
             groupMode: Value(normalizedTodo.groupMode.index),
+            parallelPlan: Value(normalizedTodo.parallelPlan),
           ),
         );
     await _saveTodoTags(id, normalizedTodo.tags);
@@ -196,6 +205,7 @@ class TodoStorage {
         estimatedEffortHours: Value(normalizedTodo.estimatedEffortHours),
         parentTodoId: Value(normalizedTodo.parentTodoId),
         groupMode: Value(normalizedTodo.groupMode.index),
+        parallelPlan: Value(normalizedTodo.parallelPlan),
       ),
     );
     if (saveLinks) {
@@ -210,6 +220,7 @@ class TodoStorage {
       TodosCompanion(
         parentTodoId: const Value(null),
         groupMode: Value(TaskGroupMode.none.index),
+        parallelPlan: const Value(null),
       ),
     );
     await (_db.delete(_db.todoTags)..where((tt) => tt.todoId.equals(id))).go();

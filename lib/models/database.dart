@@ -29,23 +29,30 @@ class Todos extends Table {
   // 0 = task, 1 = deadline  (enum index)
   IntColumn get taskType => integer().withDefault(const Constant(0))();
   RealColumn get estimatedEffortHours => real().nullable()();
-  IntColumn get parentTodoId => integer().nullable().references(Todos, #id)();
+  IntColumn get parentTodoId =>
+      integer().nullable().customConstraint('REFERENCES todos(id)')();
   // 0 = none, 1 = subtasks, 2 = parallel
   IntColumn get groupMode => integer().withDefault(const Constant(0))();
+  TextColumn get parallelPlan => text().nullable()();
 
   @override
   List<String> get customConstraints => [
     'CHECK (group_mode IN (0, 1, 2))',
     'CHECK ((group_mode = 0 AND parent_todo_id IS NULL) OR '
         '(group_mode IN (1, 2) AND parent_todo_id IS NOT NULL))',
+    'CHECK ((group_mode = 2 AND parallel_plan IS NOT NULL '
+        'AND length(trim(parallel_plan)) BETWEEN 1 AND 32) OR '
+        '(group_mode != 2 AND parallel_plan IS NULL))',
     'CHECK (parent_todo_id IS NULL OR parent_todo_id != id)',
   ];
 }
 
 /// Junction table for the many-to-many Todo ↔ Tag relationship.
 class TodoTags extends Table {
-  IntColumn get todoId => integer().references(Todos, #id)();
-  IntColumn get tagId => integer().references(Tags, #id)();
+  IntColumn get todoId =>
+      integer().customConstraint('NOT NULL REFERENCES todos(id)')();
+  IntColumn get tagId =>
+      integer().customConstraint('NOT NULL REFERENCES tags(id)')();
 
   @override
   Set<Column> get primaryKey => {todoId, tagId};
@@ -60,7 +67,7 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_openConnection());
 
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -68,8 +75,10 @@ class AppDatabase extends _$AppDatabase {
       await m.createAll();
     },
     beforeOpen: (_) async {
+      await customStatement('PRAGMA foreign_keys = ON;');
       await _normalizeTodoGroupingRows();
       await _ensureTodoGroupingTriggers();
+      await _ensureTodoParallelPlanTriggers();
     },
     onUpgrade: (Migrator m, int from, int to) async {
       if (from < 2) {
@@ -96,6 +105,13 @@ class AppDatabase extends _$AppDatabase {
           m,
           'group_mode',
           todos.groupMode as GeneratedColumn<Object>,
+        );
+      }
+      if (from < 5) {
+        await _addTodoColumnIfMissing(
+          m,
+          'parallel_plan',
+          todos.parallelPlan as GeneratedColumn<Object>,
         );
       }
     },
@@ -140,6 +156,18 @@ class AppDatabase extends _$AppDatabase {
       'SELECT 1 FROM todos parents WHERE parents.id = todos.parent_todo_id'
       ');',
     );
+    await customStatement(
+      "UPDATE todos SET parallel_plan = 'A' "
+      'WHERE group_mode = 2 '
+      'AND (parallel_plan IS NULL OR length(trim(parallel_plan)) = 0);',
+    );
+    await customStatement(
+      'UPDATE todos SET parallel_plan = substr(trim(parallel_plan), 1, 32) '
+      'WHERE group_mode = 2 AND parallel_plan IS NOT NULL;',
+    );
+    await customStatement(
+      'UPDATE todos SET parallel_plan = NULL WHERE group_mode != 2;',
+    );
   }
 
   Future<void> _ensureTodoGroupingTriggers() async {
@@ -179,6 +207,31 @@ class AppDatabase extends _$AppDatabase {
       ') '
       'BEGIN '
       "SELECT RAISE(ABORT, 'todo has grouped children'); "
+      'END;',
+    );
+  }
+
+  Future<void> _ensureTodoParallelPlanTriggers() async {
+    await customStatement(
+      'CREATE TRIGGER IF NOT EXISTS todos_parallel_plan_insert_check '
+      'BEFORE INSERT ON todos '
+      'WHEN (NEW.group_mode = 2 AND ('
+      'NEW.parallel_plan IS NULL OR '
+      'length(trim(NEW.parallel_plan)) NOT BETWEEN 1 AND 32'
+      ')) OR (NEW.group_mode != 2 AND NEW.parallel_plan IS NOT NULL) '
+      'BEGIN '
+      "SELECT RAISE(ABORT, 'invalid parallel plan'); "
+      'END;',
+    );
+    await customStatement(
+      'CREATE TRIGGER IF NOT EXISTS todos_parallel_plan_update_check '
+      'BEFORE UPDATE OF group_mode, parallel_plan ON todos '
+      'WHEN (NEW.group_mode = 2 AND ('
+      'NEW.parallel_plan IS NULL OR '
+      'length(trim(NEW.parallel_plan)) NOT BETWEEN 1 AND 32'
+      ')) OR (NEW.group_mode != 2 AND NEW.parallel_plan IS NOT NULL) '
+      'BEGIN '
+      "SELECT RAISE(ABORT, 'invalid parallel plan'); "
       'END;',
     );
   }

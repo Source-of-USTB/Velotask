@@ -13,6 +13,9 @@ extension TaskGroupModeRules on TaskGroupMode {
 /// Plain data class used throughout the UI.
 /// The actual Drift table definition lives in database.dart (Todos table).
 class Todo {
+  static const String defaultParallelPlan = 'A';
+  static const int maxParallelPlanLength = 32;
+
   final int id;
 
   String title;
@@ -27,6 +30,7 @@ class Todo {
   double? estimatedEffortHours;
   int? parentTodoId;
   TaskGroupMode groupMode;
+  String? parallelPlan;
 
   /// Tags associated with this todo (loaded alongside the todo).
   List<Tag> tags;
@@ -46,6 +50,7 @@ class Todo {
     this.estimatedEffortHours,
     this.parentTodoId,
     this.groupMode = TaskGroupMode.none,
+    this.parallelPlan,
   }) : tags = List<Tag>.from(tags);
 
   Todo copyWith({
@@ -63,6 +68,7 @@ class Todo {
     double? estimatedEffortHours,
     Object? parentTodoId = _sentinel,
     TaskGroupMode? groupMode,
+    Object? parallelPlan = _sentinel,
   }) {
     return Todo(
       id: id ?? this.id,
@@ -81,16 +87,34 @@ class Todo {
           ? this.parentTodoId
           : parentTodoId as int?,
       groupMode: groupMode ?? this.groupMode,
+      parallelPlan: identical(parallelPlan, _sentinel)
+          ? this.parallelPlan
+          : parallelPlan as String?,
     );
+  }
+
+  static String? normalizeParallelPlan(String? value) {
+    final normalized = value?.trim();
+    return normalized == null || normalized.isEmpty ? null : normalized;
   }
 
   bool get hasParent => parentTodoId != null;
 
   bool get hasValidGrouping {
     if (groupMode.requiresParent) {
-      return parentTodoId != null && parentTodoId != id;
+      if (parentTodoId == null || parentTodoId == id) {
+        return false;
+      }
+    } else if (parentTodoId != null) {
+      return false;
     }
-    return parentTodoId == null;
+
+    final normalizedPlan = normalizeParallelPlan(parallelPlan);
+    if (groupMode == TaskGroupMode.parallel) {
+      return normalizedPlan != null &&
+          normalizedPlan.length <= maxParallelPlanLength;
+    }
+    return parallelPlan == null;
   }
 
   void validateGrouping() {

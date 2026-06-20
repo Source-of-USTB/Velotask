@@ -196,6 +196,7 @@ class _MainScreenState extends State<MainScreen> {
     double? presetEffortHours,
     int? parentTodoId,
     TaskGroupMode groupMode = TaskGroupMode.none,
+    String? parallelPlan,
   }) async {
     if (title.isEmpty) return;
     final effectiveGroupMode = taskType == TaskType.daily
@@ -205,6 +206,14 @@ class _MainScreenState extends State<MainScreen> {
         ? null
         : parentTodoId;
     if (effectiveGroupMode.requiresParent && effectiveParentTodoId == null) {
+      return;
+    }
+    final effectiveParallelPlan = effectiveGroupMode == TaskGroupMode.parallel
+        ? Todo.normalizeParallelPlan(parallelPlan)
+        : null;
+    if (effectiveGroupMode == TaskGroupMode.parallel &&
+        (effectiveParallelPlan == null ||
+            effectiveParallelPlan.length > Todo.maxParallelPlanLength)) {
       return;
     }
 
@@ -218,6 +227,7 @@ class _MainScreenState extends State<MainScreen> {
       estimatedEffortHours: presetEffortHours,
       parentTodoId: effectiveParentTodoId,
       groupMode: effectiveGroupMode,
+      parallelPlan: effectiveParallelPlan,
     );
     newTodo.tags.addAll(tags);
 
@@ -291,6 +301,7 @@ class _MainScreenState extends State<MainScreen> {
         for (final child in todos.where((t) => t.parentTodoId == todo.id)) {
           child.parentTodoId = null;
           child.groupMode = TaskGroupMode.none;
+          child.parallelPlan = null;
         }
       });
       await _normalizeDailyTaskOrder();
@@ -410,6 +421,7 @@ class _MainScreenState extends State<MainScreen> {
           todo.tags.addAll(tags);
           todo.parentTodoId = null;
           todo.groupMode = TaskGroupMode.none;
+          todo.parallelPlan = null;
 
           await _storage.updateTodo(todo);
 
@@ -448,6 +460,7 @@ class _MainScreenState extends State<MainScreen> {
               taskType,
               parentTodoId,
               groupMode,
+              parallelPlan,
             ) async {
               // Mutate the existing todo instance directly to preserve object identity.
               todo.title = title;
@@ -469,6 +482,9 @@ class _MainScreenState extends State<MainScreen> {
                   ? TaskGroupMode.none
                   : effectiveGroupMode;
               todo.parentTodoId = effectiveParentTodoId;
+              todo.parallelPlan = todo.groupMode == TaskGroupMode.parallel
+                  ? Todo.normalizeParallelPlan(parallelPlan)
+                  : null;
 
               await _storage.updateTodo(todo);
 
@@ -517,6 +533,7 @@ class _MainScreenState extends State<MainScreen> {
               taskType,
               parentTodoId,
               groupMode,
+              parallelPlan,
             ) {
               _addTodo(
                 title,
@@ -528,6 +545,7 @@ class _MainScreenState extends State<MainScreen> {
                 taskType,
                 parentTodoId: parentTodoId,
                 groupMode: groupMode,
+                parallelPlan: parallelPlan,
               );
             },
       ),

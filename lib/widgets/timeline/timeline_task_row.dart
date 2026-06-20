@@ -9,6 +9,7 @@ class TimelineRow {
   final int depth;
   final bool isGroupHeader;
   final bool isParallelLane;
+  final String? parallelPlan;
   final bool isExpanded;
   final int childCount;
   final int completedChildCount;
@@ -20,6 +21,7 @@ class TimelineRow {
     this.depth = 0,
     this.isGroupHeader = false,
     this.isParallelLane = false,
+    this.parallelPlan,
     this.isExpanded = false,
     this.childCount = 0,
     this.completedChildCount = 0,
