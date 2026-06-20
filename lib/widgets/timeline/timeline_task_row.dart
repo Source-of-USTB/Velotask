@@ -1,3 +1,4 @@
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/services/color_config_manager.dart';
@@ -285,13 +286,8 @@ class _TaskBar extends StatelessWidget {
         children: [
           ..._buildExpandButton(),
           Expanded(
-            child: InkWell(
-              radius: 150,
-              mouseCursor: SystemMouseCursors.click,
+            child: _ResponsiveDoubleTapInkWell(
               onDoubleTap: onDoubleTap,
-              hoverColor: Colors.transparent,
-              highlightColor: Colors.white.withValues(alpha: 0.1),
-              splashColor: Colors.white.withValues(alpha: 0.2),
               child: Container(
                 padding: EdgeInsets.only(
                   left: onToggleExpanded == null ? 8 : 0,
@@ -398,6 +394,68 @@ class _TaskBar extends StatelessWidget {
         ),
       ),
     ];
+  }
+}
+
+class _ResponsiveDoubleTapInkWell extends StatefulWidget {
+  final VoidCallback? onDoubleTap;
+  final Widget child;
+
+  const _ResponsiveDoubleTapInkWell({
+    required this.onDoubleTap,
+    required this.child,
+  });
+
+  @override
+  State<_ResponsiveDoubleTapInkWell> createState() =>
+      _ResponsiveDoubleTapInkWellState();
+}
+
+class _ResponsiveDoubleTapInkWellState
+    extends State<_ResponsiveDoubleTapInkWell> {
+  DateTime? _lastTapTime;
+  Offset? _lastTapPosition;
+  Offset? _currentTapPosition;
+
+  void _handleTapDown(TapDownDetails details) {
+    _currentTapPosition = details.globalPosition;
+  }
+
+  void _handleTap() {
+    final now = DateTime.now();
+    final lastTime = _lastTapTime;
+    final lastPosition = _lastTapPosition;
+    final currentPosition = _currentTapPosition;
+    final isDoubleTap =
+        lastTime != null &&
+        currentPosition != null &&
+        lastPosition != null &&
+        now.difference(lastTime) <= kDoubleTapTimeout &&
+        (currentPosition - lastPosition).distance <= kDoubleTapSlop;
+
+    if (isDoubleTap) {
+      _lastTapTime = null;
+      _lastTapPosition = null;
+      widget.onDoubleTap?.call();
+      return;
+    }
+
+    _lastTapTime = now;
+    _lastTapPosition = currentPosition;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      radius: 150,
+      mouseCursor: SystemMouseCursors.click,
+      onTapDown: widget.onDoubleTap == null ? null : _handleTapDown,
+      onTap: widget.onDoubleTap == null ? null : _handleTap,
+      hoverColor: Colors.transparent,
+      highlightColor: Colors.white.withValues(alpha: 0.1),
+      splashColor: Colors.white.withValues(alpha: 0.2),
+      child: widget.child,
+    );
   }
 }
 
