@@ -215,17 +215,19 @@ class TimelineTaskRow extends StatelessWidget {
           color: row.isGroupHeader ? color.withValues(alpha: 0.86) : color,
           borderRadius: BorderRadius.circular(8),
           clipBehavior: Clip.hardEdge,
-          child: _TaskBar(
-            todo: todo,
-            textColor: p.colorByKey('ganttTaskText', b),
-            isGroupHeader: row.isGroupHeader,
-            isExpanded: row.isExpanded,
-            childCount: row.childCount,
-            completedChildCount: row.completedChildCount,
-            onToggleExpanded: row.isGroupHeader && row.childCount > 0
-                ? () => onToggleGroup?.call(row.primaryTodo)
-                : null,
-            onDoubleTap: () => onDoubleTap?.call(todo),
+          child: _BarHoverHighlight(
+            child: _TaskBar(
+              todo: todo,
+              textColor: p.colorByKey('ganttTaskText', b),
+              isGroupHeader: row.isGroupHeader,
+              isExpanded: row.isExpanded,
+              childCount: row.childCount,
+              completedChildCount: row.completedChildCount,
+              onToggleExpanded: row.isGroupHeader && row.childCount > 0
+                  ? () => onToggleGroup?.call(row.primaryTodo)
+                  : null,
+              onDoubleTap: () => onDoubleTap?.call(todo),
+            ),
           ),
         ),
       ),
@@ -283,7 +285,6 @@ class _TaskBar extends StatelessWidget {
           Expanded(
             child: InkWell(
               radius: 150,
-              hoverColor: Colors.white.withValues(alpha: 0.15),
               mouseCursor: SystemMouseCursors.click,
               onDoubleTap: onDoubleTap,
               highlightColor: Colors.white.withValues(alpha: 0.1),
@@ -394,6 +395,33 @@ class _TaskBar extends StatelessWidget {
         ),
       ),
     ];
+  }
+}
+
+class _BarHoverHighlight extends StatefulWidget {
+  final Widget child;
+
+  const _BarHoverHighlight({required this.child});
+
+  @override
+  State<_BarHoverHighlight> createState() => _BarHoverHighlightState();
+}
+
+class _BarHoverHighlightState extends State<_BarHoverHighlight> {
+  bool _isHovered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: Ink(
+        color: _isHovered
+            ? Colors.white.withValues(alpha: 0.15)
+            : Colors.transparent,
+        child: widget.child,
+      ),
+    );
   }
 }
 
