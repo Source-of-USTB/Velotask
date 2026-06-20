@@ -42,6 +42,28 @@
   "chinese": "中文",
   "tasks": "Tasks",
   "timeline": "Timeline",
+  "timelineRange": "Timeline Range",
+  "timelineRangeSubtitle": "{pastMonths} months before, {futureMonths} months after",
+  "@timelineRangeSubtitle": {
+    "placeholders": {
+      "pastMonths": {
+        "type": "int"
+      },
+      "futureMonths": {
+        "type": "int"
+      }
+    }
+  },
+  "timelineMonthsBefore": "Months before current month",
+  "timelineMonthsAfter": "Months after current month",
+  "timelineRangeLimitHint": "Enter a whole number from 0 to {maxMonths}.",
+  "@timelineRangeLimitHint": {
+    "placeholders": {
+      "maxMonths": {
+        "type": "int"
+      }
+    }
+  },
   "dashboard": "Dashboard",
   "dashboardTaskStats": "Task Stats",
   "dashboardEditName": "Edit name",

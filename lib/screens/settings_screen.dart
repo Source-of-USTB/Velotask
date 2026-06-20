@@ -8,6 +8,7 @@ import 'package:velotask/services/app_settings_controller.dart';
 import 'package:velotask/services/notification_service.dart';
 import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/widgets/dialogs/ai_settings_dialog.dart';
+import 'package:velotask/widgets/dialogs/timeline_range_dialog.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -70,6 +71,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildGeneralSection(BuildContext context, AppLocalizations l10n) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildSectionHeader(context, l10n.general),
         ValueListenableBuilder<ThemeMode>(
@@ -104,6 +106,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
             );
           },
         ),
+        ValueListenableBuilder<TimelineRangeSettings>(
+          valueListenable: AppSettingsController.timelineRangeNotifier,
+          builder: (context, range, child) {
+            return ListTile(
+              leading: const Icon(Icons.date_range_outlined),
+              title: Text(l10n.timelineRange),
+              subtitle: Text(
+                l10n.timelineRangeSubtitle(
+                  range.pastMonths,
+                  range.futureMonths,
+                ),
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _showTimelineRangeDialog(context),
+            );
+          },
+        ),
         const Divider(),
       ],
     );
@@ -114,6 +133,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     AppLocalizations l10n,
   ) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildSectionHeader(context, l10n.organization),
         ListTile(
@@ -149,6 +169,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildAISection(BuildContext context, AppLocalizations l10n) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildSectionHeader(context, l10n.aiAssistant),
         ListTile(
@@ -167,6 +188,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     AppLocalizations l10n,
   ) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildSectionHeader(context, l10n.notifications),
         ListTile(
@@ -182,6 +204,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Widget _buildAboutSection(BuildContext context, AppLocalizations l10n) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildSectionHeader(context, l10n.about),
         ListTile(
@@ -305,6 +328,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return showDialog<void>(
       context: context,
       builder: (context) => const AISettingsDialog(),
+    );
+  }
+
+  Future<void> _showTimelineRangeDialog(BuildContext context) {
+    return showDialog<void>(
+      context: context,
+      builder: (context) => const TimelineRangeDialog(),
     );
   }
 

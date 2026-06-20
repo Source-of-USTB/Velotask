@@ -6,6 +6,7 @@ import 'package:flutter/services.dart';
 import 'package:velotask/l10n/app_localizations.dart';
 import 'package:velotask/models/todo.dart';
 import 'package:velotask/models/todo_hierarchy.dart';
+import 'package:velotask/services/app_settings_controller.dart';
 import 'package:velotask/theme/app_theme.dart';
 import 'package:velotask/utils/constants.dart';
 import 'package:velotask/widgets/timeline/gantt_chart.dart';
@@ -25,12 +26,12 @@ class _TimelineScreenState extends State<TimelineScreen> {
   static const double _baseDayWidth = 60.0;
   static const List<double> _zoomLevels = [0.25, 0.5, 1, 2, 4, 8, 16, 32];
   static const int _defaultZoomIndex = 2; // 1x = 60px/day
-  static const int _yearsAroundToday = 2;
 
   late final ScrollController _headerCtrl;
   late final ScrollController _bodyCtrl;
-  late final DateTime _chartStart;
-  late final int _totalDays;
+  late DateTime _chartStart;
+  late DateTime _chartEndExclusive;
+  late int _totalDays;
 
   int _zoomIndex = _defaultZoomIndex;
   double get _dayWidth => _baseDayWidth * _zoomLevels[_zoomIndex];
@@ -45,10 +46,10 @@ class _TimelineScreenState extends State<TimelineScreen> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _chartStart = DateTime(now.year - _yearsAroundToday, 1, 1);
-    final chartEnd = DateTime(now.year + _yearsAroundToday, 12, 31);
-    _totalDays = chartEnd.difference(_chartStart).inDays;
+    _updateChartRange();
+    AppSettingsController.timelineRangeNotifier.addListener(
+      _onTimelineRangeChanged,
+    );
 
     _headerCtrl = ScrollController();
     _bodyCtrl = ScrollController();
@@ -65,6 +66,9 @@ class _TimelineScreenState extends State<TimelineScreen> {
   @override
   void dispose() {
     _nowTimer.cancel();
+    AppSettingsController.timelineRangeNotifier.removeListener(
+      _onTimelineRangeChanged,
+    );
     _headerCtrl
       ..removeListener(_syncHeader)
       ..dispose();
@@ -72,6 +76,28 @@ class _TimelineScreenState extends State<TimelineScreen> {
       ..removeListener(_syncBody)
       ..dispose();
     super.dispose();
+  }
+
+  void _updateChartRange() {
+    final now = DateTime.now();
+    final range = AppSettingsController.timelineRangeNotifier.value;
+    _chartStart = DateTime(now.year, now.month - range.pastMonths, 1);
+    _chartEndExclusive = DateTime(
+      now.year,
+      now.month + range.futureMonths + 1,
+      1,
+    );
+    _totalDays = _chartEndExclusive.difference(_chartStart).inDays;
+  }
+
+  void _onTimelineRangeChanged() {
+    if (!mounted) return;
+
+    setState(() {
+      _updateChartRange();
+      _didAutoScroll = false;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToToday());
   }
 
   void _syncBody() {
@@ -322,9 +348,8 @@ class _TimelineScreenState extends State<TimelineScreen> {
   }
 
   bool _rangeIntersectsChart(_TaskRange range) {
-    final now = DateTime.now();
-    final chartEnd = DateTime(now.year + _yearsAroundToday, 12, 31);
-    return !range.end.isBefore(_chartStart) && !range.start.isAfter(chartEnd);
+    return !range.end.isBefore(_chartStart) &&
+        range.start.isBefore(_chartEndExclusive);
   }
 
   DateTime? _earlier(DateTime? a, DateTime b) {

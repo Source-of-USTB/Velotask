@@ -42,6 +42,28 @@
   "chinese": "中文",
   "tasks": "任务",
   "timeline": "时间轴",
+  "timelineRange": "时间轴范围",
+  "timelineRangeSubtitle": "向前 {pastMonths} 个月，向后 {futureMonths} 个月",
+  "@timelineRangeSubtitle": {
+    "placeholders": {
+      "pastMonths": {
+        "type": "int"
+      },
+      "futureMonths": {
+        "type": "int"
+      }
+    }
+  },
+  "timelineMonthsBefore": "向前月份",
+  "timelineMonthsAfter": "向后月份",
+  "timelineRangeLimitHint": "请输入 0 到 {maxMonths} 之间的整数。",
+  "@timelineRangeLimitHint": {
+    "placeholders": {
+      "maxMonths": {
+        "type": "int"
+      }
+    }
+  },
   "dashboard": "我的",
   "dashboardTaskStats": "任务统计",
   "dashboardEditName": "修改昵称",
