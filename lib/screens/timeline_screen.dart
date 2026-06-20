@@ -187,7 +187,7 @@ class _TimelineScreenState extends State<TimelineScreen> {
     }
 
     final nodes = _filterTimelineNodes(buildTodoHierarchy(widget.todos));
-    sortTodoHierarchy(nodes, compareTodos);
+    sortTodoHierarchy(nodes, (a, b) => compareGroupedTodos(a, b, compareTodos));
     return nodes;
   }
 
@@ -279,16 +279,20 @@ class _TimelineScreenState extends State<TimelineScreen> {
   List<MapEntry<String, List<TodoHierarchyNode>>> _groupParallelPlans(
     List<TodoHierarchyNode> nodes,
   ) {
-    final plans = <String, List<TodoHierarchyNode>>{};
+    final plans = <String, MapEntry<String, List<TodoHierarchyNode>>>{};
     for (final node in nodes) {
       final plan =
           Todo.normalizeParallelPlan(node.todo.parallelPlan) ??
           Todo.defaultParallelPlan;
-      plans.putIfAbsent(plan, () => []).add(node);
+      final identity = plan.toLowerCase();
+      plans
+          .putIfAbsent(identity, () => MapEntry(plan, <TodoHierarchyNode>[]))
+          .value
+          .add(node);
     }
 
-    final entries = plans.entries.toList()
-      ..sort((a, b) => a.key.toLowerCase().compareTo(b.key.toLowerCase()));
+    final entries = plans.values.toList()
+      ..sort((a, b) => compareParallelPlans(a.key, b.key));
     return entries;
   }
 

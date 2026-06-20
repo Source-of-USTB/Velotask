@@ -6,12 +6,14 @@ Todo _todo(
   int id, {
   int? parentId,
   TaskGroupMode groupMode = TaskGroupMode.none,
+  String? parallelPlan,
 }) {
   return Todo(
     id: id,
     title: 'Todo $id',
     parentTodoId: parentId,
     groupMode: groupMode,
+    parallelPlan: parallelPlan,
   );
 }
 
@@ -194,6 +196,45 @@ void main() {
       sortTodoHierarchy(nodes, (a, b) => a.id.compareTo(b.id));
       expect(nodes.length, 1);
       expect(nodes.first.todo.id, 1);
+    });
+
+    test('keeps parallel plans together before schedule order', () {
+      final nodes = buildTodoHierarchy([
+        _todo(1),
+        _todo(
+          2,
+          parentId: 1,
+          groupMode: TaskGroupMode.parallel,
+          parallelPlan: 'B',
+        ),
+        _todo(3, parentId: 1, groupMode: TaskGroupMode.subtasks),
+        _todo(
+          4,
+          parentId: 1,
+          groupMode: TaskGroupMode.parallel,
+          parallelPlan: 'A',
+        ),
+        _todo(
+          5,
+          parentId: 1,
+          groupMode: TaskGroupMode.parallel,
+          parallelPlan: 'A',
+        ),
+      ]);
+
+      sortTodoHierarchy(
+        nodes,
+        (a, b) => compareGroupedTodos(a, b, (a, b) => a.id.compareTo(b.id)),
+      );
+
+      expect(
+        nodes.first.children.map((node) => node.todo.id),
+        orderedEquals([3, 4, 5, 2]),
+      );
+    });
+
+    test('sorts numeric parallel plan labels naturally', () {
+      expect(compareParallelPlans('2', '10'), lessThan(0));
     });
   });
 

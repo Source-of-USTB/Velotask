@@ -82,6 +82,55 @@ void sortTodoHierarchy(
   }
 }
 
+int compareGroupedTodos(Todo a, Todo b, Comparator<Todo> compareSchedule) {
+  final modeComparison = _groupModeSortRank(
+    a.groupMode,
+  ).compareTo(_groupModeSortRank(b.groupMode));
+  if (modeComparison != 0) {
+    return modeComparison;
+  }
+
+  if (a.groupMode == TaskGroupMode.parallel &&
+      b.groupMode == TaskGroupMode.parallel) {
+    final planComparison = compareParallelPlans(a.parallelPlan, b.parallelPlan);
+    if (planComparison != 0) {
+      return planComparison;
+    }
+  }
+
+  return compareSchedule(a, b);
+}
+
+int compareParallelPlans(String? a, String? b) {
+  final left = Todo.normalizeParallelPlan(a) ?? Todo.defaultParallelPlan;
+  final right = Todo.normalizeParallelPlan(b) ?? Todo.defaultParallelPlan;
+  final leftNumber = int.tryParse(left);
+  final rightNumber = int.tryParse(right);
+
+  if (leftNumber != null && rightNumber != null) {
+    final numberComparison = leftNumber.compareTo(rightNumber);
+    if (numberComparison != 0) {
+      return numberComparison;
+    }
+  }
+
+  final caseInsensitiveComparison = left.toLowerCase().compareTo(
+    right.toLowerCase(),
+  );
+  if (caseInsensitiveComparison != 0) {
+    return caseInsensitiveComparison;
+  }
+  return left.compareTo(right);
+}
+
+int _groupModeSortRank(TaskGroupMode mode) {
+  return switch (mode) {
+    TaskGroupMode.none => 0,
+    TaskGroupMode.subtasks => 1,
+    TaskGroupMode.parallel => 2,
+  };
+}
+
 bool hasTodoDescendant(TodoHierarchyNode node, int todoId) {
   return node.descendants.any((child) => child.todo.id == todoId);
 }

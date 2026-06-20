@@ -176,7 +176,10 @@ class _TasksScreenState extends State<TasksScreen>
       buildTodoHierarchy(widget.todos),
       matches,
     );
-    sortTodoHierarchy(hierarchy, compareTodos);
+    sortTodoHierarchy(
+      hierarchy,
+      (a, b) => compareGroupedTodos(a, b, compareTodos),
+    );
     return hierarchy;
   }
 
@@ -376,6 +379,12 @@ class _TasksScreenState extends State<TasksScreen>
         depth: entry.depth,
         subtaskCount: entry.node.descendantCount,
         completedSubtaskCount: entry.node.doneDescendantCount,
+        hasParallelChildren: entry.node.children.any(
+          (child) => child.todo.groupMode == TaskGroupMode.parallel,
+        ),
+        hasSubtaskChildren: entry.node.children.any(
+          (child) => child.todo.groupMode == TaskGroupMode.subtasks,
+        ),
         isExpanded: isExpanded,
         onToggleExpanded: hasChildren
             ? () {

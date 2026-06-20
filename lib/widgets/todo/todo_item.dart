@@ -14,6 +14,8 @@ class TodoItem extends StatefulWidget {
   final int depth;
   final int subtaskCount;
   final int completedSubtaskCount;
+  final bool hasParallelChildren;
+  final bool hasSubtaskChildren;
   final bool isExpanded;
   final VoidCallback? onToggleExpanded;
 
@@ -27,6 +29,8 @@ class TodoItem extends StatefulWidget {
     this.depth = 0,
     this.subtaskCount = 0,
     this.completedSubtaskCount = 0,
+    this.hasParallelChildren = false,
+    this.hasSubtaskChildren = false,
     this.isExpanded = false,
     this.onToggleExpanded,
   });
@@ -118,9 +122,9 @@ class _TodoItemState extends State<TodoItem> {
         ? '9.99+'
         : urgencyValue.toStringAsFixed(2);
     final hasSubtasks = widget.subtaskCount > 0;
-    final nestedGuideColor = Theme.of(
-      context,
-    ).colorScheme.secondary.withValues(alpha: 0.18);
+    final nestedGuideColor = widget.todo.groupMode == TaskGroupMode.parallel
+        ? Theme.of(context).primaryColor.withValues(alpha: 0.28)
+        : Theme.of(context).colorScheme.secondary.withValues(alpha: 0.18);
 
     return GestureDetector(
       onSecondaryTapUp: (details) =>
@@ -356,6 +360,10 @@ class _TodoItemState extends State<TodoItem> {
       children: [
         Row(
           children: [
+            if (widget.todo.groupMode.requiresParent) ...[
+              _buildGroupRelationChip(context),
+              const SizedBox(width: 8),
+            ],
             Expanded(
               child: AnimatedDefaultTextStyle(
                 duration: const Duration(milliseconds: 200),
@@ -394,6 +402,49 @@ class _TodoItemState extends State<TodoItem> {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildGroupRelationChip(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final isParallel = widget.todo.groupMode == TaskGroupMode.parallel;
+    final plan =
+        Todo.normalizeParallelPlan(widget.todo.parallelPlan) ??
+        Todo.defaultParallelPlan;
+    final label = isParallel
+        ? '${l10n.parallelPlan} $plan'
+        : l10n.taskGroupModeSubtasks;
+    final color = isParallel
+        ? Theme.of(context).primaryColor
+        : Theme.of(context).colorScheme.secondary;
+
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 132),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isParallel ? Icons.view_week_outlined : Icons.account_tree_outlined,
+            size: 12,
+            color: color,
+          ),
+          const SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: AppTheme.tinyBoldStyle(context, color: color),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -539,13 +590,20 @@ class _TodoItemState extends State<TodoItem> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            widget.todo.groupMode == TaskGroupMode.parallel
-                ? Icons.view_week_outlined
-                : Icons.account_tree_outlined,
-            size: 13,
-            color: Theme.of(context).primaryColor,
-          ),
+          if (widget.hasParallelChildren)
+            Icon(
+              Icons.view_week_outlined,
+              size: 13,
+              color: Theme.of(context).primaryColor,
+            ),
+          if (widget.hasParallelChildren && widget.hasSubtaskChildren)
+            const SizedBox(width: 3),
+          if (widget.hasSubtaskChildren || !widget.hasParallelChildren)
+            Icon(
+              Icons.account_tree_outlined,
+              size: 13,
+              color: Theme.of(context).primaryColor,
+            ),
           const SizedBox(width: 4),
           Text(
             '${widget.completedSubtaskCount}/${widget.subtaskCount}',

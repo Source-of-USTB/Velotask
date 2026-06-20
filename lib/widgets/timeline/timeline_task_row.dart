@@ -67,6 +67,14 @@ class TimelineTaskRow extends StatelessWidget {
         child: Stack(
           clipBehavior: Clip.hardEdge,
           children: [
+            if (row.isParallelLane)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: Theme.of(
+                    context,
+                  ).primaryColor.withValues(alpha: 0.025),
+                ),
+              ),
             Positioned(
               bottom: 0,
               left: 0,
@@ -151,15 +159,20 @@ class TimelineTaskRow extends StatelessWidget {
                 painter: _TrianglePainter(color: color, shadowAlpha: 0.3),
               ),
               const SizedBox(width: 6),
-              Text(
-                todo.title,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: p.colorByKey('homeBodyText', b),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 220),
+                child: Text(
+                  row.isParallelLane && row.parallelPlan != null
+                      ? '${row.parallelPlan} · ${todo.title}'
+                      : todo.title,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: p.colorByKey('homeBodyText', b),
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 1,
               ),
             ],
           ),
@@ -226,6 +239,7 @@ class TimelineTaskRow extends StatelessWidget {
               isExpanded: row.isExpanded,
               childCount: row.childCount,
               completedChildCount: row.completedChildCount,
+              parallelPlan: row.isParallelLane ? row.parallelPlan : null,
               onToggleExpanded: row.isGroupHeader && row.childCount > 0
                   ? () => onToggleGroup?.call(row.primaryTodo)
                   : null,
@@ -262,6 +276,7 @@ class _TaskBar extends StatelessWidget {
   final bool isExpanded;
   final int childCount;
   final int completedChildCount;
+  final String? parallelPlan;
   final VoidCallback? onToggleExpanded;
   final VoidCallback? onDoubleTap;
 
@@ -272,6 +287,7 @@ class _TaskBar extends StatelessWidget {
     required this.isExpanded,
     required this.childCount,
     required this.completedChildCount,
+    required this.parallelPlan,
     required this.onToggleExpanded,
     required this.onDoubleTap,
   });
@@ -279,34 +295,71 @@ class _TaskBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDone = todo.isCompleted;
-    return Opacity(
-      opacity: isDone ? 0.45 : 1.0,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ..._buildExpandButton(),
-          Expanded(
-            child: _ResponsiveDoubleTapInkWell(
-              onDoubleTap: onDoubleTap,
-              child: Container(
-                padding: EdgeInsets.only(
-                  left: onToggleExpanded == null ? 8 : 0,
-                  right: 8,
-                ),
-                alignment: Alignment.centerLeft,
-                child: Row(
-                  children: [
-                    ..._buildCompletionStatus(isDone),
-                    _buildTitle(),
-                    ..._buildGroupSummary(),
-                  ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final showParallelPlan = constraints.maxWidth >= 96;
+        return Opacity(
+          opacity: isDone ? 0.45 : 1.0,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              ..._buildExpandButton(),
+              Expanded(
+                child: _ResponsiveDoubleTapInkWell(
+                  onDoubleTap: onDoubleTap,
+                  child: Container(
+                    padding: EdgeInsets.only(
+                      left: onToggleExpanded == null ? 8 : 0,
+                      right: 8,
+                    ),
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      children: [
+                        ..._buildCompletionStatus(isDone),
+                        if (showParallelPlan) ..._buildParallelPlanBadge(),
+                        _buildTitle(),
+                        ..._buildGroupSummary(),
+                      ],
+                    ),
+                  ),
                 ),
               ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  List<Widget> _buildParallelPlanBadge() {
+    final plan = parallelPlan;
+    if (plan == null) {
+      return const [];
+    }
+
+    return [
+      ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 48),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+          decoration: BoxDecoration(
+            color: textColor.withValues(alpha: 0.14),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            plan,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: textColor,
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
             ),
           ),
-        ],
+        ),
       ),
-    );
+      const SizedBox(width: 5),
+    ];
   }
 
   List<Widget> _buildExpandButton() {
