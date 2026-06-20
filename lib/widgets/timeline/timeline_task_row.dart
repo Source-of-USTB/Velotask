@@ -289,6 +289,7 @@ class _TaskBar extends StatelessWidget {
               radius: 150,
               mouseCursor: SystemMouseCursors.click,
               onDoubleTap: onDoubleTap,
+              hoverColor: Colors.transparent,
               highlightColor: Colors.white.withValues(alpha: 0.1),
               splashColor: Colors.white.withValues(alpha: 0.2),
               child: Container(
