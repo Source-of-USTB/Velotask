@@ -46,10 +46,7 @@ class _TimelineRangeDialogState extends State<TimelineRangeDialog> {
         style: AppTheme.dialogTitleStyle(context),
       ),
       content: _buildContent(l10n),
-      actions: [
-        _buildCancelButton(l10n),
-        _buildSaveButton(l10n),
-      ],
+      actions: [_buildCancelButton(l10n), _buildSaveButton(l10n)],
     );
   }
 
@@ -137,10 +134,7 @@ class _TimelineRangeDialogState extends State<TimelineRangeDialog> {
 
     final pastMonths = int.parse(_pastMonthsController.text);
     final futureMonths = int.parse(_futureMonthsController.text);
-    if (!AppSettingsController.isValidTimelineRange(
-      pastMonths,
-      futureMonths,
-    )) {
+    if (!AppSettingsController.isValidTimelineRange(pastMonths, futureMonths)) {
       _formKey.currentState?.validate();
       return;
     }

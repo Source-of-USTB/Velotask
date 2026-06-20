@@ -215,24 +215,17 @@ class TimelineTaskRow extends StatelessWidget {
           color: row.isGroupHeader ? color.withValues(alpha: 0.86) : color,
           borderRadius: BorderRadius.circular(8),
           clipBehavior: Clip.hardEdge,
-          child: InkWell(
-            radius: 150,
-            hoverColor: Colors.white.withValues(alpha: 0.15),
-            mouseCursor: SystemMouseCursors.click,
+          child: _TaskBar(
+            todo: todo,
+            textColor: p.colorByKey('ganttTaskText', b),
+            isGroupHeader: row.isGroupHeader,
+            isExpanded: row.isExpanded,
+            childCount: row.childCount,
+            completedChildCount: row.completedChildCount,
+            onToggleExpanded: row.isGroupHeader && row.childCount > 0
+                ? () => onToggleGroup?.call(row.primaryTodo)
+                : null,
             onDoubleTap: () => onDoubleTap?.call(todo),
-            highlightColor: Colors.white.withValues(alpha: 0.1),
-            splashColor: Colors.white.withValues(alpha: 0.2),
-            child: _TaskBar(
-              todo: todo,
-              textColor: p.colorByKey('ganttTaskText', b),
-              isGroupHeader: row.isGroupHeader,
-              isExpanded: row.isExpanded,
-              childCount: row.childCount,
-              completedChildCount: row.completedChildCount,
-              onToggleExpanded: row.isGroupHeader && row.childCount > 0
-                  ? () => onToggleGroup?.call(row.primaryTodo)
-                  : null,
-            ),
           ),
         ),
       ),
@@ -265,6 +258,7 @@ class _TaskBar extends StatelessWidget {
   final int childCount;
   final int completedChildCount;
   final VoidCallback? onToggleExpanded;
+  final VoidCallback? onDoubleTap;
 
   const _TaskBar({
     required this.todo,
@@ -274,6 +268,7 @@ class _TaskBar extends StatelessWidget {
     required this.childCount,
     required this.completedChildCount,
     required this.onToggleExpanded,
+    required this.onDoubleTap,
   });
 
   @override
@@ -281,48 +276,76 @@ class _TaskBar extends StatelessWidget {
     final isDone = todo.isCompleted;
     return Opacity(
       opacity: isDone ? 0.45 : 1.0,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
-        alignment: Alignment.centerLeft,
-        child: Row(
-          children: [
-            ..._buildLeadingWidgets(isDone),
-            _buildTitle(),
-            ..._buildGroupSummary(),
-          ],
-        ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          ..._buildExpandButton(),
+          Expanded(
+            child: InkWell(
+              radius: 150,
+              hoverColor: Colors.white.withValues(alpha: 0.15),
+              mouseCursor: SystemMouseCursors.click,
+              onDoubleTap: onDoubleTap,
+              highlightColor: Colors.white.withValues(alpha: 0.1),
+              splashColor: Colors.white.withValues(alpha: 0.2),
+              child: Container(
+                padding: EdgeInsets.only(
+                  left: onToggleExpanded == null ? 8 : 0,
+                  right: 8,
+                ),
+                alignment: Alignment.centerLeft,
+                child: Row(
+                  children: [
+                    ..._buildCompletionStatus(isDone),
+                    _buildTitle(),
+                    ..._buildGroupSummary(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  List<Widget> _buildLeadingWidgets(bool isDone) {
-    if (onToggleExpanded != null) {
-      return [
-        SizedBox(
-          width: 24,
-          height: 24,
-          child: IconButton(
-            onPressed: onToggleExpanded,
-            icon: AnimatedRotation(
-              turns: isExpanded ? 0.25 : 0.0,
-              duration: const Duration(milliseconds: 160),
-              curve: Curves.easeOutCubic,
-              child: Icon(
-                Icons.chevron_right_rounded,
-                color: textColor,
-                size: 18,
-              ),
-            ),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
-            splashRadius: 16,
-          ),
-        ),
-        const SizedBox(width: 2),
-      ];
+  List<Widget> _buildExpandButton() {
+    if (onToggleExpanded == null) {
+      return const [];
     }
 
-    if (!isDone) {
+    return [
+      Padding(
+        padding: const EdgeInsets.only(left: 8),
+        child: Center(
+          child: SizedBox(
+            width: 24,
+            height: 24,
+            child: IconButton(
+              onPressed: onToggleExpanded,
+              icon: AnimatedRotation(
+                turns: isExpanded ? 0.25 : 0.0,
+                duration: const Duration(milliseconds: 160),
+                curve: Curves.easeOutCubic,
+                child: Icon(
+                  Icons.chevron_right_rounded,
+                  color: textColor,
+                  size: 18,
+                ),
+              ),
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 24, minHeight: 24),
+              splashRadius: 16,
+            ),
+          ),
+        ),
+      ),
+      const SizedBox(width: 2),
+    ];
+  }
+
+  List<Widget> _buildCompletionStatus(bool isDone) {
+    if (onToggleExpanded != null || !isDone) {
       return const [];
     }
 
