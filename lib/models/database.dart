@@ -29,8 +29,7 @@ class Todos extends Table {
   // 0 = task, 1 = deadline  (enum index)
   IntColumn get taskType => integer().withDefault(const Constant(0))();
   RealColumn get estimatedEffortHours => real().nullable()();
-  IntColumn get parentTodoId =>
-      integer().nullable().customConstraint('REFERENCES todos(id)')();
+  IntColumn get parentTodoId => integer().nullable().references(Todos, #id)();
   // 0 = none, 1 = subtasks, 2 = parallel
   IntColumn get groupMode => integer().withDefault(const Constant(0))();
   TextColumn get parallelPlan => text().nullable()();
@@ -49,10 +48,8 @@ class Todos extends Table {
 
 /// Junction table for the many-to-many Todo ↔ Tag relationship.
 class TodoTags extends Table {
-  IntColumn get todoId =>
-      integer().customConstraint('NOT NULL REFERENCES todos(id)')();
-  IntColumn get tagId =>
-      integer().customConstraint('NOT NULL REFERENCES tags(id)')();
+  IntColumn get todoId => integer().references(Todos, #id)();
+  IntColumn get tagId => integer().references(Tags, #id)();
 
   @override
   Set<Column> get primaryKey => {todoId, tagId};
